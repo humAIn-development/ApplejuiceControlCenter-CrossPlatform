@@ -52,7 +52,7 @@ That behavior is migrated into the platform-neutral `AppleJuiceCoreClient` and c
 
 ## AJCC visual language
 
-FirstLight no longer relies on the unmodified Avalonia Fluent appearance. Its first application-level style layer reuses the current productive AJCC visual language without porting WPF controls or templates:
+FirstLight no longer relies on the unmodified Avalonia Fluent appearance. Its application-level style layer reuses the current productive AJCC visual language without porting WPF controls or templates:
 
 - background `#15171C`
 - primary panel `#20232B`
@@ -63,9 +63,20 @@ FirstLight no longer relies on the unmodified Avalonia Fluent appearance. Its fi
 - input background `#111318`
 - selection `#355A86`
 - compact Fluent density
-- AJCC-like rounded inputs, buttons, metric cards, list areas and tab states
+- AJCC-like rounded inputs, buttons, metric cards and table/list surfaces
 
-This is a visual compatibility layer only. It does not introduce WPF dependencies into the cross-platform desktop project or Core.
+The first visual pass was reviewed locally on Windows on 2026-08-15 and was judged clearly better than the raw Fluent version.
+
+A second visual pass now:
+
+- replaces the remaining Fluent `TabItem` visual template with explicit AJCC tab chrome
+- replaces the remaining Fluent `ListBoxItem` visual template with explicit AJCC row/selection chrome
+- moves transient runtime/search messages into a bottom status bar
+- compacts the Core connection controls into a single toolbar-like row
+- gives the connection badge a real online state
+- locks endpoint/password editing while connecting or connected, avoiding misleading changes to a live connection
+
+This remains a visual/desktop compatibility layer only. It does not introduce WPF dependencies into the cross-platform desktop project or Core.
 
 ## Windows live validation — 2026-08-15
 
@@ -87,7 +98,7 @@ Validated behavior:
 
 The first connection attempt exposed a desktop-only `NullReferenceException` caused by the generated password-control field being null in the click handler. Commit `b629ab78c63a5844d74892835832ef7b0b80dbef` replaced that fragile field access with Avalonia namescope lookup; the subsequent live connection succeeded and remained stable.
 
-The later AJCC-style visual pass is compile/test validated by CI and still requires a local visual check after pulling the current branch.
+The first AJCC visual pass was also launched locally and confirmed visually. The second navigation/status pass is CI validated and awaits the next local visual check.
 
 ## CI gate
 
@@ -97,7 +108,13 @@ The GitHub Actions matrix builds the complete solution on:
 - Linux
 - macOS
 
-Core regression tests remain part of every matrix job. The AJCC-style FirstLight head `ece7125c1029501046ce2deec96565c5a118c440` passed restore, complete Release build and Core tests on all three runners in workflow run `31890377932`.
+Core regression tests remain part of every matrix job.
+
+Validated visual/runtime heads:
+
+- `ece7125c1029501046ce2deec96565c5a118c440` — first AJCC style pass, workflow `31890377932`, all three OSes green
+- `0d3c0f54da8f01442417147522a99d40e3c6b6ab` — custom tabs/lists/status chrome, workflow `31890989270`, all three OSes green
+- `1a3b03be3dbcd8d4a59758fde6249a360cdd2a21` — connection-state polish and edit locking, workflow `31891131595`, all three OSes green
 
 ## Intentionally not included yet
 
