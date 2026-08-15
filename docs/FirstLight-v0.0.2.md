@@ -29,12 +29,34 @@ The FirstLight window provides:
 - continuous `modified.xml` polling through `AjPollingService`
 - dashboard data for Core identity/version, network size, credits, transfer speeds and list counts
 - live download list
+- selected-download pause/resume controls
 - live upload list
 - live server list
 - live search list and result list
 - starting searches through the real `/function/search` endpoint
 
 Search cancellation is deliberately not exposed. Although the historical endpoint inventory contains `/function/cancelsearch`, real Core behavior does not reliably abort a running search, so FirstLight must not present that as a working function.
+
+## Download control compatibility
+
+The first non-search Core control slice deliberately starts with non-destructive pause/resume actions.
+
+The productive WPF AJCC currently uses:
+
+- pause: `/function/pausedownload` with the historical uppercase query parameter `ID`
+- resume: `/function/resumedownload` with lowercase query parameter `id`
+
+FirstLight preserves that exact protocol behavior in the platform-neutral `AppleJuiceCoreClient` and covers both requests with Core regression tests.
+
+The desktop action layer uses the same productive state semantics:
+
+- status `18` = paused
+- terminal states `14`, `15`, `17` are not actionable
+- defensive text checks also recognize paused/terminal variants
+
+The Downloads tab binds the selected row to the desktop ViewModel. `Pausieren` is enabled only for a non-paused, non-terminal selected download; `Fortsetzen` only for a paused, non-terminal selected download. The actual state transition remains Core-owned and is reflected back through normal `modified.xml` polling.
+
+Destructive cancel/remove actions are not exposed yet; they require explicit confirmation UX before live use.
 
 ## Search protocol compatibility
 
@@ -95,10 +117,11 @@ Validated behavior:
 - a real search for `linux` was submitted from FirstLight
 - the search appeared in live state and returned results; `30` hits were visible at the captured test point
 - result filenames, sizes and user counts were rendered in the Avalonia search result list
+- subsequent AJCC-style search UI was locally reviewed with a live `matrix` search and judged good
 
 The first connection attempt exposed a desktop-only `NullReferenceException` caused by the generated password-control field being null in the click handler. Commit `b629ab78c63a5844d74892835832ef7b0b80dbef` replaced that fragile field access with Avalonia namescope lookup; the subsequent live connection succeeded and remained stable.
 
-The first AJCC visual pass was also launched locally and confirmed visually. The second navigation/status pass is CI validated and awaits the next local visual check.
+Pause/resume download controls are currently CI validated and await a live test against a real download on Core 1.
 
 ## CI gate
 
@@ -115,6 +138,7 @@ Validated visual/runtime heads:
 - `ece7125c1029501046ce2deec96565c5a118c440` — first AJCC style pass, workflow `31890377932`, all three OSes green
 - `0d3c0f54da8f01442417147522a99d40e3c6b6ab` — custom tabs/lists/status chrome, workflow `31890989270`, all three OSes green
 - `1a3b03be3dbcd8d4a59758fde6249a360cdd2a21` — connection-state polish and edit locking, workflow `31891131595`, all three OSes green
+- `c3c645f9fbd12d3194e6edba458088c698116e86` — download selection + pause/resume vertical slice, workflow `31891782144`, all three OSes green
 
 ## Intentionally not included yet
 
@@ -124,7 +148,9 @@ Validated visual/runtime heads:
 - protocol/file associations
 - persisted desktop settings
 - light-theme/theme switching
-- advanced download/server actions
+- destructive download actions without confirmation UX
+- download rename/target-directory UI
+- advanced server actions
 - dialogs and file pickers
 - parity with the productive WPF feature surface
 
