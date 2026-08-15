@@ -45,7 +45,7 @@ public sealed class CoreEndpoint
         builder.Port = Port ?? -1;
 
         string absolute = builder.Uri.AbsoluteUri;
-        if (!absolute.EndsWith('/', StringComparison.Ordinal))
+        if (!absolute.EndsWith("/", StringComparison.Ordinal))
             absolute += "/";
 
         return new Uri(absolute, UriKind.Absolute);
