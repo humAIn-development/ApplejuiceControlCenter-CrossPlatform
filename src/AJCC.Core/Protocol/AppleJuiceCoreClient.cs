@@ -72,6 +72,18 @@ public sealed class AppleJuiceCoreClient
             new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
             cancellationToken);
 
+    public Task<string> PauseDownloadAsync(long id, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.PauseDownload,
+            new Dictionary<string, string> { ["ID"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
+    public Task<string> ResumeDownloadAsync(long id, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.ResumeDownload,
+            new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         try
