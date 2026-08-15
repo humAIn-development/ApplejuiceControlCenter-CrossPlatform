@@ -1,0 +1,49 @@
+name: AJCC.Core CI
+
+on:
+  push:
+    branches:
+      - "foundation/**"
+    paths:
+      - "src/AJCC.Core/**"
+      - "tests/AJCC.Core.Tests/**"
+      - "ApplejuiceControlCenter-CrossPlatform.sln"
+      - ".github/workflows/core-ci.yml"
+  pull_request:
+    paths:
+      - "src/AJCC.Core/**"
+      - "tests/AJCC.Core.Tests/**"
+      - "ApplejuiceControlCenter-CrossPlatform.sln"
+      - ".github/workflows/core-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    name: Core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore ApplejuiceControlCenter-CrossPlatform.sln
+
+      - name: Build
+        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-build --verbosity normal
