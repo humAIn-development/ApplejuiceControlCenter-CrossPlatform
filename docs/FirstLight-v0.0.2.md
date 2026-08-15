@@ -125,13 +125,7 @@ Pause/resume download controls are currently CI validated and await a live test 
 
 ## CI gate
 
-The GitHub Actions matrix builds the complete solution on:
-
-- Windows
-- Linux
-- macOS
-
-Core regression tests remain part of every matrix job.
+The GitHub Actions matrix builds the complete solution on Windows, Linux and macOS. Core regression tests remain part of every matrix job.
 
 Validated visual/runtime heads:
 
