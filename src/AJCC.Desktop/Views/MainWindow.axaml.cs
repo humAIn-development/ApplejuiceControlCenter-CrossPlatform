@@ -35,6 +35,12 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void PauseDownloadButton_OnClick(object? sender, RoutedEventArgs e)
+        => await _viewModel.PauseSelectedDownloadAsync();
+
+    private async void ResumeDownloadButton_OnClick(object? sender, RoutedEventArgs e)
+        => await _viewModel.ResumeSelectedDownloadAsync();
+
     private async void SearchButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.StartSearchAsync();
 
