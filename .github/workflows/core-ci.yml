@@ -7,12 +7,14 @@ on:
     paths:
       - "src/AJCC.Core/**"
       - "tests/AJCC.Core.Tests/**"
+      - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
       - ".github/workflows/core-ci.yml"
   pull_request:
     paths:
       - "src/AJCC.Core/**"
       - "tests/AJCC.Core.Tests/**"
+      - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
       - ".github/workflows/core-ci.yml"
 
