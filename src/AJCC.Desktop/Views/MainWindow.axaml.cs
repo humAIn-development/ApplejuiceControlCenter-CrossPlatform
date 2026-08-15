@@ -16,8 +16,6 @@ public sealed partial class MainWindow : Window
         Closed += MainWindow_OnClosed;
     }
 
-    private TextBox PasswordInput => this.FindControl<TextBox>("PasswordInput")!;
-
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
 
