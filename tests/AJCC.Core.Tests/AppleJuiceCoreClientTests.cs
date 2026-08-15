@@ -82,6 +82,38 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task PauseDownload_UsesHistoricalUppercaseIdParameter()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.PauseDownloadAsync(1234);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/pausedownload", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "ID=1234");
+    }
+
+    [TestMethod]
+    public async Task ResumeDownload_UsesLowercaseIdParameter()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.ResumeDownloadAsync(1234);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/resumedownload", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=1234");
+    }
+
+    [TestMethod]
     public async Task TestConnection_AcceptsAppleJuiceSettingsShape()
     {
         const string settingsXml = "<settings><xmlport>9851</xmlport><incomingdirectory>/in</incomingdirectory><temporarydirectory>/tmp</temporarydirectory></settings>";
