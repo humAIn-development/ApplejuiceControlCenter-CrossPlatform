@@ -117,7 +117,7 @@ Validated behavior:
 - a real search for `linux` was submitted from FirstLight
 - the search appeared in live state and returned results; `30` hits were visible at the captured test point
 - result filenames, sizes and user counts were rendered in the Avalonia search result list
-- subsequent AJCC-style search UI was locally reviewed with a live `matrix` search and judged good
+- the later AJCC-style search UI was also reviewed locally with a live `matrix` search and judged good
 
 The first connection attempt exposed a desktop-only `NullReferenceException` caused by the generated password-control field being null in the click handler. Commit `b629ab78c63a5844d74892835832ef7b0b80dbef` replaced that fragile field access with Avalonia namescope lookup; the subsequent live connection succeeded and remained stable.
 
