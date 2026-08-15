@@ -58,6 +58,20 @@ public sealed class AppleJuiceCoreClient
         return GetXmlAsync(AjEndpoints.Modified, parameters, cancellationToken);
     }
 
+    public Task<string> SearchAsync(string searchText, CancellationToken cancellationToken = default)
+        => ExecuteFunctionPostAsync(
+            AjEndpoints.Search,
+            new Dictionary<string, string> { ["search"] = searchText ?? string.Empty },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "search" },
+            readResponseBody: false,
+            cancellationToken);
+
+    public Task<string> CancelSearchAsync(long id, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.CancelSearch,
+            new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -113,7 +127,50 @@ public sealed class AppleJuiceCoreClient
         return body;
     }
 
-    private Uri BuildUri(string path, IReadOnlyDictionary<string, string> parameters)
+    private async Task<string> ExecuteFunctionPostAsync(
+        string functionPath,
+        Dictionary<string, string>? parameters,
+        ISet<string>? javaGuiStyleEncodingParameterNames,
+        bool readResponseBody,
+        CancellationToken cancellationToken)
+    {
+        Dictionary<string, string> allParameters = parameters is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(parameters);
+
+        allParameters["password"] = SecurityHelper.ToMd5IfNeeded(Password);
+        Uri requestUri = BuildUri(functionPath, allParameters, javaGuiStyleEncodingParameterNames);
+
+        LastRequestUrl = SecurityHelper.MaskSensitiveData(requestUri.ToString());
+        Trace($"HTTP POST -> {LastRequestUrl}");
+
+        using HttpRequestMessage request = new(HttpMethod.Post, requestUri);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        string body;
+        if (readResponseBody)
+        {
+            byte[] bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            body = TryDecodeBody(bytes, response);
+        }
+        else
+        {
+            body = "OK";
+        }
+
+        LastRawResponse = SecurityHelper.MaskSensitiveData(body);
+        Trace($"HTTP {(int)response.StatusCode} {response.ReasonPhrase} <- {functionPath} | Antwortlänge: {body.Length:N0}");
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
+
+        return body;
+    }
+
+    private Uri BuildUri(
+        string path,
+        IReadOnlyDictionary<string, string> parameters,
+        ISet<string>? javaGuiStyleEncodingParameterNames = null)
     {
         Uri resolved = Endpoint.Resolve(path);
         UriBuilder builder = new(resolved);
@@ -124,9 +181,12 @@ public sealed class AppleJuiceCoreClient
             if (query.Length > 0)
                 query.Append('&');
 
+            bool javaGuiStyle = javaGuiStyleEncodingParameterNames?.Contains(pair.Key) == true;
             query.Append(WebUtility.UrlEncode(pair.Key));
             query.Append('=');
-            query.Append(WebUtility.UrlEncode(pair.Value));
+            query.Append(javaGuiStyle
+                ? Uri.EscapeDataString((pair.Value ?? string.Empty).Trim())
+                : WebUtility.UrlEncode(pair.Value));
         }
 
         builder.Query = query.ToString();

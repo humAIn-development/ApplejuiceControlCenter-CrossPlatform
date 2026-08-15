@@ -25,6 +25,30 @@ public sealed class CoreEndpoint
     public string DisplayName { get; }
     public Uri BaseUri { get; }
 
+    public static CoreEndpoint Parse(string value, string? displayName = null)
+    {
+        if (!Uri.TryCreate(value?.Trim(), UriKind.Absolute, out Uri? uri))
+            throw new ArgumentException("Core endpoint must be an absolute http/https URI.", nameof(value));
+
+        return FromUri(uri, displayName);
+    }
+
+    public static CoreEndpoint FromUri(Uri uri, string? displayName = null)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        if (!uri.IsAbsoluteUri)
+            throw new ArgumentException("Core endpoint must be an absolute URI.", nameof(uri));
+
+        if (!string.IsNullOrEmpty(uri.UserInfo))
+            throw new ArgumentException("Credentials must not be embedded in the Core endpoint URI.", nameof(uri));
+
+        if (!string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+            throw new ArgumentException("Core endpoint must not contain a query or fragment.", nameof(uri));
+
+        int? port = uri.IsDefaultPort ? null : uri.Port;
+        return new CoreEndpoint(uri.Scheme, uri.Host, port, uri.AbsolutePath, displayName);
+    }
+
     public Uri Resolve(string endpointPath)
     {
         if (string.IsNullOrWhiteSpace(endpointPath))

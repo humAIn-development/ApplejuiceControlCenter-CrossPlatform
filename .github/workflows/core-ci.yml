@@ -1,11 +1,13 @@
-name: AJCC.Core CI
+name: AJCC Cross-platform CI
 
 on:
   push:
     branches:
       - "foundation/**"
+      - "firstlight/**"
     paths:
       - "src/AJCC.Core/**"
+      - "src/AJCC.Desktop/**"
       - "tests/AJCC.Core.Tests/**"
       - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
@@ -13,6 +15,7 @@ on:
   pull_request:
     paths:
       - "src/AJCC.Core/**"
+      - "src/AJCC.Desktop/**"
       - "tests/AJCC.Core.Tests/**"
       - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
@@ -22,8 +25,8 @@ permissions:
   contents: read
 
 jobs:
-  core:
-    name: Core (${{ matrix.os }})
+  build-test:
+    name: Build + Core tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -48,5 +51,5 @@ jobs:
       - name: Build
         run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-build --verbosity normal
+      - name: Test Core
+        run: dotnet test tests/AJCC.Core.Tests/AJCC.Core.Tests.csproj --configuration Release --no-build --verbosity normal

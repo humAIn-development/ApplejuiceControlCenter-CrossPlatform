@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AJCC.Core.Tests", "tests\AJ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AJCC.Core.Probe", "tools\AJCC.Core.Probe\AJCC.Core.Probe.csproj", "{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AJCC.Desktop", "src\AJCC.Desktop\AJCC.Desktop.csproj", "{A5A6D034-7A0B-4F39-9AD7-83CF8B1E5F2C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +28,10 @@ Global
 		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5A6D034-7A0B-4F39-9AD7-83CF8B1E5F2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5A6D034-7A0B-4F39-9AD7-83CF8B1E5F2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5A6D034-7A0B-4F39-9AD7-83CF8B1E5F2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5A6D034-7A0B-4F39-9AD7-83CF8B1E5F2C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

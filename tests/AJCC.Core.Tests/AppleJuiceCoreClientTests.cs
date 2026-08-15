@@ -19,6 +19,7 @@ public sealed class AppleJuiceCoreClientTests
         await client.GetSettingsXmlAsync();
 
         Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
         Assert.AreEqual("https", handler.LastRequestUri.Scheme);
         Assert.AreEqual("example.org", handler.LastRequestUri.Host);
         Assert.AreEqual("/applejuice/xml/settings.xml", handler.LastRequestUri.AbsolutePath);
@@ -37,11 +38,47 @@ public sealed class AppleJuiceCoreClientTests
         await client.GetModifiedXmlAsync(42, "session-1", "ids;down;server");
 
         Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
         Assert.AreEqual("/xml/modified.xml", handler.LastRequestUri.AbsolutePath);
         string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
         StringAssert.Contains(query, "timestamp=42");
         StringAssert.Contains(query, "session=session-1");
         StringAssert.Contains(query, "filter=ids;down;server");
+    }
+
+    [TestMethod]
+    public async Task Search_UsesPostAndJavaGuiStyleEncoding()
+    {
+        RecordingHandler handler = new(string.Empty);
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("https", "example.org", basePath: "/applejuice/"), "secret", httpClient);
+
+        string result = await client.SearchAsync("  two words  ");
+
+        Assert.AreEqual("OK", result);
+        Assert.AreEqual(HttpMethod.Post, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/applejuice/function/search", handler.LastRequestUri.AbsolutePath);
+        string rawUrl = handler.LastRequestUri.OriginalString;
+        StringAssert.Contains(rawUrl, "search=two%20words");
+        Assert.IsFalse(rawUrl.Contains("search=two+words", StringComparison.Ordinal));
+        Assert.IsFalse(rawUrl.Contains("secret", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task CancelSearch_UsesGetWithSearchId()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.CancelSearchAsync(17);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/cancelsearch", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=17");
     }
 
     [TestMethod]
@@ -68,10 +105,12 @@ public sealed class AppleJuiceCoreClientTests
         }
 
         public Uri? LastRequestUri { get; private set; }
+        public HttpMethod? LastMethod { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             LastRequestUri = request.RequestUri;
+            LastMethod = request.Method;
             HttpResponseMessage response = new(HttpStatusCode.OK)
             {
                 Content = new StringContent(_responseBody)

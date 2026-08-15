@@ -1,0 +1,230 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.MainWindow"
+        Title="AJCC-X FirstLight"
+        Width="1180"
+        Height="760"
+        MinWidth="900"
+        MinHeight="620">
+
+  <Grid RowDefinitions="Auto,Auto,*" Margin="18">
+    <Border Grid.Row="0" CornerRadius="8" Padding="14" BorderThickness="1">
+      <Grid ColumnDefinitions="2.3*,1.2*,Auto" RowDefinitions="Auto,Auto">
+        <TextBox Grid.Row="0"
+                 Grid.Column="0"
+                 Margin="0,0,10,0"
+                 Watermark="Core-Endpunkt, z. B. http://127.0.0.1:8851/"
+                 Text="{Binding EndpointText}" />
+
+        <TextBox x:Name="PasswordInput"
+                 Grid.Row="0"
+                 Grid.Column="1"
+                 Margin="0,0,10,0"
+                 Watermark="Core-Passwort"
+                 PasswordChar="●" />
+
+        <Button Grid.Row="0"
+                Grid.Column="2"
+                MinWidth="120"
+                IsEnabled="{Binding CanToggleConnection}"
+                Content="{Binding ConnectButtonText}"
+                Click="ConnectButton_OnClick" />
+
+        <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="Auto,*" Margin="0,10,0,0">
+          <TextBlock Text="{Binding ConnectionStateText}" FontWeight="Bold" Margin="0,0,12,0" />
+          <TextBlock Grid.Column="1" Text="{Binding StatusText}" TextWrapping="Wrap" />
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*,*" Margin="0,12,0,12">
+      <Border Grid.Column="0" CornerRadius="8" Padding="12" BorderThickness="1" Margin="0,0,6,0">
+        <StackPanel>
+          <TextBlock Text="Core" Opacity="0.7" />
+          <TextBlock Text="{Binding CoreNick}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding CoreVersion}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" CornerRadius="8" Padding="12" BorderThickness="1" Margin="6,0">
+        <StackPanel>
+          <TextBlock Text="Netzwerk" Opacity="0.7" />
+          <TextBlock Text="{Binding NetworkUsersText, StringFormat='{}{0} Nutzer'}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding NetworkFilesText, StringFormat='{}{0} Dateien'}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="2" CornerRadius="8" Padding="12" BorderThickness="1" Margin="6,0">
+        <StackPanel>
+          <TextBlock Text="Credits" Opacity="0.7" />
+          <TextBlock Text="{Binding CreditsText}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding CoreTimestampText, StringFormat='Timestamp {0}'}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="3" CornerRadius="8" Padding="12" BorderThickness="1" Margin="6,0">
+        <StackPanel>
+          <TextBlock Text="Download" Opacity="0.7" />
+          <TextBlock Text="{Binding DownloadSpeedText}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding DownloadCountText, StringFormat='{}{0} Einträge'}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="4" CornerRadius="8" Padding="12" BorderThickness="1" Margin="6,0">
+        <StackPanel>
+          <TextBlock Text="Upload" Opacity="0.7" />
+          <TextBlock Text="{Binding UploadSpeedText}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding UploadCountText, StringFormat='{}{0} Einträge'}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="5" CornerRadius="8" Padding="12" BorderThickness="1" Margin="6,0,0,0">
+        <StackPanel>
+          <TextBlock Text="Core-Listen" Opacity="0.7" />
+          <TextBlock Text="{Binding ServerCountText, StringFormat='{}{0} Server'}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding SearchCountText, StringFormat='{}{0} Suchen'}" FontSize="12" Opacity="0.7" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <TabControl Grid.Row="2">
+      <TabItem Header="Downloads">
+        <Grid RowDefinitions="Auto,*" Margin="10">
+          <Grid Grid.Row="0" ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*" Margin="8,0,8,6">
+            <TextBlock Text="Datei" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="2" Text="Fortschritt" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="3" Text="Quellen" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="4" Text="Geschwindigkeit" FontWeight="SemiBold" />
+          </Grid>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Downloads}" HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*" Margin="8,5">
+                  <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
+                  <TextBlock Grid.Column="2" Text="{Binding ProgressText}" />
+                  <TextBlock Grid.Column="3" Text="{Binding SourceCountText}" />
+                  <TextBlock Grid.Column="4" Text="{Binding DownloadSpeedText}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Uploads">
+        <Grid RowDefinitions="Auto,*" Margin="10">
+          <Grid Grid.Row="0" ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.2*" Margin="8,0,8,6">
+            <TextBlock Text="Datei" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="Nutzer" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="2" Text="Status" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="3" Text="Fortschritt" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="4" Text="Geschwindigkeit" FontWeight="SemiBold" />
+          </Grid>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Uploads}" HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.2*" Margin="8,5">
+                  <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding StatusText}" />
+                  <TextBlock Grid.Column="3" Text="{Binding ProgressPercentText}" />
+                  <TextBlock Grid.Column="4" Text="{Binding SpeedText}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Server">
+        <Grid RowDefinitions="Auto,*" Margin="10">
+          <Grid Grid.Row="0" ColumnDefinitions="2.5*,2.5*,1*,1.2*" Margin="8,0,8,6">
+            <TextBlock Text="Name" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="Host" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="2" Text="Port" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="3" Text="Letzter Kontakt" FontWeight="SemiBold" />
+          </Grid>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Servers}" HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="2.5*,2.5*,1*,1.2*" Margin="8,5">
+                  <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding HostDisplay}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding Port}" />
+                  <TextBlock Grid.Column="3" Text="{Binding LastSeen}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Suche">
+        <Grid RowDefinitions="Auto,*" Margin="10">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,10">
+            <TextBox Grid.Column="0"
+                     Margin="0,0,8,0"
+                     Watermark="Suchbegriff"
+                     Text="{Binding SearchText}" />
+            <Button Grid.Column="1"
+                    Margin="0,0,8,0"
+                    MinWidth="90"
+                    Content="Suchen"
+                    IsEnabled="{Binding CanSearch}"
+                    Click="SearchButton_OnClick" />
+            <Button Grid.Column="2"
+                    MinWidth="90"
+                    Content="Stoppen"
+                    IsEnabled="{Binding CanCancelSearch}"
+                    Click="CancelSearchButton_OnClick" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="1.1*,2.2*">
+            <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,10,0">
+              <Grid Grid.Row="0" ColumnDefinitions="2*,1*,1*" Margin="8,0,8,6">
+                <TextBlock Text="Suche" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Text="Treffer" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="2" Text="Läuft" FontWeight="SemiBold" />
+              </Grid>
+              <ListBox Grid.Row="1"
+                       ItemsSource="{Binding Searches}"
+                       SelectedItem="{Binding SelectedSearch}"
+                       HorizontalContentAlignment="Stretch">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="2*,1*,1*" Margin="8,5">
+                      <TextBlock Text="{Binding SearchText}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding FoundFiles}" />
+                      <TextBlock Grid.Column="2" Text="{Binding RunningText}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+
+            <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="10,0,0,0">
+              <Grid Grid.Row="0" ColumnDefinitions="4*,1.2*,1.2*" Margin="8,0,8,6">
+                <TextBlock Text="Trefferdatei" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Text="Größe" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="2" Text="Nutzer" FontWeight="SemiBold" />
+              </Grid>
+              <ListBox Grid.Row="1" ItemsSource="{Binding SelectedSearchEntries}" HorizontalContentAlignment="Stretch">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="4*,1.2*,1.2*" Margin="8,5">
+                      <TextBlock Text="{Binding Filename}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding SizeText}" />
+                      <TextBlock Grid.Column="2" Text="{Binding FilenameUsers}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </Grid>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</Window>
