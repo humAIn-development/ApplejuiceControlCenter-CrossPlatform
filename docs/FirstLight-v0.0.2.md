@@ -18,7 +18,7 @@ FirstLight uses Avalonia 12.1.1 and targets .NET 10.
 
 `AJCC.Desktop` references `AJCC.Core`; `AJCC.Core` does not reference Avalonia or any other desktop framework.
 
-## First vertical slice
+## Current vertical slice
 
 The FirstLight window provides:
 
@@ -89,7 +89,7 @@ FirstLight no longer relies on the unmodified Avalonia Fluent appearance. Its ap
 
 The first visual pass was reviewed locally on Windows on 2026-08-15 and was judged clearly better than the raw Fluent version.
 
-A second visual pass now:
+A second visual pass:
 
 - replaces the remaining Fluent `TabItem` visual template with explicit AJCC tab chrome
 - replaces the remaining Fluent `ListBoxItem` visual template with explicit AJCC row/selection chrome
