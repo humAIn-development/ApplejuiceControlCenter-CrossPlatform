@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Xml.Linq;
 using AJCC.Core.Helpers;
+using AJCC.Core.Links;
 using AJCC.Core.Services;
 
 namespace AJCC.Core.Protocol;
@@ -83,6 +84,40 @@ public sealed class AppleJuiceCoreClient
             AjEndpoints.ResumeDownload,
             new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
             cancellationToken);
+
+    public async Task<string> ProcessLinkAsync(
+        string link,
+        AjCoreCompatibilityProfile? compatibilityProfile = null,
+        string subdir = "",
+        CancellationToken cancellationToken = default)
+    {
+        AjProcessLinkResult result = await ProcessLinkDetailedAsync(link, compatibilityProfile, subdir, cancellationToken).ConfigureAwait(false);
+        return result.RawResponse;
+    }
+
+    public async Task<AjProcessLinkResult> ProcessLinkDetailedAsync(
+        string link,
+        AjCoreCompatibilityProfile? compatibilityProfile = null,
+        string subdir = "",
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(link))
+            throw new ArgumentException("AJFSP-Link fehlt.", nameof(link));
+
+        AjCoreCompatibilityProfile effectiveProfile = compatibilityProfile ?? AjCoreCompatibilityProfile.FromCoreVersion(null);
+        Dictionary<string, string> parameters = new()
+        {
+            ["link"] = link.Trim()
+        };
+
+        if (effectiveProfile.SupportsProcessLinkSubdir && !string.IsNullOrWhiteSpace(subdir))
+            parameters["subdir"] = subdir.Trim();
+
+        string response = await GetXmlAsync(AjEndpoints.ProcessLink, parameters, cancellationToken).ConfigureAwait(false);
+        AjProcessLinkResult result = AjProcessLinkResult.FromResponse(response);
+        Trace($"processlink fachliche Antwort: {result.StatusText}");
+        return result;
+    }
 
     public async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
