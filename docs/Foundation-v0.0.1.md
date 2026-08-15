@@ -135,11 +135,9 @@ The CI gate performs restore, Release build and MSTest execution with .NET 10.
 
 Architecture tests additionally fail if `AJCC.Core` directly references Windows desktop framework assemblies such as WPF or WinForms.
 
-This verifies the source/build/test portability of the Foundation Core. It does not by itself prove network compatibility with a particular live AppleJuice Core instance because GitHub-hosted runners cannot reach a developer's local Core.
+This verifies the source/build/test portability of the Foundation Core. GitHub-hosted runners cannot reach a developer's local Core, so live protocol validation is performed separately with `AJCC.Core.Probe`.
 
 ## Real-Core integration probe
-
-The final live validation step is intentionally separate from CI.
 
 Without Core password:
 
@@ -163,9 +161,31 @@ A successful Probe confirms against the real Core:
 - initial modified-state load
 - a subsequent live `modified.xml` polling cycle
 
+### First live validation — 2026-08-15
+
+The Foundation probe was successfully executed on Windows against an actual local AppleJuice Core instance (`AJ-Core1`) using a password-protected XML interface.
+
+Validated endpoint and Core data:
+
+- endpoint: `http://127.0.0.1:8851/`
+- AppleJuice Core version: `0.31.149.113`
+- XML port reported by `settings.xml`: `8851`
+- connection validation: OK
+- runtime bootstrap: OK
+- network information parsing: OK (`119` users / `4,330,501` files at probe time)
+- initial state: `0` downloads / `0` uploads / `9` servers / `0` searches
+- session acquisition: OK
+- Core timestamp acquisition: OK
+- subsequent `modified.xml` polling cycle: OK
+- probe result: `Foundation Core-Probe erfolgreich.`
+
+The password itself is deliberately not recorded in the repository. Authentication was supplied through `AJCC_CORE_PASSWORD` and accepted by the real Core.
+
+This completes the first live Foundation technical proof: the platform-neutral Core is not only build/test portable in CI, but can bootstrap and poll a real existing AppleJuice Core through the migrated HTTP/XML path.
+
 ## Foundation technical-proof status
 
-Implemented and CI-testable:
+Completed:
 
 - platform-neutral `AJCC.Core`
 - settings/information/session/modified transport and parsing
@@ -174,10 +194,12 @@ Implemented and CI-testable:
 - AJFSP parsing/building
 - HTTP/HTTPS/base-path endpoint architecture
 - Windows/Linux/macOS build and test gate
+- architecture guard against direct Windows desktop dependencies
+- live authenticated connection to a real AppleJuice Core
+- live settings/information/session/bootstrap validation
+- live `modified.xml` polling validation
 
-Still requiring local live validation before declaring the first technical proof complete:
-
-- run `AJCC.Core.Probe` against an actual existing AppleJuice Core
+The first Foundation technical proof is complete.
 
 Still intentionally out of scope for Foundation:
 
