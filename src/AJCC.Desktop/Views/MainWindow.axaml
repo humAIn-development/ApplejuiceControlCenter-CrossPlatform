@@ -268,7 +268,7 @@
               </ListBox>
             </Grid>
 
-            <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="8,0,0,0">
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" Margin="8,0,0,0">
               <Border Grid.Row="0" Classes="tableHeader">
                 <Grid ColumnDefinitions="4*,1.2*,1.2*">
                   <TextBlock Text="Trefferdatei" FontWeight="SemiBold" />
@@ -276,7 +276,31 @@
                   <TextBlock Grid.Column="2" Text="Nutzer" FontWeight="SemiBold" />
                 </Grid>
               </Border>
-              <ListBox Grid.Row="1" ItemsSource="{Binding SelectedSearchEntries}">
+
+              <Border Grid.Row="1" Classes="panel" Padding="7" Margin="0,0,0,4">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <TextBlock Grid.Column="0"
+                             Classes="muted"
+                             Text="Auswahl"
+                             Margin="2,0,10,0"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding SelectedSearchEntryText}"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center" />
+                  <Button Grid.Column="2"
+                          Classes="primary"
+                          MinWidth="170"
+                          Margin="8,0,0,0"
+                          Content="Als Download übernehmen"
+                          IsEnabled="{Binding CanDownloadSelectedSearchEntry}"
+                          Click="DownloadSearchResultButton_OnClick" />
+                </Grid>
+              </Border>
+
+              <ListBox Grid.Row="2"
+                       ItemsSource="{Binding SelectedSearchEntries}"
+                       SelectedItem="{Binding SelectedSearchEntry}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:AjSearchEntry">
                     <Grid ColumnDefinitions="4*,1.2*,1.2*" Margin="8,6">
