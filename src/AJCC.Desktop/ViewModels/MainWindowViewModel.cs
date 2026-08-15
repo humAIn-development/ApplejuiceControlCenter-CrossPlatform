@@ -74,6 +74,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
 
             OnPropertyChanged(nameof(CanToggleConnection));
+            OnPropertyChanged(nameof(CanEditConnectionSettings));
             OnPropertyChanged(nameof(CanSearch));
         }
     }
@@ -86,13 +87,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (!SetField(ref _isConnected, value))
                 return;
 
+            OnPropertyChanged(nameof(IsDisconnected));
             OnPropertyChanged(nameof(ConnectButtonText));
             OnPropertyChanged(nameof(ConnectionStateText));
+            OnPropertyChanged(nameof(CanEditConnectionSettings));
             OnPropertyChanged(nameof(CanSearch));
         }
     }
 
+    public bool IsDisconnected => !IsConnected;
     public bool CanToggleConnection => !IsBusy;
+    public bool CanEditConnectionSettings => !IsConnected && !IsBusy;
     public bool CanSearch => IsConnected && !IsBusy && !string.IsNullOrWhiteSpace(SearchText);
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
