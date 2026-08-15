@@ -122,8 +122,35 @@
 
     <TabControl Grid.Row="2">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
-          <Border Grid.Row="0" Classes="tableHeader">
+        <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+          <Border Grid.Row="0" Classes="panel" Padding="8" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+              <TextBlock Grid.Column="0"
+                         Classes="muted"
+                         Text="Auswahl"
+                         Margin="2,0,10,0"
+                         VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding SelectedDownloadText}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <Button Grid.Column="2"
+                      MinWidth="96"
+                      Margin="8,0,0,0"
+                      Content="Pausieren"
+                      IsEnabled="{Binding CanPauseSelectedDownload}"
+                      Click="PauseDownloadButton_OnClick" />
+              <Button Grid.Column="3"
+                      Classes="primary"
+                      MinWidth="106"
+                      Margin="8,0,0,0"
+                      Content="Fortsetzen"
+                      IsEnabled="{Binding CanResumeSelectedDownload}"
+                      Click="ResumeDownloadButton_OnClick" />
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="1" Classes="tableHeader">
             <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
@@ -132,7 +159,9 @@
               <TextBlock Grid.Column="4" Text="Geschwindigkeit" FontWeight="SemiBold" />
             </Grid>
           </Border>
-          <ListBox Grid.Row="1" ItemsSource="{Binding Downloads}">
+          <ListBox Grid.Row="2"
+                   ItemsSource="{Binding Downloads}"
+                   SelectedItem="{Binding SelectedDownload}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjDownload">
                 <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*" Margin="8,6">
