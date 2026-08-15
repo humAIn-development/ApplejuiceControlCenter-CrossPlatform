@@ -4,51 +4,48 @@
         xmlns:models="using:AJCC.Core.Models"
         x:Class="AJCC.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="AJCC-X FirstLight"
-        Width="1180"
-        Height="760"
-        MinWidth="900"
-        MinHeight="620">
+        Title="Applejuice-Control-Center X — FirstLight"
+        Width="1280"
+        Height="820"
+        MinWidth="1000"
+        MinHeight="680">
 
-  <Grid RowDefinitions="Auto,Auto,*" Margin="18">
-    <Border Grid.Row="0" Classes="panel" Padding="14">
-      <Grid ColumnDefinitions="2.3*,1.2*,Auto" RowDefinitions="Auto,Auto">
-        <TextBox Grid.Row="0"
-                 Grid.Column="0"
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="14">
+    <Border Grid.Row="0" Classes="panel" Padding="10">
+      <Grid ColumnDefinitions="Auto,2.3*,1.2*,Auto">
+        <Border Grid.Column="0" Classes="connectionBadge" Margin="0,0,10,0">
+          <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+            <TextBlock Text="●" Foreground="{DynamicResource AjAccent}" FontSize="12" VerticalAlignment="Center" />
+            <TextBlock Classes="muted" Text="CORE" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ConnectionStateText}"
+                       Foreground="{DynamicResource AjAccent}"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <TextBox Grid.Column="1"
                  Margin="0,0,10,0"
                  PlaceholderText="Core-Endpunkt, z. B. http://127.0.0.1:8851/"
                  Text="{Binding EndpointText}" />
 
         <TextBox x:Name="PasswordInput"
-                 Grid.Row="0"
-                 Grid.Column="1"
+                 Grid.Column="2"
                  Margin="0,0,10,0"
                  PlaceholderText="Core-Passwort"
                  PasswordChar="●" />
 
-        <Button Grid.Row="0"
-                Grid.Column="2"
+        <Button Grid.Column="3"
                 Classes="primary"
                 MinWidth="120"
                 IsEnabled="{Binding CanToggleConnection}"
                 Content="{Binding ConnectButtonText}"
                 Click="ConnectButton_OnClick" />
-
-        <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="Auto,*" Margin="0,10,0,0">
-          <TextBlock Text="{Binding ConnectionStateText}"
-                     FontWeight="Bold"
-                     Foreground="{DynamicResource AjAccent}"
-                     Margin="0,0,12,0" />
-          <TextBlock Grid.Column="1"
-                     Classes="muted"
-                     Text="{Binding StatusText}"
-                     TextWrapping="Wrap" />
-        </Grid>
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*,*" Margin="0,12,0,12">
-      <Border Grid.Column="0" Classes="metric" Margin="0,0,6,0">
+    <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*,*" Margin="0,10,0,10">
+      <Border Grid.Column="0" Classes="metric" Margin="0,0,5,0">
         <StackPanel Spacing="2">
           <TextBlock Classes="metricLabel" Text="Core" />
           <TextBlock Classes="metricValue" Text="{Binding CoreNick}" />
@@ -56,7 +53,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="1" Classes="metric" Margin="6,0">
+      <Border Grid.Column="1" Classes="metric" Margin="5,0">
         <StackPanel Spacing="2">
           <TextBlock Classes="metricLabel" Text="Netzwerk" />
           <TextBlock Classes="metricValue" Text="{Binding NetworkUsersText, StringFormat='{}{0} Nutzer'}" />
@@ -64,15 +61,15 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="2" Classes="metric" Margin="6,0">
+      <Border Grid.Column="2" Classes="metric" Margin="5,0">
         <StackPanel Spacing="2">
           <TextBlock Classes="metricLabel" Text="Credits" />
           <TextBlock Classes="metricValue" Text="{Binding CreditsText}" />
-          <TextBlock Classes="muted" Text="{Binding CoreTimestampText, StringFormat='Timestamp {0}'}" FontSize="12" />
+          <TextBlock Classes="muted" Text="Core-Credits" FontSize="12" />
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="3" Classes="metric" Margin="6,0">
+      <Border Grid.Column="3" Classes="metric" Margin="5,0">
         <StackPanel Spacing="2">
           <TextBlock Classes="metricLabel" Text="Download" />
           <TextBlock Classes="metricValue" Text="{Binding DownloadSpeedText}" />
@@ -80,7 +77,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="4" Classes="metric" Margin="6,0">
+      <Border Grid.Column="4" Classes="metric" Margin="5,0">
         <StackPanel Spacing="2">
           <TextBlock Classes="metricLabel" Text="Upload" />
           <TextBlock Classes="metricValue" Text="{Binding UploadSpeedText}" />
@@ -88,7 +85,7 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="5" Classes="metric" Margin="6,0,0,0">
+      <Border Grid.Column="5" Classes="metric" Margin="5,0,0,0">
         <StackPanel Spacing="2">
           <TextBlock Classes="metricLabel" Text="Core-Listen" />
           <TextBlock Classes="metricValue" Text="{Binding ServerCountText, StringFormat='{}{0} Server'}" />
@@ -99,7 +96,7 @@
 
     <TabControl Grid.Row="2">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,*" Margin="6,10,6,6">
+        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
           <Border Grid.Row="0" Classes="tableHeader">
             <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
@@ -126,7 +123,7 @@
       </TabItem>
 
       <TabItem Header="Uploads">
-        <Grid RowDefinitions="Auto,*" Margin="6,10,6,6">
+        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
           <Border Grid.Row="0" Classes="tableHeader">
             <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.2*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
@@ -153,7 +150,7 @@
       </TabItem>
 
       <TabItem Header="Server">
-        <Grid RowDefinitions="Auto,*" Margin="6,10,6,6">
+        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
           <Border Grid.Row="0" Classes="tableHeader">
             <Grid ColumnDefinitions="2.5*,2.5*,1*,1.2*">
               <TextBlock Text="Name" FontWeight="SemiBold" />
@@ -178,8 +175,8 @@
       </TabItem>
 
       <TabItem Header="Suche">
-        <Grid RowDefinitions="Auto,*" Margin="6,10,6,6">
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
             <TextBox Grid.Column="0"
                      Margin="0,0,8,0"
                      PlaceholderText="Suchbegriff"
@@ -193,7 +190,7 @@
           </Grid>
 
           <Grid Grid.Row="1" ColumnDefinitions="1.1*,2.2*">
-            <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,10,0">
+            <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,8,0">
               <Border Grid.Row="0" Classes="tableHeader">
                 <Grid ColumnDefinitions="2*,1*,1*">
                   <TextBlock Text="Suche" FontWeight="SemiBold" />
@@ -216,7 +213,7 @@
               </ListBox>
             </Grid>
 
-            <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="10,0,0,0">
+            <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="8,0,0,0">
               <Border Grid.Row="0" Classes="tableHeader">
                 <Grid ColumnDefinitions="4*,1.2*,1.2*">
                   <TextBlock Text="Trefferdatei" FontWeight="SemiBold" />
@@ -240,5 +237,18 @@
         </Grid>
       </TabItem>
     </TabControl>
+
+    <Border Grid.Row="3" Classes="statusBar" Margin="0,10,0,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="muted"
+                   Text="{Binding StatusText}"
+                   TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+          <TextBlock Classes="muted" Text="Core-Timestamp" FontSize="12" />
+          <TextBlock Text="{Binding CoreTimestampText}" FontSize="12" />
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </Window>
