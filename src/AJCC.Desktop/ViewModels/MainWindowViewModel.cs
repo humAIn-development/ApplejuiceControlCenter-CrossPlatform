@@ -22,6 +22,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private AjSearch? _selectedSearch;
     private bool _isBusy;
     private bool _isConnected;
+    private bool _runtimeResyncInProgress;
     private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -347,6 +348,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (result.CoreTimestamp > 0)
                 _state.LastTimestamp = result.CoreTimestamp;
 
+            bool runtimeObjectMissing = HasMissingActiveRuntimeObject(_state, result);
+
             if (SelectedDownload is not null && !_state.Downloads.Any(download => download.Id == SelectedDownload.Id))
                 SelectedDownload = null;
 
@@ -354,7 +357,66 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 SelectedSearch = _state.Searches[^1];
 
             RaiseStateProperties();
+
+            if (runtimeObjectMissing)
+                _ = RefreshRuntimeSnapshotAsync("Core meldet aktive Objekt-IDs, deren Detailobjekte im lokalen State fehlen.");
         });
+    }
+
+    private static bool HasMissingActiveRuntimeObject(AjState state, ModifiedParseResult result)
+    {
+        return result.ActiveDownloadIds.Any(id => state.Downloads.All(item => item.Id != id))
+            || result.ActiveUploadIds.Any(id => state.Uploads.All(item => item.Id != id))
+            || result.ActiveServerIds.Any(id => state.Servers.All(item => item.Id != id));
+    }
+
+    private async Task RefreshRuntimeSnapshotAsync(string reason)
+    {
+        if (_runtimeResyncInProgress || !IsConnected || _client is null || _state is null)
+            return;
+
+        _runtimeResyncInProgress = true;
+        AppleJuiceCoreClient client = _client;
+        AjState state = _state;
+        StatusText = "Runtime-Neuabgleich: " + reason;
+
+        try
+        {
+            CoreRuntimeSnapshot snapshot = await new CoreRuntimeSnapshotService(client)
+                .LoadAsync()
+                .ConfigureAwait(false);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!ReferenceEquals(_state, state) || !IsConnected)
+                    return;
+
+                AjStateUpdater.Apply(state, snapshot.Result);
+                if (snapshot.Result.CoreTimestamp > state.LastTimestamp)
+                    state.LastTimestamp = snapshot.Result.CoreTimestamp;
+
+                if (SelectedDownload is not null && state.Downloads.All(download => download.Id != SelectedDownload.Id))
+                    SelectedDownload = null;
+
+                if (SelectedSearch is null && state.Searches.Count > 0)
+                    SelectedSearch = state.Searches[^1];
+
+                RaiseStateProperties();
+                StatusText = $"Runtime neu abgeglichen: {state.Downloads.Count:N0} Downloads, {state.Uploads.Count:N0} Uploads, {state.Servers.Count:N0} Server.";
+            });
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (ReferenceEquals(_state, state) && IsConnected)
+                    StatusText = "Runtime-Neuabgleich fehlgeschlagen: " + ex.Message;
+            });
+        }
+        finally
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => _runtimeResyncInProgress = false);
+        }
     }
 
     private void PollingOnConnectionDegraded(int errors, string message)
@@ -371,7 +433,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
 
     private void PollingOnFullResyncRequested(int missingTimestamps, string reason)
-        => Dispatcher.UIThread.Post(() => StatusText = $"Core fordert Neuabgleich an ({missingTimestamps}): {reason}");
+        => Dispatcher.UIThread.Post(() =>
+        {
+            _ = RefreshRuntimeSnapshotAsync($"{missingTimestamps:N0} Polls ohne Core-Zeitstempel: {reason}");
+        });
 
     private void RaiseStateProperties()
     {

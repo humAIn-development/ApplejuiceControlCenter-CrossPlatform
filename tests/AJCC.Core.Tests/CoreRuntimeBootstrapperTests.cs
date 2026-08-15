@@ -31,16 +31,26 @@ public sealed class CoreRuntimeBootstrapperTests
         CollectionAssert.AreEqual(
             new[] { "/aj/xml/settings.xml", "/aj/xml/information.xml", "/aj/xml/getsession.xml", "/aj/xml/modified.xml" },
             handler.RequestPaths);
+
+        Assert.IsNotNull(handler.ModifiedRequestUri);
+        string rawQuery = handler.ModifiedRequestUri.Query;
+        StringAssert.Contains(WebUtility.UrlDecode(rawQuery), "timestamp=0");
+        StringAssert.Contains(WebUtility.UrlDecode(rawQuery), "filter=" + CoreRuntimeFilters.FullRuntime);
+        Assert.IsFalse(rawQuery.Contains("session=", StringComparison.OrdinalIgnoreCase),
+            "The initial full runtime snapshot must be sessionless, matching productive AJCC semantics.");
     }
 
     private sealed class RoutingHandler : HttpMessageHandler
     {
         public List<string> RequestPaths { get; } = new();
+        public Uri? ModifiedRequestUri { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             string path = request.RequestUri?.AbsolutePath ?? string.Empty;
             RequestPaths.Add(path);
+            if (path.EndsWith("/xml/modified.xml", StringComparison.OrdinalIgnoreCase))
+                ModifiedRequestUri = request.RequestUri;
 
             string body = path switch
             {
