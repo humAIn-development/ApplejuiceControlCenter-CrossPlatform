@@ -62,7 +62,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
 
             OnPropertyChanged(nameof(SelectedSearchEntries));
-            OnPropertyChanged(nameof(CanCancelSearch));
         }
     }
 
@@ -76,7 +75,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             OnPropertyChanged(nameof(CanToggleConnection));
             OnPropertyChanged(nameof(CanSearch));
-            OnPropertyChanged(nameof(CanCancelSearch));
         }
     }
 
@@ -91,13 +89,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(ConnectButtonText));
             OnPropertyChanged(nameof(ConnectionStateText));
             OnPropertyChanged(nameof(CanSearch));
-            OnPropertyChanged(nameof(CanCancelSearch));
         }
     }
 
     public bool CanToggleConnection => !IsBusy;
     public bool CanSearch => IsConnected && !IsBusy && !string.IsNullOrWhiteSpace(SearchText);
-    public bool CanCancelSearch => IsConnected && !IsBusy && SelectedSearch?.Running == true;
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
 
@@ -150,31 +146,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Suche fehlgeschlagen: " + ex.Message;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    public async Task CancelSelectedSearchAsync()
-    {
-        ThrowIfDisposed();
-        if (!CanCancelSearch || _client is null || SelectedSearch is null)
-            return;
-
-        long searchId = SelectedSearch.Id;
-        IsBusy = true;
-        StatusText = $"Stoppe Suche #{searchId} ...";
-
-        try
-        {
-            await _client.CancelSearchAsync(searchId).ConfigureAwait(true);
-            StatusText = $"Abbruch für Suche #{searchId} gesendet.";
-        }
-        catch (Exception ex)
-        {
-            StatusText = "Suche konnte nicht gestoppt werden: " + ex.Message;
         }
         finally
         {
@@ -337,7 +308,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ServerCountText));
         OnPropertyChanged(nameof(SearchCountText));
         OnPropertyChanged(nameof(CoreTimestampText));
-        OnPropertyChanged(nameof(CanCancelSearch));
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

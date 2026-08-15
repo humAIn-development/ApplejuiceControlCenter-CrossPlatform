@@ -38,9 +38,6 @@ public sealed partial class MainWindow : Window
     private async void SearchButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.StartSearchAsync();
 
-    private async void CancelSearchButton_OnClick(object? sender, RoutedEventArgs e)
-        => await _viewModel.CancelSelectedSearchAsync();
-
     private void MainWindow_OnClosed(object? sender, EventArgs e)
         => _viewModel.Dispose();
 }
