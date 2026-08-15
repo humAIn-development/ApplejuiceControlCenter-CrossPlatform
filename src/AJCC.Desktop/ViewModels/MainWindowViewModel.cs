@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _statusText = "Nicht verbunden";
     private string _coreVersion = "-";
     private string _searchText = string.Empty;
+    private AjDownload? _selectedDownload;
     private AjSearch? _selectedSearch;
     private bool _isBusy;
     private bool _isConnected;
@@ -53,6 +54,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public AjDownload? SelectedDownload
+    {
+        get => _selectedDownload;
+        set
+        {
+            if (!SetField(ref _selectedDownload, value))
+                return;
+
+            OnPropertyChanged(nameof(SelectedDownloadText));
+            OnPropertyChanged(nameof(CanPauseSelectedDownload));
+            OnPropertyChanged(nameof(CanResumeSelectedDownload));
+        }
+    }
+
     public AjSearch? SelectedSearch
     {
         get => _selectedSearch;
@@ -76,6 +91,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanToggleConnection));
             OnPropertyChanged(nameof(CanEditConnectionSettings));
             OnPropertyChanged(nameof(CanSearch));
+            OnPropertyChanged(nameof(CanPauseSelectedDownload));
+            OnPropertyChanged(nameof(CanResumeSelectedDownload));
         }
     }
 
@@ -92,6 +109,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(ConnectionStateText));
             OnPropertyChanged(nameof(CanEditConnectionSettings));
             OnPropertyChanged(nameof(CanSearch));
+            OnPropertyChanged(nameof(CanPauseSelectedDownload));
+            OnPropertyChanged(nameof(CanResumeSelectedDownload));
         }
     }
 
@@ -99,8 +118,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanToggleConnection => !IsBusy;
     public bool CanEditConnectionSettings => !IsConnected && !IsBusy;
     public bool CanSearch => IsConnected && !IsBusy && !string.IsNullOrWhiteSpace(SearchText);
+    public bool CanPauseSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanPause(SelectedDownload);
+    public bool CanResumeSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanResume(SelectedDownload);
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
+    public string SelectedDownloadText => SelectedDownload is null ? "Kein Download ausgewählt" : SelectedDownload.DisplayFilename;
 
     public IEnumerable<AjDownload> Downloads => _state is null ? Array.Empty<AjDownload>() : _state.Downloads;
     public IEnumerable<AjUpload> Uploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads;
@@ -130,6 +152,58 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await DisconnectAsync().ConfigureAwait(true);
         else
             await ConnectAsync(password).ConfigureAwait(true);
+    }
+
+    public async Task PauseSelectedDownloadAsync()
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        if (download is null || client is null || !CanPauseSelectedDownload)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Pausiere Download: {download.DisplayFilename}";
+
+        try
+        {
+            await client.PauseDownloadAsync(download.Id).ConfigureAwait(true);
+            StatusText = $"Pause angefordert: {download.DisplayFilename}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Download konnte nicht pausiert werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ResumeSelectedDownloadAsync()
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        if (download is null || client is null || !CanResumeSelectedDownload)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Setze Download fort: {download.DisplayFilename}";
+
+        try
+        {
+            await client.ResumeDownloadAsync(download.Id).ConfigureAwait(true);
+            StatusText = $"Fortsetzen angefordert: {download.DisplayFilename}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Download konnte nicht fortgesetzt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     public async Task StartSearchAsync()
@@ -256,6 +330,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         _state = null;
+        SelectedDownload = null;
         SelectedSearch = null;
         CoreVersion = "-";
         RaiseStateProperties();
@@ -271,6 +346,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             AjStateUpdater.Apply(_state, result);
             if (result.CoreTimestamp > 0)
                 _state.LastTimestamp = result.CoreTimestamp;
+
+            if (SelectedDownload is not null && !_state.Downloads.Any(download => download.Id == SelectedDownload.Id))
+                SelectedDownload = null;
 
             if (SelectedSearch is null && _state.Searches.Count > 0)
                 SelectedSearch = _state.Searches[^1];
@@ -301,6 +379,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(Uploads));
         OnPropertyChanged(nameof(Servers));
         OnPropertyChanged(nameof(Searches));
+        OnPropertyChanged(nameof(SelectedDownloadText));
+        OnPropertyChanged(nameof(CanPauseSelectedDownload));
+        OnPropertyChanged(nameof(CanResumeSelectedDownload));
         OnPropertyChanged(nameof(SelectedSearchEntries));
         OnPropertyChanged(nameof(CoreNick));
         OnPropertyChanged(nameof(NetworkUsersText));
