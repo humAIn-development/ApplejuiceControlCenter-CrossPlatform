@@ -101,11 +101,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
 
-    public IEnumerable<AjDownload> Downloads => _state?.Downloads ?? Array.Empty<AjDownload>();
-    public IEnumerable<AjUpload> Uploads => _state?.Uploads ?? Array.Empty<AjUpload>();
-    public IEnumerable<AjServer> Servers => _state?.Servers ?? Array.Empty<AjServer>();
-    public IEnumerable<AjSearch> Searches => _state?.Searches ?? Array.Empty<AjSearch>();
-    public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch?.Entries ?? Array.Empty<AjSearchEntry>();
+    public IEnumerable<AjDownload> Downloads => _state is null ? Array.Empty<AjDownload>() : _state.Downloads;
+    public IEnumerable<AjUpload> Uploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads;
+    public IEnumerable<AjServer> Servers => _state is null ? Array.Empty<AjServer>() : _state.Servers;
+    public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
+    public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
 
     public string CoreNick => string.IsNullOrWhiteSpace(_state?.Settings.Nick) ? "-" : _state.Settings.Nick;
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
@@ -357,9 +357,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
+        => ObjectDisposedException.ThrowIf(_disposed, this);
 
     public void Dispose()
     {
