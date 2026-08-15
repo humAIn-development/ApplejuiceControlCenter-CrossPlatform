@@ -114,6 +114,28 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task ProcessLink_UsesEndpointEncodingAndParsesAcceptedResponse()
+    {
+        const string link = "ajfsp://file|demo file.bin|0123456789abcdef0123456789abcdef|12345/";
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("https", "example.org", basePath: "/applejuice/"), "secret", httpClient);
+        AjCoreCompatibilityProfile profile = AjCoreCompatibilityProfile.FromCoreVersion("0.31.149.113");
+
+        var result = await client.ProcessLinkDetailedAsync(link, profile);
+
+        Assert.IsTrue(result.IsAccepted);
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/applejuice/function/processlink", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "link=" + link);
+        StringAssert.Contains(query, "password=5ebe2294ecd0e0f08eab7690d2a6ee69");
+        Assert.IsFalse(query.Contains("subdir=", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(handler.LastRequestUri.OriginalString.Contains("secret", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task TestConnection_AcceptsAppleJuiceSettingsShape()
     {
         const string settingsXml = "<settings><xmlport>9851</xmlport><incomingdirectory>/in</incomingdirectory><temporarydirectory>/tmp</temporarydirectory></settings>";
