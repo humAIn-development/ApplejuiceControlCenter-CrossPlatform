@@ -34,6 +34,7 @@ The FirstLight window provides:
 - live server list
 - live search list and result list
 - starting searches through the real `/function/search` endpoint
+- taking a selected search result over as a download on the currently connected Core through AJFSP + `/function/processlink`
 
 Search cancellation is deliberately not exposed. Although the historical endpoint inventory contains `/function/cancelsearch`, real Core behavior does not reliably abort a running search, so FirstLight must not present that as a working function.
 
@@ -57,6 +58,30 @@ The desktop action layer uses the same productive state semantics:
 The Downloads tab binds the selected row to the desktop ViewModel. `Pausieren` is enabled only for a non-paused, non-terminal selected download; `Fortsetzen` only for a paused, non-terminal selected download. The actual state transition remains Core-owned and is reflected back through normal `modified.xml` polling.
 
 Destructive cancel/remove actions are not exposed yet; they require explicit confirmation UX before live use.
+
+## Search-result download handoff
+
+FirstLight now mirrors the productive WPF workflow instead of relying on another Core instance to create test downloads.
+
+For a selected search result it:
+
+1. validates filename, 32-character checksum and positive file size
+2. builds the plain AJFSP file link through `AjfspLinkBuilder`
+3. resolves the existing `AjCoreCompatibilityProfile` from the connected Core version
+4. submits the link through `/function/processlink` on that same connected Core
+5. interprets the Core response through `AjProcessLinkResult`
+6. repeatedly requests `modified.xml` with the current session and download filter until the matching hash appears or the short visibility timeout expires
+7. selects the matching download when it becomes visible
+
+This keeps the complete test and runtime path inside one Core instance: FirstLight search → FirstLight processlink → connected Core download list → pause/resume.
+
+## Correction note — 2026-08-15
+
+A temporary test diagnosis incorrectly treated a download created in the productive `Standard-Core` as if it should appear in FirstLight connected to the separate `AJ-Core1` instance. Those are independent Core processes with independent runtime state, so that expectation was invalid and did not demonstrate a FirstLight polling defect.
+
+The speculative desktop logic that automatically forced a runtime snapshot when an active object ID was missing was therefore removed again. We do not keep architecture changes whose justification came from mixing two Core instances.
+
+The sessionless `timestamp=0` initial runtime snapshot introduced during that investigation remains: it matches the current productive WPF startup semantics and is covered by the Core bootstrap tests. Normal live polling continues to use the established Core session.
 
 ## Search protocol compatibility
 
@@ -121,7 +146,7 @@ Validated behavior:
 
 The first connection attempt exposed a desktop-only `NullReferenceException` caused by the generated password-control field being null in the click handler. Commit `b629ab78c63a5844d74892835832ef7b0b80dbef` replaced that fragile field access with Avalonia namescope lookup; the subsequent live connection succeeded and remained stable.
 
-Pause/resume download controls are currently CI validated and await a live test against a real download on Core 1.
+Pause/resume and search-result-to-download controls are currently CI validated. Their same-Core live validation against `AJ-Core1` is the next local test.
 
 ## CI gate
 
@@ -133,6 +158,7 @@ Validated visual/runtime heads:
 - `0d3c0f54da8f01442417147522a99d40e3c6b6ab` — custom tabs/lists/status chrome, workflow `31890989270`, all three OSes green
 - `1a3b03be3dbcd8d4a59758fde6249a360cdd2a21` — connection-state polish and edit locking, workflow `31891131595`, all three OSes green
 - `c3c645f9fbd12d3194e6edba458088c698116e86` — download selection + pause/resume vertical slice, workflow `31891782144`, all three OSes green
+- `28b4e45c3641120bc7e7f6138cc45a9669d8041a` — corrected same-Core search-result download handoff via `processlink`, workflow `31893234914`, all three OSes green
 
 ## Intentionally not included yet
 
