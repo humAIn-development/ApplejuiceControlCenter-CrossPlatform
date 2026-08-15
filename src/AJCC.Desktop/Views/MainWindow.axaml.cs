@@ -21,9 +21,18 @@ public sealed partial class MainWindow : Window
 
     private async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        string password = PasswordInput.Text ?? string.Empty;
-        await _viewModel.ToggleConnectionAsync(password);
-        PasswordInput.Text = string.Empty;
+        TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
+        string password = passwordInput?.Text ?? string.Empty;
+
+        try
+        {
+            await _viewModel.ToggleConnectionAsync(password);
+        }
+        finally
+        {
+            if (passwordInput is not null)
+                passwordInput.Text = string.Empty;
+        }
     }
 
     private async void SearchButton_OnClick(object? sender, RoutedEventArgs e)
