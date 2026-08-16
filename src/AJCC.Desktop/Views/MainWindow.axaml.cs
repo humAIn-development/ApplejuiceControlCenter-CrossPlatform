@@ -45,6 +45,9 @@ public sealed partial class MainWindow : Window
     private async void ResumeDownloadButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.ResumeSelectedDownloadAsync();
 
+    private async void CancelDownloadButton_OnClick(object? sender, RoutedEventArgs e)
+        => await ConfirmAndCancelSelectedDownloadAsync();
+
     private async void SearchButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.StartSearchAsync();
 
@@ -69,8 +72,28 @@ public sealed partial class MainWindow : Window
     private async void DownloadContextResume_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.ResumeSelectedDownloadAsync();
 
+    private async void DownloadContextCancel_OnClick(object? sender, RoutedEventArgs e)
+        => await ConfirmAndCancelSelectedDownloadAsync();
+
     private async void SearchResultContextDownload_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
+
+    private async Task ConfirmAndCancelSelectedDownloadAsync()
+    {
+        AjDownload? download = _viewModel.SelectedDownload;
+        if (download is null || !_viewModel.CanCancelSelectedDownload)
+            return;
+
+        ConfirmDialog dialog = new(
+            "Download abbrechen",
+            $"Download abbrechen?\n\n{download.DisplayFilename}",
+            "Abbrechen",
+            "Zurück");
+
+        bool confirmed = await dialog.ShowDialog<bool>(this);
+        if (confirmed)
+            await _viewModel.CancelSelectedDownloadAsync();
+    }
 
     private async void DownloadContextCopyAjfsp_OnClick(object? sender, RoutedEventArgs e)
     {
