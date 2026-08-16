@@ -34,4 +34,7 @@ internal static class DownloadActionSemantics
 
     public static bool CanResume(AjDownload? download)
         => download is not null && !IsTerminal(download) && IsPaused(download);
+
+    public static bool CanCancel(AjDownload? download)
+        => download is not null && !IsTerminal(download);
 }
