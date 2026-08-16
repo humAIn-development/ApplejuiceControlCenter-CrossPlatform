@@ -93,13 +93,16 @@ public sealed partial class MainWindow : Window
         if (item is null)
             return;
 
+        bool isDownloadRow;
         switch (item.DataContext)
         {
             case AjDownload download:
                 _viewModel.SelectedDownload = download;
+                isDownloadRow = true;
                 break;
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
+                isDownloadRow = false;
                 break;
             default:
                 return;
@@ -110,9 +113,53 @@ public sealed partial class MainWindow : Window
             if (descendant is not Control { ContextMenu: { } menu } contextHost)
                 continue;
 
+            if (isDownloadRow)
+                ConfigureDownloadContextMenu(menu);
+
             menu.Open(contextHost);
             e.Handled = true;
             return;
+        }
+    }
+
+    private void ConfigureDownloadContextMenu(ContextMenu menu)
+    {
+        bool canPause = _viewModel.CanPauseSelectedDownload;
+        bool canResume = _viewModel.CanResumeSelectedDownload;
+        bool canCancel = _viewModel.CanCancelSelectedDownload;
+        bool canRename = _viewModel.CanRenameSelectedDownload;
+        bool canSetTargetDirectory = _viewModel.CanSetTargetDirectorySelectedDownload;
+        bool hasControlActions = canPause || canResume || canCancel;
+        bool hasMetadataActions = canRename || canSetTargetDirectory;
+        int separatorIndex = 0;
+
+        foreach (object? rawItem in menu.Items)
+        {
+            if (rawItem is MenuItem item)
+            {
+                string header = item.Header?.ToString() ?? string.Empty;
+                item.IsVisible = header switch
+                {
+                    "Pausieren" => canPause,
+                    "Fortsetzen" => canResume,
+                    "Download abbrechen…" => canCancel,
+                    "Umbenennen…" => canRename,
+                    "Zielverzeichnis setzen…" => canSetTargetDirectory,
+                    _ => true
+                };
+                continue;
+            }
+
+            if (rawItem is Separator separator)
+            {
+                separator.IsVisible = separatorIndex switch
+                {
+                    0 => hasControlActions && hasMetadataActions,
+                    1 => hasControlActions || hasMetadataActions,
+                    _ => true
+                };
+                separatorIndex++;
+            }
         }
     }
 
