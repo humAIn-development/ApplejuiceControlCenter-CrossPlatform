@@ -164,7 +164,19 @@
                    SelectedItem="{Binding SelectedDownload}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjDownload">
-                <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*" Margin="8,6">
+                <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*"
+                      Margin="8,6"
+                      ContextRequested="DownloadRow_OnContextRequested">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Pausieren" Click="DownloadContextPause_OnClick" />
+                      <MenuItem Header="Fortsetzen" Click="DownloadContextResume_OnClick" />
+                      <Separator />
+                      <MenuItem Header="AJFSP-Link kopieren" Click="DownloadContextCopyAjfsp_OnClick" />
+                      <MenuItem Header="Dateiname kopieren" Click="DownloadContextCopyFilename_OnClick" />
+                      <MenuItem Header="Hash kopieren" Click="DownloadContextCopyHash_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
                   <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
                   <TextBlock Grid.Column="2" Text="{Binding ProgressText}" />
@@ -303,7 +315,19 @@
                        SelectedItem="{Binding SelectedSearchEntry}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:AjSearchEntry">
-                    <Grid ColumnDefinitions="4*,1.2*,1.2*" Margin="8,6">
+                    <Grid ColumnDefinitions="4*,1.2*,1.2*"
+                          Margin="8,6"
+                          ContextRequested="SearchResultRow_OnContextRequested">
+                      <Grid.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="Als Download übernehmen" Click="SearchResultContextDownload_OnClick" />
+                          <MenuItem Header="AJFSP-Link kopieren" Click="SearchResultContextCopyAjfsp_OnClick" />
+                          <Separator />
+                          <MenuItem Header="Dateiname kopieren" Click="SearchResultContextCopyFilename_OnClick" />
+                          <MenuItem Header="Größe kopieren" Click="SearchResultContextCopySize_OnClick" />
+                          <MenuItem Header="Checksum kopieren" Click="SearchResultContextCopyChecksum_OnClick" />
+                        </ContextMenu>
+                      </Grid.ContextMenu>
                       <TextBlock Text="{Binding Filename}" TextTrimming="CharacterEllipsis" />
                       <TextBlock Grid.Column="1" Text="{Binding SizeText}" />
                       <TextBlock Grid.Column="2" Text="{Binding FilenameUsers}" />
