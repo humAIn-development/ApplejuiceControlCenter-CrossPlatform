@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.ConfirmDialog"
+        Width="520"
+        Height="220"
+        MinWidth="420"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AjBackground}">
+  <Border Margin="14"
+          Padding="16"
+          Background="{DynamicResource AjPanel}"
+          BorderBrush="{DynamicResource AjBorder}"
+          BorderThickness="1"
+          CornerRadius="10">
+    <Grid RowDefinitions="Auto,*,Auto">
+      <TextBlock x:Name="TitleText"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource AjText}" />
+
+      <TextBlock x:Name="MessageText"
+                 Grid.Row="1"
+                 Margin="0,14,0,14"
+                 TextWrapping="Wrap"
+                 VerticalAlignment="Center"
+                 Foreground="{DynamicResource AjText}" />
+
+      <StackPanel Grid.Row="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8">
+        <Button x:Name="CancelButton"
+                MinWidth="100"
+                Click="CancelButton_OnClick" />
+        <Button x:Name="ConfirmButton"
+                Classes="primary"
+                MinWidth="110"
+                Click="ConfirmButton_OnClick" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
