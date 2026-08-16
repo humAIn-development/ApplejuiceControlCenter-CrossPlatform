@@ -17,6 +17,11 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        AddHandler(
+            InputElement.PointerPressedEvent,
+            MainWindow_OnPointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
         Closed += MainWindow_OnClosed;
     }
 
@@ -53,6 +58,25 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadSearchResultButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
+
+    private void MainWindow_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
+            return;
+
+        if (e.Source is not Control source)
+            return;
+
+        switch (source.DataContext)
+        {
+            case AjDownload download:
+                _viewModel.SelectedDownload = download;
+                break;
+            case AjSearchEntry entry:
+                _viewModel.SelectedSearchEntry = entry;
+                break;
+        }
+    }
 
     private void DownloadRow_OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
