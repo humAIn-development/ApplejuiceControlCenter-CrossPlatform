@@ -37,4 +37,7 @@ internal static class DownloadActionSemantics
 
     public static bool CanCancel(AjDownload? download)
         => download is not null && !IsTerminal(download);
+
+    public static bool CanChangeMetadata(AjDownload? download)
+        => download is not null && !IsTerminal(download);
 }

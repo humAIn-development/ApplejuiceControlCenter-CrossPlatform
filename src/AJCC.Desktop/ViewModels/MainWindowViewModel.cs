@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using AJCC.Core.Helpers;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
 using AJCC.Core.Parsers;
@@ -68,6 +69,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
             OnPropertyChanged(nameof(CanCancelSelectedDownload));
+            OnPropertyChanged(nameof(CanRenameSelectedDownload));
+            OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
         }
     }
 
@@ -111,6 +114,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
             OnPropertyChanged(nameof(CanCancelSelectedDownload));
+            OnPropertyChanged(nameof(CanRenameSelectedDownload));
+            OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         }
     }
@@ -131,6 +136,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
             OnPropertyChanged(nameof(CanCancelSelectedDownload));
+            OnPropertyChanged(nameof(CanRenameSelectedDownload));
+            OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         }
     }
@@ -142,6 +149,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanPauseSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanPause(SelectedDownload);
     public bool CanResumeSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanResume(SelectedDownload);
     public bool CanCancelSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanCancel(SelectedDownload);
+    public bool CanRenameSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
+    public bool CanSetTargetDirectorySelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanDownloadSelectedSearchEntry => IsConnected && !IsBusy && IsValidSearchEntryForDownload(SelectedSearchEntry);
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
@@ -155,6 +164,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
 
     public string CoreNick => string.IsNullOrWhiteSpace(_state?.Settings.Nick) ? "-" : _state.Settings.Nick;
+    public string CoreIncomingDirectory => string.IsNullOrWhiteSpace(_state?.Settings.IncomingDirectory) ? "-" : _state.Settings.IncomingDirectory;
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
@@ -249,6 +259,72 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Download konnte nicht abgebrochen werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task RenameSelectedDownloadAsync(string newName)
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        string name = (newName ?? string.Empty).Trim();
+        if (download is null || client is null || !CanRenameSelectedDownload || name.Length == 0)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Benenne Download um: {download.DisplayFilename}";
+
+        try
+        {
+            await client.RenameDownloadAsync(download.Id, name).ConfigureAwait(true);
+            StatusText = $"Umbenennen angefordert: {name}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Download konnte nicht umbenannt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task SetSelectedDownloadTargetDirectoryAsync(string targetDirectory)
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (download is null || client is null || state is null || !CanSetTargetDirectorySelectedDownload)
+            return;
+
+        char separator = CoreTargetDirectory.DetermineSeparator(
+            state.Settings.IncomingDirectory,
+            download.TargetDirectory,
+            targetDirectory);
+        CoreTargetDirectoryNormalizationResult normalization = CoreTargetDirectory.NormalizeRelative(targetDirectory, separator);
+        if (!normalization.Success)
+        {
+            StatusText = "Zielverzeichnis ungültig: " + normalization.ErrorMessage;
+            return;
+        }
+
+        string displayTarget = normalization.Value.Length == 0 ? "Incoming" : normalization.Value;
+        IsBusy = true;
+        StatusText = $"Setze Core-Zielverzeichnis: {displayTarget}";
+
+        try
+        {
+            await client.SetTargetDirAsync(download.Id, normalization.Value).ConfigureAwait(true);
+            StatusText = $"Zielverzeichnis angefordert: {displayTarget}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Zielverzeichnis konnte nicht gesetzt werden: " + ex.Message;
         }
         finally
         {
@@ -564,10 +640,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CanPauseSelectedDownload));
         OnPropertyChanged(nameof(CanResumeSelectedDownload));
         OnPropertyChanged(nameof(CanCancelSelectedDownload));
+        OnPropertyChanged(nameof(CanRenameSelectedDownload));
+        OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
         OnPropertyChanged(nameof(SelectedSearchEntries));
         OnPropertyChanged(nameof(SelectedSearchEntryText));
         OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         OnPropertyChanged(nameof(CoreNick));
+        OnPropertyChanged(nameof(CoreIncomingDirectory));
         OnPropertyChanged(nameof(NetworkUsersText));
         OnPropertyChanged(nameof(NetworkFilesText));
         OnPropertyChanged(nameof(CreditsText));

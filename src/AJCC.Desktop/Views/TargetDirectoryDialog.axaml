@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.TargetDirectoryDialog"
+        Title="Zielverzeichnis setzen"
+        Width="650"
+        Height="330"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="18">
+    <TextBlock Text="Core-Zielverzeichnis"
+               FontSize="17"
+               FontWeight="SemiBold" />
+
+    <TextBlock Grid.Row="1"
+               Classes="muted"
+               Margin="0,6,0,12"
+               Text="Der Pfad wird vom verbundenen Core interpretiert. Das lokale Dateisystem dieser GUI wird nicht verwendet."
+               TextWrapping="Wrap" />
+
+    <Border Grid.Row="2" Classes="panel" Padding="10" Margin="0,0,0,12">
+      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+        <TextBlock Classes="muted" Text="Core-Incoming" Margin="0,0,12,0" />
+        <TextBlock x:Name="IncomingPathText"
+                   Grid.Column="1"
+                   TextWrapping="Wrap"
+                   TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Row="1"
+                   Classes="muted"
+                   Text="Relativer Zielpfad"
+                   Margin="0,8,12,0" />
+        <TextBlock x:Name="CurrentTargetText"
+                   Grid.Row="1"
+                   Grid.Column="1"
+                   Margin="0,8,0,0"
+                   TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <TextBox x:Name="TargetPathInput"
+             Grid.Row="3"
+             PlaceholderText="z. B. Serien/Staffel 01 — leer = direkt Incoming" />
+
+    <TextBlock x:Name="ValidationText"
+               Grid.Row="4"
+               Classes="muted"
+               Margin="0,9,0,0"
+               TextWrapping="Wrap" />
+
+    <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
+      <Button Grid.Column="0"
+              MinWidth="132"
+              Content="Direkt Incoming"
+              Click="IncomingButton_OnClick" />
+      <Button Grid.Column="2"
+              MinWidth="96"
+              Margin="8,0,0,0"
+              Content="Zurück"
+              Click="CancelButton_OnClick" />
+      <Button Grid.Column="3"
+              Classes="primary"
+              MinWidth="110"
+              Margin="8,0,0,0"
+              Content="Übernehmen"
+              Click="AcceptButton_OnClick" />
+    </Grid>
+  </Grid>
+</Window>

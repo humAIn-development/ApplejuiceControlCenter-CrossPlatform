@@ -43,6 +43,15 @@ public sealed class AppleJuiceCoreClient
     public Task<string> GetSessionXmlAsync(CancellationToken cancellationToken = default)
         => GetXmlAsync(AjEndpoints.GetSession, null, cancellationToken);
 
+    public Task<string> GetDirectoryXmlAsync(string? directory = null, CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, string>? parameters = string.IsNullOrWhiteSpace(directory)
+            ? null
+            : new Dictionary<string, string> { ["directory"] = directory };
+
+        return GetXmlAsync(AjEndpoints.Directory, parameters, cancellationToken);
+    }
+
     public Task<string> GetModifiedXmlAsync(long timestamp, string? sessionId = null, string? filter = null, CancellationToken cancellationToken = default)
     {
         Dictionary<string, string> parameters = new()
@@ -83,6 +92,27 @@ public sealed class AppleJuiceCoreClient
         => GetXmlAsync(
             AjEndpoints.ResumeDownload,
             new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
+    public Task<string> RenameDownloadAsync(long id, string name, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.RenameDownload,
+            new Dictionary<string, string>
+            {
+                ["id"] = id.ToString(CultureInfo.InvariantCulture),
+                ["name"] = name ?? string.Empty
+            },
+            cancellationToken);
+
+    public Task<string> SetTargetDirAsync(long id, string dir, CancellationToken cancellationToken = default)
+        => GetXmlPreservingDirectorySeparatorsAsync(
+            AjEndpoints.SetTargetDir,
+            new Dictionary<string, string>
+            {
+                ["id"] = id.ToString(CultureInfo.InvariantCulture),
+                ["dir"] = dir ?? string.Empty
+            },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "dir" },
             cancellationToken);
 
     public async Task<string> ProcessLinkAsync(
@@ -174,6 +204,35 @@ public sealed class AppleJuiceCoreClient
         return body;
     }
 
+    private async Task<string> GetXmlPreservingDirectorySeparatorsAsync(
+        string path,
+        Dictionary<string, string>? parameters,
+        ISet<string> preserveSeparatorParameterNames,
+        CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, string> allParameters = parameters is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(parameters);
+
+        allParameters["password"] = SecurityHelper.ToMd5IfNeeded(Password);
+        Uri requestUri = BuildUri(path, allParameters, null, preserveSeparatorParameterNames);
+
+        LastRequestUrl = SecurityHelper.MaskSensitiveData(requestUri.ToString());
+        Trace($"HTTP GET -> {LastRequestUrl}");
+
+        using HttpResponseMessage response = await _httpClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        byte[] bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        string body = TryDecodeBody(bytes, response);
+
+        LastRawResponse = SecurityHelper.MaskSensitiveData(body);
+        Trace($"HTTP {(int)response.StatusCode} {response.ReasonPhrase} <- {path} | Antwortlänge: {body.Length:N0}");
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
+
+        return body;
+    }
+
     private async Task<string> ExecuteFunctionPostAsync(
         string functionPath,
         Dictionary<string, string>? parameters,
@@ -217,7 +276,8 @@ public sealed class AppleJuiceCoreClient
     private Uri BuildUri(
         string path,
         IReadOnlyDictionary<string, string> parameters,
-        ISet<string>? javaGuiStyleEncodingParameterNames = null)
+        ISet<string>? javaGuiStyleEncodingParameterNames = null,
+        ISet<string>? preserveSeparatorParameterNames = null)
     {
         Uri resolved = Endpoint.Resolve(path);
         UriBuilder builder = new(resolved);
@@ -228,16 +288,27 @@ public sealed class AppleJuiceCoreClient
             if (query.Length > 0)
                 query.Append('&');
 
+            bool preserveSeparators = preserveSeparatorParameterNames?.Contains(pair.Key) == true;
             bool javaGuiStyle = javaGuiStyleEncodingParameterNames?.Contains(pair.Key) == true;
             query.Append(WebUtility.UrlEncode(pair.Key));
             query.Append('=');
-            query.Append(javaGuiStyle
-                ? Uri.EscapeDataString((pair.Value ?? string.Empty).Trim())
-                : WebUtility.UrlEncode(pair.Value));
+            query.Append(preserveSeparators
+                ? EncodeQueryValuePreservingDirectorySeparators(pair.Value)
+                : javaGuiStyle
+                    ? Uri.EscapeDataString((pair.Value ?? string.Empty).Trim())
+                    : WebUtility.UrlEncode(pair.Value));
         }
 
         builder.Query = query.ToString();
         return builder.Uri;
+    }
+
+    private static string EncodeQueryValuePreservingDirectorySeparators(string? value)
+    {
+        string encoded = WebUtility.UrlEncode(value ?? string.Empty) ?? string.Empty;
+        return encoded
+            .Replace("%2f", "/", StringComparison.OrdinalIgnoreCase)
+            .Replace("%5c", "\\", StringComparison.OrdinalIgnoreCase);
     }
 
     private static ConnectionTestResult AnalyzeSettingsResponseForLogin(string xml, string request, string responseForLog)

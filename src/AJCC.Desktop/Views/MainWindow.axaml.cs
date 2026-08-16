@@ -75,6 +75,12 @@ public sealed partial class MainWindow : Window
     private async void DownloadContextCancel_OnClick(object? sender, RoutedEventArgs e)
         => await ConfirmAndCancelSelectedDownloadAsync();
 
+    private async void DownloadContextRename_OnClick(object? sender, RoutedEventArgs e)
+        => await RenameSelectedDownloadWithDialogAsync();
+
+    private async void DownloadContextSetTargetDirectory_OnClick(object? sender, RoutedEventArgs e)
+        => await SetSelectedDownloadTargetDirectoryWithDialogAsync();
+
     private async void SearchResultContextDownload_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
 
@@ -93,6 +99,40 @@ public sealed partial class MainWindow : Window
         bool confirmed = await dialog.ShowDialog<bool>(this);
         if (confirmed)
             await _viewModel.CancelSelectedDownloadAsync();
+    }
+
+    private async Task RenameSelectedDownloadWithDialogAsync()
+    {
+        AjDownload? download = _viewModel.SelectedDownload;
+        if (download is null || !_viewModel.CanRenameSelectedDownload)
+            return;
+
+        TextPromptDialog dialog = new(
+            "Download umbenennen",
+            "Neuer Dateiname:",
+            download.DisplayFilename,
+            "Der Dateiname wird an den verbundenen Core übergeben.",
+            "Umbenennen");
+
+        bool accepted = await dialog.ShowDialog<bool>(this);
+        if (accepted)
+            await _viewModel.RenameSelectedDownloadAsync(dialog.TextValue);
+    }
+
+    private async Task SetSelectedDownloadTargetDirectoryWithDialogAsync()
+    {
+        AjDownload? download = _viewModel.SelectedDownload;
+        if (download is null || !_viewModel.CanSetTargetDirectorySelectedDownload)
+            return;
+
+        string incomingDirectory = _viewModel.CoreIncomingDirectory == "-"
+            ? string.Empty
+            : _viewModel.CoreIncomingDirectory;
+        TargetDirectoryDialog dialog = new(download.TargetDirectory, incomingDirectory);
+
+        bool accepted = await dialog.ShowDialog<bool>(this);
+        if (accepted)
+            await _viewModel.SetSelectedDownloadTargetDirectoryAsync(dialog.TargetDirectory);
     }
 
     private async void DownloadContextCopyAjfsp_OnClick(object? sender, RoutedEventArgs e)
