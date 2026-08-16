@@ -79,7 +79,7 @@ public static class CoreTargetDirectory
 
     private static bool LooksAbsolute(string value)
     {
-        if (value.StartsWith('/', StringComparison.Ordinal) || value.StartsWith('\\', StringComparison.Ordinal))
+        if (value.StartsWith("/", StringComparison.Ordinal) || value.StartsWith("\\", StringComparison.Ordinal))
             return true;
 
         return value.Length >= 2
