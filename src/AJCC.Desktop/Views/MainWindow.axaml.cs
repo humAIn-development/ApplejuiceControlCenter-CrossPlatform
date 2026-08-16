@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
 using AJCC.Desktop.ViewModels;
@@ -20,6 +21,11 @@ public sealed partial class MainWindow : Window
         AddHandler(
             InputElement.PointerPressedEvent,
             MainWindow_OnPointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            InputElement.ContextRequestedEvent,
+            MainWindow_OnContextRequested,
             RoutingStrategies.Tunnel,
             handledEventsToo: true);
         Closed += MainWindow_OnClosed;
@@ -75,6 +81,38 @@ public sealed partial class MainWindow : Window
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
                 break;
+        }
+    }
+
+    private void MainWindow_OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (e.Source is not Control source)
+            return;
+
+        ListBoxItem? item = source.FindAncestorOfType<ListBoxItem>(includeSelf: true);
+        if (item is null)
+            return;
+
+        switch (item.DataContext)
+        {
+            case AjDownload download:
+                _viewModel.SelectedDownload = download;
+                break;
+            case AjSearchEntry entry:
+                _viewModel.SelectedSearchEntry = entry;
+                break;
+            default:
+                return;
+        }
+
+        foreach (var descendant in item.GetVisualDescendants())
+        {
+            if (descendant is not Control { ContextMenu: { } menu } contextHost)
+                continue;
+
+            menu.Open(contextHost);
+            e.Handled = true;
+            return;
         }
     }
 
