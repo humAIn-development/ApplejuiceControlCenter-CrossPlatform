@@ -11,69 +11,103 @@ The productive Windows/WPF AJCC remains untouched.
 - base: `foundation/v0.0.1-foundation`
 - development: `firstlight/v0.0.2-firstlight`
 - `main` remains untouched until Martin explicitly decides otherwise
+- PR #2 stays draft until Martin explicitly decides otherwise
 
 ## UI framework
 
 FirstLight uses Avalonia 12.1.1 and targets .NET 10.
 
-`AJCC.Desktop` references `AJCC.Core`; `AJCC.Core` does not reference Avalonia or any other desktop framework.
+`AJCC.Desktop` references `AJCC.Core`; `AJCC.Core` does not reference Avalonia or another desktop framework.
 
 ## Current vertical slice
 
-The FirstLight window provides:
+FirstLight currently provides:
 
 - absolute Core endpoint input (`http` / `https`, optional port and base path)
 - transient Core password entry without repository/config persistence
-- connection validation through the existing Foundation transport
+- connection validation through the Foundation transport
 - runtime bootstrap through `CoreRuntimeBootstrapper`
 - continuous `modified.xml` polling through `AjPollingService`
 - dashboard data for Core identity/version, network size, credits, transfer speeds and list counts
 - live download list
-- selected-download pause/resume controls
+- selected-download pause/resume
+- confirmed download cancellation
 - live upload list
 - live server list
 - live search list and result list
 - starting searches through the real `/function/search` endpoint
 - taking a selected search result over as a download on the currently connected Core through AJFSP + `/function/processlink`
+- cross-platform context menus for downloads and search results
+- cross-platform clipboard copy actions through Avalonia
 
 Search cancellation is deliberately not exposed. Although the historical endpoint inventory contains `/function/cancelsearch`, real Core behavior does not reliably abort a running search, so FirstLight must not present that as a working function.
 
 ## Download control compatibility
 
-The first non-search Core control slice deliberately starts with non-destructive pause/resume actions.
-
 The productive WPF AJCC currently uses:
 
-- pause: `/function/pausedownload` with the historical uppercase query parameter `ID`
+- pause: `/function/pausedownload` with historical uppercase query parameter `ID`
 - resume: `/function/resumedownload` with lowercase query parameter `id`
+- cancel: `/function/canceldownload` with lowercase query parameter `id`
 
-FirstLight preserves that exact protocol behavior in the platform-neutral `AppleJuiceCoreClient` and covers both requests with Core regression tests.
+FirstLight preserves those protocol conventions in the platform-neutral Core layer and covers them with Core regression tests.
 
-The desktop action layer uses the same productive state semantics:
+Desktop action semantics match the productive client:
 
 - status `18` = paused
 - terminal states `14`, `15`, `17` are not actionable
-- defensive text checks also recognize paused/terminal variants
+- pause is allowed only for non-paused, non-terminal downloads
+- resume is allowed only for paused, non-terminal downloads
+- cancel is allowed for every non-terminal download
 
-The Downloads tab binds the selected row to the desktop ViewModel. `Pausieren` is enabled only for a non-paused, non-terminal selected download; `Fortsetzen` only for a paused, non-terminal selected download. The actual state transition remains Core-owned and is reflected back through normal `modified.xml` polling.
+The Core remains authoritative for the resulting state. FirstLight sends the action and reflects the later state transition through normal Core polling.
 
-Destructive cancel/remove actions are not exposed yet; they require explicit confirmation UX before live use.
+### Destructive action guard
+
+`Download abbrechen` is not sent directly from a context-menu click. FirstLight first opens an owner-modal Avalonia confirmation window showing the selected filename. Only the explicit confirmation button invokes the Core cancel action. Closing the dialog or choosing `Zurück` does not call the Core.
+
+This replaces the productive WPF confirmation dialog with an Avalonia implementation without introducing WPF dependencies.
 
 ## Search-result download handoff
 
-FirstLight now mirrors the productive WPF workflow instead of relying on another Core instance to create test downloads.
+FirstLight mirrors the productive WPF workflow on the same connected Core:
 
-For a selected search result it:
+1. validate filename, 32-character checksum and positive file size
+2. build the plain AJFSP file link through `AjfspLinkBuilder`
+3. resolve the existing `AjCoreCompatibilityProfile` from the connected Core version
+4. submit the link through `/function/processlink`
+5. interpret the Core response through `AjProcessLinkResult`
+6. repeatedly request `modified.xml` with the current session and download filter until the matching hash appears or the short visibility timeout expires
+7. select the matching download when it becomes visible
 
-1. validates filename, 32-character checksum and positive file size
-2. builds the plain AJFSP file link through `AjfspLinkBuilder`
-3. resolves the existing `AjCoreCompatibilityProfile` from the connected Core version
-4. submits the link through `/function/processlink` on that same connected Core
-5. interprets the Core response through `AjProcessLinkResult`
-6. repeatedly requests `modified.xml` with the current session and download filter until the matching hash appears or the short visibility timeout expires
-7. selects the matching download when it becomes visible
+The complete runtime path therefore stays inside one Core instance:
 
-This keeps the complete test and runtime path inside one Core instance: FirstLight search → FirstLight processlink → connected Core download list → pause/resume.
+`FirstLight search → FirstLight processlink → connected Core download list → download actions`
+
+## Context menus
+
+Context menus are implemented with Avalonia `ContextMenu` and the platform-neutral `ContextRequested` event rather than Windows-specific mouse handling.
+
+### Downloads
+
+- Pausieren
+- Fortsetzen
+- Download abbrechen…
+- AJFSP-Link kopieren
+- Dateiname kopieren
+- Hash kopieren
+
+The cancel item always passes through the confirmation dialog before the Core can be called.
+
+### Search results
+
+- Als Download übernehmen
+- AJFSP-Link kopieren
+- Dateiname kopieren
+- Größe kopieren
+- Checksum kopieren
+
+Clipboard access uses Avalonia `TopLevel.Clipboard`; no Windows clipboard API is referenced.
 
 ## Correction note — 2026-08-15
 
@@ -81,25 +115,21 @@ A temporary test diagnosis incorrectly treated a download created in the product
 
 The speculative desktop logic that automatically forced a runtime snapshot when an active object ID was missing was therefore removed again. We do not keep architecture changes whose justification came from mixing two Core instances.
 
-The sessionless `timestamp=0` initial runtime snapshot introduced during that investigation remains: it matches the current productive WPF startup semantics and is covered by the Core bootstrap tests. Normal live polling continues to use the established Core session.
+The sessionless `timestamp=0` initial runtime snapshot introduced during that investigation remains because it matches the current productive WPF startup semantics. Normal live polling uses the established Core session.
 
 ## Search protocol compatibility
 
-The productive AJCC currently sends search requests as HTTP POST requests and encodes the search query with the legacy Java/phpGUI-compatible RFC3986-style behavior where spaces are `%20` rather than `+`.
+The productive AJCC sends search requests as HTTP POST and encodes search terms with the legacy Java/phpGUI-compatible RFC3986-style behavior where spaces are `%20` rather than `+`.
 
 That behavior is migrated into the platform-neutral `AppleJuiceCoreClient` and covered by Core tests. Transport still uses `CoreEndpoint`, so HTTPS and reverse-proxy base paths remain supported.
 
-## Endpoint parsing
-
-`CoreEndpoint.Parse` / `CoreEndpoint.FromUri` centralize validation for desktop and tool callers. Embedded credentials, query strings and fragments are rejected; credentials stay separate from the technical endpoint URI.
-
 ## Thread boundary
 
-`AjPollingService` performs network polling away from the desktop UI. FirstLight applies each parsed `ModifiedParseResult` to the bound `AjState` on Avalonia's UI dispatcher before ObservableCollection/model changes reach controls.
+`AjPollingService` performs network polling away from the desktop UI. FirstLight applies parsed `ModifiedParseResult` instances to the bound `AjState` on Avalonia's UI dispatcher before state changes reach controls.
 
 ## AJCC visual language
 
-FirstLight no longer relies on the unmodified Avalonia Fluent appearance. Its application-level style layer reuses the current productive AJCC visual language without porting WPF controls or templates:
+FirstLight no longer uses the raw Avalonia Fluent appearance. Its application-level style layer reuses the productive AJCC visual language without porting WPF controls or templates:
 
 - background `#15171C`
 - primary panel `#20232B`
@@ -109,56 +139,55 @@ FirstLight no longer relies on the unmodified Avalonia Fluent appearance. Its ap
 - muted text `#AEB7C2`
 - input background `#111318`
 - selection `#355A86`
-- compact Fluent density
-- AJCC-like rounded inputs, buttons, metric cards and table/list surfaces
+- compact density
+- explicit AJCC tab and list-row chrome
+- compact Core connection toolbar
+- bottom status bar
+- online state badge
+- locked connection settings while connected
 
-The first visual pass was reviewed locally on Windows on 2026-08-15 and was judged clearly better than the raw Fluent version.
-
-A second visual pass:
-
-- replaces the remaining Fluent `TabItem` visual template with explicit AJCC tab chrome
-- replaces the remaining Fluent `ListBoxItem` visual template with explicit AJCC row/selection chrome
-- moves transient runtime/search messages into a bottom status bar
-- compacts the Core connection controls into a single toolbar-like row
-- gives the connection badge a real online state
-- locks endpoint/password editing while connecting or connected, avoiding misleading changes to a live connection
-
-This remains a visual/desktop compatibility layer only. It does not introduce WPF dependencies into the cross-platform desktop project or Core.
+The current visual direction was reviewed locally on Windows and accepted as a substantial improvement over the raw Fluent version.
 
 ## Windows live validation — 2026-08-15
 
-FirstLight was launched locally on Windows and tested against the real password-protected `AJ-Core1` at `http://127.0.0.1:8851/`.
+FirstLight was tested locally against the password-protected `AJ-Core1` at `http://127.0.0.1:8851/`.
 
-Validated behavior:
+Confirmed live:
 
-- Avalonia application launch: OK
-- password-protected Core connection: OK
-- Core identity: `AJ-Core1`
-- Core version: `0.31.149.113`
-- network counters populated from the Core and updated live
-- `9` servers visible in runtime state during the test
-- Core timestamp advanced continuously through `modified.xml` polling
-- download/upload speed fields updated from live information
-- a real search for `linux` was submitted from FirstLight
-- the search appeared in live state and returned results; `30` hits were visible at the captured test point
-- result filenames, sizes and user counts were rendered in the Avalonia search result list
-- the later AJCC-style search UI was also reviewed locally with a live `matrix` search and judged good
+- Avalonia application launch
+- password-protected connection
+- Core identity `AJ-Core1`
+- Core version `0.31.149.113`
+- network/runtime data
+- server list
+- continuously advancing Core timestamp through `modified.xml`
+- live transfer values
+- real searches including `linux` and `matrix`
+- search-result rendering
+- selected search result → AJFSP/processlink → download on the same connected `AJ-Core1`
+- current AJCC-style visual layer
 
-The first connection attempt exposed a desktop-only `NullReferenceException` caused by the generated password-control field being null in the click handler. Commit `b629ab78c63a5844d74892835832ef7b0b80dbef` replaced that fragile field access with Avalonia namescope lookup; the subsequent live connection succeeded and remained stable.
+Not yet explicitly recorded as live-confirmed:
 
-Pause/resume and search-result-to-download controls are currently CI validated. Their same-Core live validation against `AJ-Core1` is the next local test.
+- pause/resume transition against a real AJ-Core1 download
+- context-menu gesture/clipboard behavior on the local desktop
+- confirmed download cancellation against AJ-Core1
+
+Those remain runtime interaction checks; CI proves build/protocol behavior but not a human popup/gesture sequence.
 
 ## CI gate
 
-The GitHub Actions matrix builds the complete solution on Windows, Linux and macOS. Core regression tests remain part of every matrix job.
+The GitHub Actions matrix builds the complete solution on Windows, Linux and macOS. Core regression tests run in every matrix job.
 
-Validated visual/runtime heads:
+Validated heads:
 
 - `ece7125c1029501046ce2deec96565c5a118c440` — first AJCC style pass, workflow `31890377932`, all three OSes green
 - `0d3c0f54da8f01442417147522a99d40e3c6b6ab` — custom tabs/lists/status chrome, workflow `31890989270`, all three OSes green
-- `1a3b03be3dbcd8d4a59758fde6249a360cdd2a21` — connection-state polish and edit locking, workflow `31891131595`, all three OSes green
-- `c3c645f9fbd12d3194e6edba458088c698116e86` — download selection + pause/resume vertical slice, workflow `31891782144`, all three OSes green
-- `28b4e45c3641120bc7e7f6138cc45a9669d8041a` — corrected same-Core search-result download handoff via `processlink`, workflow `31893234914`, all three OSes green
+- `1a3b03be3dbcd8d4a59758fde6249a360cdd2a21` — connection-state polish/edit locking, workflow `31891131595`, all three OSes green
+- `c3c645f9fbd12d3194e6edba458088c698116e86` — download pause/resume slice, workflow `31891782144`, all three OSes green
+- `28b4e45c3641120bc7e7f6138cc45a9669d8041a` — same-Core search-result download handoff, workflow `31893234914`, all three OSes green
+- `24a62452b6fdf674348ab99e9238cef0c278b4b0` — cross-platform context menus + Avalonia clipboard, workflow `31931634467`, all three OSes green
+- `d65d00538c247ffce659beebc01790960d7bacfd` — confirmed download cancellation + cancel transport regression test, workflow `31931907875`, all three OSes green
 
 ## Intentionally not included yet
 
@@ -168,10 +197,9 @@ Validated visual/runtime heads:
 - protocol/file associations
 - persisted desktop settings
 - light-theme/theme switching
-- destructive download actions without confirmation UX
 - download rename/target-directory UI
 - advanced server actions
-- dialogs and file pickers
-- parity with the productive WPF feature surface
+- dialogs/file pickers beyond the current confirmation dialog
+- full productive-WPF feature parity
 
-FirstLight exists to prove the UI-to-Core boundary and then expand in controlled vertical slices.
+FirstLight exists to prove and expand the UI-to-Core boundary in controlled vertical slices.
