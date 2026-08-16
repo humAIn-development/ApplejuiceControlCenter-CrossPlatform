@@ -67,6 +67,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SelectedDownloadText));
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
+            OnPropertyChanged(nameof(CanCancelSelectedDownload));
         }
     }
 
@@ -109,6 +110,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanSearch));
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
+            OnPropertyChanged(nameof(CanCancelSelectedDownload));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         }
     }
@@ -128,6 +130,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanSearch));
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
+            OnPropertyChanged(nameof(CanCancelSelectedDownload));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         }
     }
@@ -138,6 +141,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanSearch => IsConnected && !IsBusy && !string.IsNullOrWhiteSpace(SearchText);
     public bool CanPauseSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanPause(SelectedDownload);
     public bool CanResumeSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanResume(SelectedDownload);
+    public bool CanCancelSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanCancel(SelectedDownload);
     public bool CanDownloadSelectedSearchEntry => IsConnected && !IsBusy && IsValidSearchEntryForDownload(SelectedSearchEntry);
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
@@ -219,6 +223,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Download konnte nicht fortgesetzt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task CancelSelectedDownloadAsync()
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        if (download is null || client is null || !CanCancelSelectedDownload)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Breche Download ab: {download.DisplayFilename}";
+
+        try
+        {
+            await client.CancelDownloadAsync(download.Id).ConfigureAwait(true);
+            StatusText = $"Abbruch angefordert: {download.DisplayFilename}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Download konnte nicht abgebrochen werden: " + ex.Message;
         }
         finally
         {
@@ -533,6 +563,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(SelectedDownloadText));
         OnPropertyChanged(nameof(CanPauseSelectedDownload));
         OnPropertyChanged(nameof(CanResumeSelectedDownload));
+        OnPropertyChanged(nameof(CanCancelSelectedDownload));
         OnPropertyChanged(nameof(SelectedSearchEntries));
         OnPropertyChanged(nameof(SelectedSearchEntryText));
         OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
