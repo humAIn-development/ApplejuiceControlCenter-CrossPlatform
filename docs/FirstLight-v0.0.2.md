@@ -32,6 +32,8 @@ FirstLight currently provides:
 - live download list
 - selected-download pause/resume
 - confirmed download cancellation
+- selected-download rename
+- selected-download Core-relative target-directory change
 - live upload list
 - live server list
 - live search list and result list
@@ -59,6 +61,7 @@ Desktop action semantics match the productive client:
 - pause is allowed only for non-paused, non-terminal downloads
 - resume is allowed only for paused, non-terminal downloads
 - cancel is allowed for every non-terminal download
+- rename and target-directory changes are allowed only for non-terminal downloads
 
 The Core remains authoritative for the resulting state. FirstLight sends the action and reflects the later state transition through normal Core polling.
 
@@ -67,6 +70,33 @@ The Core remains authoritative for the resulting state. FirstLight sends the act
 `Download abbrechen` is not sent directly from a context-menu click. FirstLight first opens an owner-modal Avalonia confirmation window showing the selected filename. Only the explicit confirmation button invokes the Core cancel action. Closing the dialog or choosing `Zurück` does not call the Core.
 
 This replaces the productive WPF confirmation dialog with an Avalonia implementation without introducing WPF dependencies.
+
+## Download metadata compatibility
+
+The current productive WPF source was re-read before implementing rename and target-directory changes.
+
+Protocol conventions preserved in `AJCC.Core`:
+
+- rename: `/function/renamedownload?id=...&name=...`
+- target directory: `/function/settargetdir?id=...&dir=...`
+- the target-directory query value preserves `/` and `\\` directory separators, matching the productive client's old-Core compatibility behavior
+- `/xml/directory.xml` transport is available through `GetDirectoryXmlAsync` for a later Core-side directory browser
+
+### Core-owned target path
+
+The target path belongs to the **connected Core**, not to the computer on which the Avalonia GUI happens to run. FirstLight therefore does not open a Windows/macOS/Linux local folder picker and does not create local directories.
+
+The target dialog accepts a relative path below the connected Core's `IncomingDirectory`:
+
+- empty value means the Core's Incoming directory itself
+- absolute Windows paths, absolute Unix paths, UNC-style roots and `.` / `..` traversal are rejected
+- separators are normalized to the separator inferred from the connected Core's Incoming path
+- problematic path characters are normalized through the migrated platform-neutral `CoreTargetPathSanitizer`
+- when normalization changes the entered path, the dialog shows the normalized value and requires a second explicit `Übernehmen`
+
+This is intentionally different from the productive Windows-only local filesystem preparation path. AJCC-X must not pretend that a local directory on the GUI machine is the Core's directory when the Core can run remotely or on another operating system.
+
+The current slice does not assert that an arbitrary new directory already exists on the Core and does not attempt remote directory creation. The Core remains authoritative. A later Core-side directory browser can use `/xml/directory.xml` without weakening this boundary.
 
 ## Search-result download handoff
 
@@ -93,11 +123,13 @@ Context menus are implemented with Avalonia `ContextMenu` and the platform-neutr
 - Pausieren
 - Fortsetzen
 - Download abbrechen…
+- Umbenennen…
+- Zielverzeichnis setzen…
 - AJFSP-Link kopieren
 - Dateiname kopieren
 - Hash kopieren
 
-The cancel item always passes through the confirmation dialog before the Core can be called.
+The cancel item always passes through the confirmation dialog before the Core can be called. Rename uses a small owner-modal Avalonia text dialog. Target-directory editing uses a dedicated Avalonia dialog that exposes the Core/GUI filesystem distinction directly.
 
 ### Search results
 
@@ -173,7 +205,7 @@ Confirmed live:
 - resulting Core-owned state transition through normal polling
 - current AJCC-style visual layer
 
-The current download/search-result interaction slice is therefore both CI-validated across Windows/Linux/macOS and live-validated on Windows against the real Core.
+The rename/target-directory metadata slice added after those checks is CI-validated across all three operating systems but is **not yet recorded as live-validated against AJ-Core1**. That validation must happen before the documentation claims real-Core success for those two actions.
 
 ## CI gate
 
@@ -188,6 +220,7 @@ Validated heads:
 - `28b4e45c3641120bc7e7f6138cc45a9669d8041a` — same-Core search-result download handoff, workflow `31893234914`, all three OSes green
 - `24a62452b6fdf674348ab99e9238cef0c278b4b0` — cross-platform context menus + Avalonia clipboard, workflow `31931634467`, all three OSes green
 - `d65d00538c247ffce659beebc01790960d7bacfd` — confirmed download cancellation + cancel transport regression test, workflow `31931907875`, all three OSes green
+- `7a992a93d6d2a15e796bc6e48d440bd26bcac8e6` — portable rename + Core-relative target-directory slice and regression tests, workflow `31933020732`, all three OSes green
 
 ## Intentionally not included yet
 
@@ -197,9 +230,9 @@ Validated heads:
 - protocol/file associations
 - persisted desktop settings
 - light-theme/theme switching
-- download rename/target-directory UI
+- Core-side directory browser/tree UI
+- remote Core directory creation
 - advanced server actions
-- dialogs/file pickers beyond the current confirmation dialog
 - full productive-WPF feature parity
 
 FirstLight exists to prove and expand the UI-to-Core boundary in controlled vertical slices.
