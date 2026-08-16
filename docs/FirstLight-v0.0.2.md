@@ -148,7 +148,7 @@ FirstLight no longer uses the raw Avalonia Fluent appearance. Its application-le
 
 The current visual direction was reviewed locally on Windows and accepted as a substantial improvement over the raw Fluent version.
 
-## Windows live validation — 2026-08-15
+## Windows live validation — 2026-08-15 / 2026-08-16
 
 FirstLight was tested locally against the password-protected `AJ-Core1` at `http://127.0.0.1:8851/`.
 
@@ -165,15 +165,15 @@ Confirmed live:
 - real searches including `linux` and `matrix`
 - search-result rendering
 - selected search result → AJFSP/processlink → download on the same connected `AJ-Core1`
+- pause/resume transition on a real AJ-Core1 download
+- download and search-result context-menu gestures
+- Avalonia clipboard copy actions
+- cancel confirmation guard: `Zurück` leaves the download untouched
+- confirmed download cancellation against AJ-Core1
+- resulting Core-owned state transition through normal polling
 - current AJCC-style visual layer
 
-Not yet explicitly recorded as live-confirmed:
-
-- pause/resume transition against a real AJ-Core1 download
-- context-menu gesture/clipboard behavior on the local desktop
-- confirmed download cancellation against AJ-Core1
-
-Those remain runtime interaction checks; CI proves build/protocol behavior but not a human popup/gesture sequence.
+The current download/search-result interaction slice is therefore both CI-validated across Windows/Linux/macOS and live-validated on Windows against the real Core.
 
 ## CI gate
 
