@@ -13,6 +13,7 @@ namespace AJCC.Desktop.Views;
 public sealed partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel = new();
+    private AjServer? _selectedServerForContext;
 
     public MainWindow()
     {
@@ -81,6 +82,9 @@ public sealed partial class MainWindow : Window
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
                 break;
+            case AjServer server:
+                _selectedServerForContext = server;
+                break;
         }
     }
 
@@ -102,6 +106,10 @@ public sealed partial class MainWindow : Window
                 break;
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
+                isDownloadRow = false;
+                break;
+            case AjServer server:
+                _selectedServerForContext = server;
                 isDownloadRow = false;
                 break;
             default:
@@ -173,6 +181,18 @@ public sealed partial class MainWindow : Window
     {
         if (sender is Control { DataContext: AjSearchEntry entry })
             _viewModel.SelectedSearchEntry = entry;
+    }
+
+    private void ServerRow_OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is Control { DataContext: AjServer server })
+            _selectedServerForContext = server;
+    }
+
+    private async void ServerContextRemove_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedServerForContext is { } server)
+            await _viewModel.RemoveServerAsync(server);
     }
 
     private async void DownloadContextPause_OnClick(object? sender, RoutedEventArgs e)

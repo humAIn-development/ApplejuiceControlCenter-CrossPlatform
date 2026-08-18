@@ -247,7 +247,14 @@
           <ListBox Grid.Row="1" ItemsSource="{Binding Servers}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjServer">
-                <Grid ColumnDefinitions="2.5*,2.5*,1*,1.2*" Margin="8,6">
+                <Grid ColumnDefinitions="2.5*,2.5*,1*,1.2*"
+                      Margin="8,6"
+                      ContextRequested="ServerRow_OnContextRequested">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Server entfernen" Click="ServerContextRemove_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
                   <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding HostDisplay}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding Port}" />

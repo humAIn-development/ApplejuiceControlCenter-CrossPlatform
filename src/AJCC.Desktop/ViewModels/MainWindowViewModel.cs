@@ -221,6 +221,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await ConnectAsync(password).ConfigureAwait(true);
     }
 
+    public async Task RemoveServerAsync(AjServer server)
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        if (!IsConnected || IsBusy || client is null)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Entferne Server: {server.Name}";
+
+        try
+        {
+            await client.RemoveServerAsync(server.Id).ConfigureAwait(true);
+            StatusText = $"Server entfernen angefordert: {server.Name}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Server konnte nicht entfernt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task PauseSelectedDownloadAsync()
     {
         ThrowIfDisposed();
