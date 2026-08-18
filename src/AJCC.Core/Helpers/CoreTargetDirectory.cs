@@ -92,7 +92,7 @@ public static class CoreTargetDirectory
                 false,
                 string.Empty,
                 false,
-                "Der ausgewÃ¤hlte Core-Pfad muss relativ unterhalb des Core-Incoming-Verzeichnisses liegen.");
+                "Der ausgewählte Core-Pfad muss relativ unterhalb des Core-Incoming-Verzeichnisses liegen.");
         }
 
         string[] parts = raw
@@ -106,7 +106,7 @@ public static class CoreTargetDirectory
                 false,
                 string.Empty,
                 false,
-                "'.' und '..' sind im Core-Zielpfad nicht zulÃ¤ssig.");
+                "'.' und '..' sind im Core-Zielpfad nicht zulässig.");
         }
 
         string normalized = string.Join(safeSeparator, parts);

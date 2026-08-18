@@ -74,7 +74,7 @@ public sealed partial class TargetDirectoryDialog : Window
         if (_loadDirectoryAsync is null)
         {
             if (status is not null)
-                status.Text = "Core-Verzeichnisbrowser ist nicht verfÃ¼gbar.";
+                status.Text = "Core-Verzeichnisbrowser ist nicht verfügbar.";
             return false;
         }
 
@@ -89,14 +89,14 @@ public sealed partial class TargetDirectoryDialog : Window
         if (!IsAtOrBelowIncoming(normalizedPath))
         {
             if (status is not null)
-                status.Text = "Navigation auÃŸerhalb des Core-Incoming-Verzeichnisses wurde blockiert.";
+                status.Text = "Navigation außerhalb des Core-Incoming-Verzeichnisses wurde blockiert.";
             return false;
         }
 
         try
         {
             if (status is not null)
-                status.Text = "Lade Core-Verzeichnis â€¦";
+                status.Text = "Lade Core-Verzeichnis …";
 
             AjDirectoryListResult result = await _loadDirectoryAsync(normalizedPath);
             if (!string.IsNullOrWhiteSpace(result.Separator))
@@ -141,7 +141,7 @@ public sealed partial class TargetDirectoryDialog : Window
             {
                 TextBlock? validation = this.FindControl<TextBlock>("ValidationText");
                 if (validation is not null)
-                    validation.Text = "Core-Verzeichnisbrowser konnte nicht geladen werden. Die manuelle relative Eingabe bleibt verfÃ¼gbar.";
+                    validation.Text = "Core-Verzeichnisbrowser konnte nicht geladen werden. Die manuelle relative Eingabe bleibt verfügbar.";
             }
 
             return false;
@@ -153,7 +153,7 @@ public sealed partial class TargetDirectoryDialog : Window
         ListBox? list = this.FindControl<ListBox>("CoreDirectoryList");
         if (list?.SelectedItem is not CoreDirectoryChoice selected)
         {
-            SetDirectoryStatus("Bitte zuerst einen Unterordner auswÃ¤hlen.");
+            SetDirectoryStatus("Bitte zuerst einen Unterordner auswählen.");
             return;
         }
 
@@ -196,8 +196,8 @@ public sealed partial class TargetDirectoryDialog : Window
         if (validation is not null)
         {
             validation.Text = relative.Length == 0
-                ? "Vorhandenes Core-Incoming gewÃ¤hlt. Mit Ãœbernehmen bestÃ¤tigen."
-                : $"Vorhandener Core-Ordner gewÃ¤hlt: {relative}. Mit Ãœbernehmen bestÃ¤tigen.";
+                ? "Vorhandenes Core-Incoming gewählt. Mit Übernehmen bestätigen."
+                : $"Vorhandener Core-Ordner gewählt: {relative}. Mit Übernehmen bestätigen.";
         }
     }
 
@@ -244,7 +244,7 @@ public sealed partial class TargetDirectoryDialog : Window
             if (input is not null)
                 input.Text = result.Value;
             if (validation is not null)
-                validation.Text = "Der manuelle Pfad wurde fÃ¼r Core-KompatibilitÃ¤t bereinigt. Bitte prÃ¼fen und erneut auf Ãœbernehmen klicken.";
+                validation.Text = "Der manuelle Pfad wurde für Core-Kompatibilität bereinigt. Bitte prüfen und erneut auf Übernehmen klicken.";
             input?.Focus();
             return;
         }
@@ -359,7 +359,7 @@ public sealed partial class TargetDirectoryDialog : Window
             return string.Empty;
 
         if (!IsAtOrBelowIncoming(current))
-            throw new InvalidOperationException("Core-Pfad liegt auÃŸerhalb von Incoming.");
+            throw new InvalidOperationException("Core-Pfad liegt außerhalb von Incoming.");
 
         return current[(root.Length + 1)..];
     }

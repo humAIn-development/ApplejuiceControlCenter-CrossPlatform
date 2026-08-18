@@ -66,7 +66,7 @@
                    Grid.Row="1"
                    Classes="muted"
                    Margin="0,0,0,6"
-                   Text="Core-Verzeichnisse werden beim Ã–ffnen geladen."
+                   Text="Core-Verzeichnisse werden beim Öffnen geladen."
                    TextWrapping="Wrap" />
 
         <ListBox x:Name="CoreDirectoryList"
@@ -84,12 +84,12 @@
         <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*" Margin="0,8,0,0">
           <Button Grid.Column="0"
                   MinWidth="116"
-                  Content="Ordner Ã¶ffnen"
+                  Content="Ordner öffnen"
                   Click="OpenDirectoryButton_OnClick" />
           <Button Grid.Column="1"
                   MinWidth="164"
                   Margin="8,0,0,0"
-                  Content="Diesen Ordner wÃ¤hlen"
+                  Content="Diesen Ordner wählen"
                   Click="UseCurrentDirectoryButton_OnClick" />
         </Grid>
       </Grid>
@@ -97,13 +97,13 @@
 
     <TextBox x:Name="TargetPathInput"
              Grid.Row="4"
-             PlaceholderText="Relativer Pfad, z. B. Serien/Staffel 01 â€” leer = direkt Incoming" />
+             PlaceholderText="Relativer Pfad, z. B. Serien/Staffel 01 — leer = direkt Incoming" />
 
     <TextBlock x:Name="ValidationText"
                Grid.Row="5"
                Classes="muted"
                Margin="0,9,0,0"
-               Text="Baumauswahl verwendet einen vorhandenen Core-Ordner. Eine manuelle relative Eingabe bleibt mÃ¶glich."
+               Text="Baumauswahl verwendet einen vorhandenen Core-Ordner. Eine manuelle relative Eingabe bleibt möglich."
                TextWrapping="Wrap" />
 
     <Grid Grid.Row="6" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
@@ -114,13 +114,13 @@
       <Button Grid.Column="2"
               MinWidth="96"
               Margin="8,0,0,0"
-              Content="ZurÃ¼ck"
+              Content="Zurück"
               Click="CancelButton_OnClick" />
       <Button Grid.Column="3"
               Classes="primary"
               MinWidth="110"
               Margin="8,0,0,0"
-              Content="Ãœbernehmen"
+              Content="Übernehmen"
               Click="AcceptButton_OnClick" />
     </Grid>
   </Grid>
