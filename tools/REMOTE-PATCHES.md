@@ -8,7 +8,8 @@ Source commits must be created from Martin's local clone so Git author and commi
 
 ## Transport
 
-Issue #3 (`AJCC-X Remote Patch Channel`) contains JSON using schema `AJCC_REMOTE_PATCH_V2`.
+Issue #3 (`AJCC-X Remote Patch Channel`) contains JSON. The bridge accepts legacy schema
+`AJCC_REMOTE_PATCH_V2` and current schema `AJCC_REMOTE_PATCH_V3`.
 
 An active payload contains:
 
@@ -17,7 +18,7 @@ An active payload contains:
 - expected changed file list
 - commit message
 - build/test policy
-- Base64-encoded Git unified diff
+- gzip-compressed, Base64-encoded Git unified diff (`V3`)
 - SHA-256 of the decoded diff
 
 No remote PowerShell code is executed.

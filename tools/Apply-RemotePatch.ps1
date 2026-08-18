@@ -7,7 +7,7 @@ $IssueApiUrl = "https://api.github.com/repos/$Repository/issues/$IssueNumber"
 $ExpectedIssueOwner = "humAIn-development"
 $ExpectedEmail = "ajcc-feedback@martin-bruenig.de"
 $Solution = ".\ApplejuiceControlCenter-CrossPlatform.sln"
-$Schema = "AJCC_REMOTE_PATCH_V2"
+$SupportedSchemas = @("AJCC_REMOTE_PATCH_V2", "AJCC_REMOTE_PATCH_V3")
 
 function Fail([string]$Message) {
     throw $Message
@@ -85,7 +85,7 @@ if ([string]$issue.user.login -ne $ExpectedIssueOwner) {
 }
 
 $payload = ([string]$issue.body) | ConvertFrom-Json
-if ([string]$payload.schema -ne $Schema) {
+if ($SupportedSchemas -notcontains [string]$payload.schema) {
     Fail "Unsupported patch schema: $($payload.schema)"
 }
 
@@ -102,7 +102,12 @@ $commitMessage = [string]$payload.commit_message
 $expectedFiles = @($payload.expected_files | ForEach-Object { ([string]$_).Replace("\", "/") })
 $testProjects = @($payload.test_projects | ForEach-Object { [string]$_ })
 $patchShaExpected = ([string]$payload.patch_sha256).ToLowerInvariant()
-$patchBase64 = [string]$payload.patch_base64
+$patchBase64 = if ([string]$payload.schema -eq "AJCC_REMOTE_PATCH_V3") {
+    [string]$payload.patch_gzip_base64
+}
+else {
+    [string]$payload.patch_base64
+}
 
 if ($patchId -notmatch '^[A-Za-z0-9._-]+$') { Fail "Invalid patch_id." }
 if ([string]::IsNullOrWhiteSpace($targetBranch)) { Fail "Missing target_branch." }
@@ -110,7 +115,7 @@ if ($baseSha -notmatch '^[0-9a-f]{40}$') { Fail "Invalid base_sha." }
 if ([string]::IsNullOrWhiteSpace($commitMessage)) { Fail "Missing commit_message." }
 if ($expectedFiles.Count -eq 0) { Fail "expected_files is empty." }
 if ($patchShaExpected -notmatch '^[0-9a-f]{64}$') { Fail "Invalid patch_sha256." }
-if ([string]::IsNullOrWhiteSpace($patchBase64)) { Fail "patch_base64 is empty." }
+if ([string]::IsNullOrWhiteSpace($patchBase64)) { Fail "Encoded patch payload is empty." }
 
 foreach ($file in $expectedFiles) {
     if ([string]::IsNullOrWhiteSpace($file)) { Fail "Empty expected file path." }
@@ -166,10 +171,29 @@ if (-not [string]::IsNullOrWhiteSpace($description)) {
 }
 
 try {
-    $patchBytes = [System.Convert]::FromBase64String($patchBase64)
+    $encodedPatchBytes = [System.Convert]::FromBase64String($patchBase64)
+    if ([string]$payload.schema -eq "AJCC_REMOTE_PATCH_V3") {
+        $compressedStream = [System.IO.MemoryStream]::new($encodedPatchBytes)
+        $gzipStream = [System.IO.Compression.GZipStream]::new(
+            $compressedStream,
+            [System.IO.Compression.CompressionMode]::Decompress)
+        $decodedStream = [System.IO.MemoryStream]::new()
+        try {
+            $gzipStream.CopyTo($decodedStream)
+            $patchBytes = $decodedStream.ToArray()
+        }
+        finally {
+            $decodedStream.Dispose()
+            $gzipStream.Dispose()
+            $compressedStream.Dispose()
+        }
+    }
+    else {
+        $patchBytes = $encodedPatchBytes
+    }
 }
 catch {
-    Fail "patch_base64 is invalid."
+    Fail "Encoded patch payload is invalid: $($_.Exception.Message)"
 }
 
 $patchShaActual = Get-Sha256Hex $patchBytes
@@ -269,7 +293,7 @@ try {
     }
 
     $state = [pscustomobject]@{
-        schema = $Schema
+        schema = [string]$payload.schema
         patch_id = $patchId
         base_sha = $baseSha
         applied_sha = $newHead
