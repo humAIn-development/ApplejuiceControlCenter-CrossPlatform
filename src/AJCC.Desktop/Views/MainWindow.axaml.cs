@@ -237,11 +237,11 @@ public sealed partial class MainWindow : Window
         string incomingDirectory = _viewModel.CoreIncomingDirectory == "-"
             ? string.Empty
             : _viewModel.CoreIncomingDirectory;
-        TargetDirectoryDialog dialog = new(download.TargetDirectory, incomingDirectory);
+        TargetDirectoryDialog dialog = new(download.TargetDirectory, incomingDirectory, _viewModel.LoadCoreDirectoryAsync);
 
         bool accepted = await dialog.ShowDialog<bool>(this);
         if (accepted)
-            await _viewModel.SetSelectedDownloadTargetDirectoryAsync(dialog.TargetDirectory);
+            await _viewModel.SetSelectedDownloadTargetDirectoryAsync(dialog.TargetDirectory, dialog.SelectedFromCoreBrowser);
     }
 
     private async void DownloadContextCopyAjfsp_OnClick(object? sender, RoutedEventArgs e)

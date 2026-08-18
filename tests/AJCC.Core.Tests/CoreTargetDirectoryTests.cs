@@ -62,4 +62,42 @@ public sealed class CoreTargetDirectoryTests
     {
         Assert.AreEqual(expected, CoreTargetDirectory.DetermineSeparator(path));
     }
-}
+
+    [TestMethod]
+    public void ExistingCoreDirectory_PreservesCoreValidCharacters()
+    {
+        CoreTargetDirectoryNormalizationResult result = CoreTargetDirectory.NormalizeExistingRelative("Movies: Sci-Fi/Staffel?1", '/');
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Movies: Sci-Fi/Staffel?1", result.Value);
+        Assert.IsFalse(result.Changed);
+    }
+
+    [TestMethod]
+    public void ExistingCoreDirectory_NormalizesOnlySeparators()
+    {
+        CoreTargetDirectoryNormalizationResult result = CoreTargetDirectory.NormalizeExistingRelative(@"Serien\Staffel 01", '/');
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Serien/Staffel 01", result.Value);
+        Assert.IsTrue(result.Changed);
+    }
+
+    [DataTestMethod]
+    [DataRow("/home/user/applejuice/incoming/Serie")]
+    [DataRow(@"C:\AJMULTI\Core1\incoming\Serie")]
+    public void ExistingCoreDirectory_RejectsAbsolutePath(string value)
+    {
+        CoreTargetDirectoryNormalizationResult result = CoreTargetDirectory.NormalizeExistingRelative(value, '/');
+
+        Assert.IsFalse(result.Success);
+        Assert.AreEqual(string.Empty, result.Value);
+    }
+
+    [TestMethod]
+    public void ExistingCoreDirectory_RejectsParentTraversal()
+    {
+        CoreTargetDirectoryNormalizationResult result = CoreTargetDirectory.NormalizeExistingRelative("Serien/../Andere", '/');
+
+        Assert.IsFalse(result.Success);
+    }}

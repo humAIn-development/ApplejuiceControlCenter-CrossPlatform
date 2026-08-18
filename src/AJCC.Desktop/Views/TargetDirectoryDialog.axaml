@@ -1,12 +1,15 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="AJCC.Desktop.Views.TargetDirectoryDialog"
+        x:CompileBindings="False"
         Title="Zielverzeichnis setzen"
-        Width="650"
-        Height="330"
-        CanResize="False"
+        Width="760"
+        Height="585"
+        MinWidth="640"
+        MinHeight="500"
+        CanResize="True"
         WindowStartupLocation="CenterOwner">
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="18">
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" Margin="18">
     <TextBlock Text="Core-Zielverzeichnis"
                FontSize="17"
                FontWeight="SemiBold" />
@@ -14,7 +17,7 @@
     <TextBlock Grid.Row="1"
                Classes="muted"
                Margin="0,6,0,12"
-               Text="Der Pfad wird vom verbundenen Core interpretiert. Das lokale Dateisystem dieser GUI wird nicht verwendet."
+               Text="Die Ordnerliste wird direkt vom verbundenen Core gelesen. Das lokale Dateisystem dieser GUI wird nicht verwendet."
                TextWrapping="Wrap" />
 
     <Border Grid.Row="2" Classes="panel" Padding="10" Margin="0,0,0,12">
@@ -26,7 +29,7 @@
                    TextTrimming="CharacterEllipsis" />
         <TextBlock Grid.Row="1"
                    Classes="muted"
-                   Text="Relativer Zielpfad"
+                   Text="Aktuelles Ziel"
                    Margin="0,8,12,0" />
         <TextBlock x:Name="CurrentTargetText"
                    Grid.Row="1"
@@ -36,17 +39,74 @@
       </Grid>
     </Border>
 
+    <Border Grid.Row="3" Classes="panel" Padding="10" Margin="0,0,0,12">
+      <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+          <StackPanel>
+            <TextBlock Text="Vorhandene Ordner auf dem verbundenen Core"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="CurrentCorePathText"
+                       Classes="muted"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1"
+                  MinWidth="112"
+                  Margin="8,0,0,0"
+                  Content="Eine Ebene hoch"
+                  Click="UpDirectoryButton_OnClick" />
+          <Button Grid.Column="2"
+                  MinWidth="96"
+                  Margin="8,0,0,0"
+                  Content="Neu laden"
+                  Click="ReloadDirectoryButton_OnClick" />
+        </Grid>
+
+        <TextBlock x:Name="DirectoryStatusText"
+                   Grid.Row="1"
+                   Classes="muted"
+                   Margin="0,0,0,6"
+                   Text="Core-Verzeichnisse werden beim Ã–ffnen geladen."
+                   TextWrapping="Wrap" />
+
+        <ListBox x:Name="CoreDirectoryList"
+                 Grid.Row="2"
+                 MinHeight="205"
+                 ItemsSource="{Binding Directories}"
+                 SelectionMode="Single">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+          <Button Grid.Column="0"
+                  MinWidth="116"
+                  Content="Ordner Ã¶ffnen"
+                  Click="OpenDirectoryButton_OnClick" />
+          <Button Grid.Column="1"
+                  MinWidth="164"
+                  Margin="8,0,0,0"
+                  Content="Diesen Ordner wÃ¤hlen"
+                  Click="UseCurrentDirectoryButton_OnClick" />
+        </Grid>
+      </Grid>
+    </Border>
+
     <TextBox x:Name="TargetPathInput"
-             Grid.Row="3"
-             PlaceholderText="z. B. Serien/Staffel 01 — leer = direkt Incoming" />
+             Grid.Row="4"
+             PlaceholderText="Relativer Pfad, z. B. Serien/Staffel 01 â€” leer = direkt Incoming" />
 
     <TextBlock x:Name="ValidationText"
-               Grid.Row="4"
+               Grid.Row="5"
                Classes="muted"
                Margin="0,9,0,0"
+               Text="Baumauswahl verwendet einen vorhandenen Core-Ordner. Eine manuelle relative Eingabe bleibt mÃ¶glich."
                TextWrapping="Wrap" />
 
-    <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
+    <Grid Grid.Row="6" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
       <Button Grid.Column="0"
               MinWidth="132"
               Content="Direkt Incoming"
@@ -54,13 +114,13 @@
       <Button Grid.Column="2"
               MinWidth="96"
               Margin="8,0,0,0"
-              Content="Zurück"
+              Content="ZurÃ¼ck"
               Click="CancelButton_OnClick" />
       <Button Grid.Column="3"
               Classes="primary"
               MinWidth="110"
               Margin="8,0,0,0"
-              Content="Übernehmen"
+              Content="Ãœbernehmen"
               Click="AcceptButton_OnClick" />
     </Grid>
   </Grid>

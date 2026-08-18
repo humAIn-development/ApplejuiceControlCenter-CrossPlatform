@@ -77,6 +77,42 @@ public static class CoreTargetDirectory
         return new CoreTargetDirectoryNormalizationResult(true, normalized, changed, string.Empty);
     }
 
+    public static CoreTargetDirectoryNormalizationResult NormalizeExistingRelative(string? value, char separator)
+    {
+        char safeSeparator = separator is '/' or '\\' ? separator : '\\';
+        string original = value ?? string.Empty;
+        string raw = original.Trim().Trim('"');
+
+        if (raw.Length == 0)
+            return new CoreTargetDirectoryNormalizationResult(true, string.Empty, original.Length != 0, string.Empty);
+
+        if (LooksAbsolute(raw))
+        {
+            return new CoreTargetDirectoryNormalizationResult(
+                false,
+                string.Empty,
+                false,
+                "Der ausgewÃ¤hlte Core-Pfad muss relativ unterhalb des Core-Incoming-Verzeichnisses liegen.");
+        }
+
+        string[] parts = raw
+            .Replace('\\', safeSeparator)
+            .Replace('/', safeSeparator)
+            .Split(safeSeparator, StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Any(part => part is "." or ".."))
+        {
+            return new CoreTargetDirectoryNormalizationResult(
+                false,
+                string.Empty,
+                false,
+                "'.' und '..' sind im Core-Zielpfad nicht zulÃ¤ssig.");
+        }
+
+        string normalized = string.Join(safeSeparator, parts);
+        bool changed = !string.Equals(raw, normalized, StringComparison.Ordinal);
+        return new CoreTargetDirectoryNormalizationResult(true, normalized, changed, string.Empty);
+    }
     private static bool LooksAbsolute(string value)
     {
         if (value.StartsWith("/", StringComparison.Ordinal) || value.StartsWith("\\", StringComparison.Ordinal))

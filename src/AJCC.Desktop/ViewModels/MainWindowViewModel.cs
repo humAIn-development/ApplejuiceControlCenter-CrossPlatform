@@ -176,6 +176,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string SearchCountText => _state?.Searches.Count.ToString("N0") ?? "0";
     public string CoreTimestampText => _state is null || _state.LastTimestamp <= 0 ? "-" : _state.LastTimestamp.ToString();
 
+    public async Task<AjDirectoryListResult> LoadCoreDirectoryAsync(string? directory)
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        if (!IsConnected || client is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+
+        string xml = await client.GetDirectoryXmlAsync(directory).ConfigureAwait(true);
+        return AjXmlParser.ParseDirectoryList(xml);
+    }
     public async Task ToggleConnectionAsync(string password)
     {
         ThrowIfDisposed();
@@ -293,7 +303,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public async Task SetSelectedDownloadTargetDirectoryAsync(string targetDirectory)
+    public async Task SetSelectedDownloadTargetDirectoryAsync(string targetDirectory, bool existingCoreDirectory = false)
     {
         ThrowIfDisposed();
         AjDownload? download = SelectedDownload;
@@ -306,7 +316,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             state.Settings.IncomingDirectory,
             download.TargetDirectory,
             targetDirectory);
-        CoreTargetDirectoryNormalizationResult normalization = CoreTargetDirectory.NormalizeRelative(targetDirectory, separator);
+        CoreTargetDirectoryNormalizationResult normalization = existingCoreDirectory
+            ? CoreTargetDirectory.NormalizeExistingRelative(targetDirectory, separator)
+            : CoreTargetDirectory.NormalizeRelative(targetDirectory, separator);
         if (!normalization.Success)
         {
             StatusText = "Zielverzeichnis ungültig: " + normalization.ErrorMessage;
