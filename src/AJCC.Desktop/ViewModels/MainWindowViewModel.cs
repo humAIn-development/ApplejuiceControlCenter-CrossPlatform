@@ -16,6 +16,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly HostIncomingDirectoryPreparer _incomingDirectoryPreparer = new();
     private readonly LocalIncomingMappingStore _mappingStore = new();
+    private readonly ServerReconnectRestrictionStore _serverReconnectRestrictionStore = new();
     private readonly ServerReconnectRestrictionState _serverReconnectRestriction = new();
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
@@ -23,6 +24,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private AjState? _state;
     private string _endpointText = "http://127.0.0.1:8851/";
     private string _localIncomingMappingText = string.Empty;
+    private string _serverReconnectRestrictionEndpoint = string.Empty;
     private string _statusText = "Nicht verbunden";
     private string _coreVersion = "-";
     private string _searchText = string.Empty;
@@ -263,6 +265,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 hasExactCountdown: true,
                 targetServerId: server.Id,
                 nowUtc: nowUtc);
+            PersistServerReconnectRestrictionState();
         }
 
         IsBusy = true;
@@ -279,6 +282,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     hasExactCountdown: false,
                     targetServerId: server.Id,
                     nowUtc: DateTimeOffset.UtcNow);
+                PersistServerReconnectRestrictionState();
                 int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
                 StatusText = $"Core meldet Reconnect-Sperre: noch ca. {minutes} Minuten. Ziel: {server.Name}";
                 return;
@@ -611,6 +615,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _httpClient = httpClient;
             _client = client;
             _state = bootstrap.State;
+            _serverReconnectRestrictionEndpoint = endpoint.BaseUri.ToString();
+            RestoreServerReconnectRestrictionState(DateTimeOffset.UtcNow);
+            RefreshServerReconnectRestrictionState(DateTimeOffset.UtcNow);
             CoreVersion = string.IsNullOrWhiteSpace(bootstrap.CoreVersion) ? "unbekannt" : bootstrap.CoreVersion;
 
             _polling = new AjPollingService(client);
@@ -712,6 +719,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         _state = null;
+        _serverReconnectRestriction.Clear();
+        _serverReconnectRestrictionEndpoint = string.Empty;
         SelectedDownload = null;
         SelectedSearchEntry = null;
         SelectedSearch = null;
@@ -748,15 +757,49 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private void RestoreServerReconnectRestrictionState(DateTimeOffset nowUtc)
+    {
+        _serverReconnectRestriction.Clear();
+        if (string.IsNullOrWhiteSpace(_serverReconnectRestrictionEndpoint))
+            return;
+
+        if (!_serverReconnectRestrictionStore.TryLoad(
+                _serverReconnectRestrictionEndpoint,
+                out ServerReconnectRestrictionSnapshot snapshot,
+                out _))
+        {
+            return;
+        }
+
+        if (!ServerReconnectRestrictionSnapshots.Restore(_serverReconnectRestriction, snapshot, nowUtc)
+            && snapshot.IsMarked)
+        {
+            PersistServerReconnectRestrictionState();
+        }
+    }
+
+    private void PersistServerReconnectRestrictionState()
+    {
+        if (string.IsNullOrWhiteSpace(_serverReconnectRestrictionEndpoint))
+            return;
+
+        _serverReconnectRestrictionStore.TrySave(
+            _serverReconnectRestrictionEndpoint,
+            ServerReconnectRestrictionSnapshots.Capture(_serverReconnectRestriction),
+            out _);
+    }
+
     private void RefreshServerReconnectRestrictionState(DateTimeOffset nowUtc)
     {
         if (_state is not null
             && _serverReconnectRestriction.ClearIfConnected(_state.NetworkInfo.ConnectedWithServerId))
         {
+            PersistServerReconnectRestrictionState();
             return;
         }
 
-        _serverReconnectRestriction.ClearIfExpired(nowUtc);
+        if (_serverReconnectRestriction.ClearIfExpired(nowUtc))
+            PersistServerReconnectRestrictionState();
     }
 
     private void PollingOnConnectionDegraded(int errors, string message)
