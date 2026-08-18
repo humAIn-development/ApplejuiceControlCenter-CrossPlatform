@@ -114,6 +114,38 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task ServerLogin_UsesGetWithServerId()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.ServerLoginAsync(77);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/serverlogin", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=77");
+    }
+
+    [TestMethod]
+    public async Task RemoveServer_UsesGetWithServerId()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.RemoveServerAsync(88);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/removeserver", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=88");
+    }
+
+    [TestMethod]
     public async Task ProcessLink_UsesEndpointEncodingAndParsesAcceptedResponse()
     {
         const string link = "ajfsp://file|demo file.bin|0123456789abcdef0123456789abcdef|12345/";

@@ -115,6 +115,18 @@ public sealed class AppleJuiceCoreClient
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "dir" },
             cancellationToken);
 
+    public Task<string> ServerLoginAsync(long id, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.ServerLogin,
+            new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
+    public Task<string> RemoveServerAsync(long id, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.RemoveServer,
+            new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
     public async Task<string> ProcessLinkAsync(
         string link,
         AjCoreCompatibilityProfile? compatibilityProfile = null,
