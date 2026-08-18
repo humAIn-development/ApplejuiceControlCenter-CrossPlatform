@@ -221,6 +221,53 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await ConnectAsync(password).ConfigureAwait(true);
     }
 
+    public ServerReconnectEvaluation EvaluateServerLogin(AjServer server)
+    {
+        ThrowIfDisposed();
+        AjState? state = _state;
+        if (!IsConnected || state is null)
+            return default;
+
+        return ServerReconnectPolicy.EvaluateLogin(
+            state.NetworkInfo.ConnectedWithServerId,
+            server.Id,
+            state.NetworkInfo.ConnectedSince,
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+    }
+
+    public async Task LoginServerAsync(AjServer server)
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        if (!IsConnected || IsBusy || client is null)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Fordere Serverlogin an: {server.Name}";
+
+        try
+        {
+            string response = await client.ServerLoginAsync(server.Id).ConfigureAwait(true);
+            if (ServerReconnectPolicy.LooksLikeRestrictionResponse(response))
+            {
+                TimeSpan remaining = ServerReconnectPolicy.ExtractRestrictionRemaining(response);
+                int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+                StatusText = $"Core meldet Reconnect-Sperre: noch ca. {minutes} Minuten. Ziel: {server.Name}";
+                return;
+            }
+
+            StatusText = $"Serverlogin angefordert: {server.Name}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Serverlogin fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task RemoveServerAsync(AjServer server)
     {
         ThrowIfDisposed();

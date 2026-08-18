@@ -252,6 +252,8 @@
                       ContextRequested="ServerRow_OnContextRequested">
                   <Grid.ContextMenu>
                     <ContextMenu>
+                      <MenuItem Header="Verbinden" Click="ServerContextLogin_OnClick" />
+                      <Separator />
                       <MenuItem Header="Server entfernen" Click="ServerContextRemove_OnClick" />
                     </ContextMenu>
                   </Grid.ContextMenu>

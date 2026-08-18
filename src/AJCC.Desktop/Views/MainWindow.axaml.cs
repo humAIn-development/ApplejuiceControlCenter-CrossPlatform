@@ -189,6 +189,38 @@ public sealed partial class MainWindow : Window
             _selectedServerForContext = server;
     }
 
+    private async void ServerContextLogin_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedServerForContext is not { } server || !_viewModel.IsConnected || _viewModel.IsBusy)
+            return;
+
+        var evaluation = _viewModel.EvaluateServerLogin(server);
+        if (evaluation.RequiresConfirmation)
+        {
+            int waitMinutes = Math.Max(1, (int)Math.Ceiling(evaluation.RecommendedWait.TotalMinutes));
+            string connectedForText = evaluation.ConnectedFor.TotalMinutes >= 1
+                ? $"{(int)evaluation.ConnectedFor.TotalMinutes} Min. {evaluation.ConnectedFor.Seconds} Sek."
+                : $"{Math.Max(0, (int)evaluation.ConnectedFor.TotalSeconds)} Sek.";
+
+            ConfirmDialog dialog = new(
+                "Serverwechsel-Warnung",
+                "Der Core ist noch keine 30 Minuten mit dem aktuellen Server verbunden.\n\n" +
+                $"Zielserver: {server.Name} / ID {server.Id}\n" +
+                $"Aktuelle Verbindungsdauer: {connectedForText}\n\n" +
+                "Zu viele Serverwechsel in kurzer Zeit können eine 30-Minuten-Reconnect-Sperre auslösen.\n" +
+                $"Empfehlung: noch ca. {waitMinutes} Minuten warten.\n\n" +
+                "Trotzdem jetzt einen Serverlogin versuchen?",
+                "Trotzdem verbinden",
+                "Abbrechen");
+
+            bool confirmed = await dialog.ShowDialog<bool>(this);
+            if (!confirmed)
+                return;
+        }
+
+        await _viewModel.LoginServerAsync(server);
+    }
+
     private async void ServerContextRemove_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_selectedServerForContext is { } server)
