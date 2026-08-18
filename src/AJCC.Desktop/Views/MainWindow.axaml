@@ -26,7 +26,7 @@
     <Border Grid.Row="0"
             Classes="panel"
             Padding="10">
-      <Grid ColumnDefinitions="Auto,2.3*,1.2*,Auto">
+      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,2.3*,1.2*,Auto">
         <Border Grid.Column="0"
                 Classes="connectionBadge"
                 Classes.online="{Binding IsConnected}"
@@ -67,6 +67,20 @@
                 IsEnabled="{Binding CanToggleConnection}"
                 Content="{Binding ConnectButtonText}"
                 Click="ConnectButton_OnClick" />
+
+        <TextBlock Grid.Row="1"
+                   Grid.Column="0"
+                   Classes="muted"
+                   Margin="2,10,10,0"
+                   VerticalAlignment="Center"
+                   Text="Incoming-Mapping" />
+        <TextBox Grid.Row="1"
+                 Grid.Column="1"
+                 Grid.ColumnSpan="3"
+                 Margin="0,8,0,0"
+                 IsEnabled="{Binding CanEditConnectionSettings}"
+                 PlaceholderText="Optional: lokales/gemountetes Abbild des Core-Incoming (z. B. Z:\ oder /mnt/applejuice-incoming)"
+                 Text="{Binding LocalIncomingMappingText}" />
       </Grid>
     </Border>
 

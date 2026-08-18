@@ -6,17 +6,22 @@ using AJCC.Core.Models;
 using AJCC.Core.Parsers;
 using AJCC.Core.Protocol;
 using AJCC.Core.Services;
+using AJCC.Desktop.Platform;
+using AJCC.Desktop.Services;
 using Avalonia.Threading;
 
 namespace AJCC.Desktop.ViewModels;
 
 public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
+    private readonly HostIncomingDirectoryPreparer _incomingDirectoryPreparer = new();
+    private readonly LocalIncomingMappingStore _mappingStore = new();
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
     private AjState? _state;
     private string _endpointText = "http://127.0.0.1:8851/";
+    private string _localIncomingMappingText = string.Empty;
     private string _statusText = "Nicht verbunden";
     private string _coreVersion = "-";
     private string _searchText = string.Empty;
@@ -29,10 +34,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public MainWindowViewModel()
+    {
+        _localIncomingMappingText = _mappingStore.Get(_endpointText);
+    }
+
     public string EndpointText
     {
         get => _endpointText;
-        set => SetField(ref _endpointText, value ?? string.Empty);
+        set
+        {
+            string next = value ?? string.Empty;
+            if (!SetField(ref _endpointText, next))
+                return;
+
+            LocalIncomingMappingText = _mappingStore.Get(next);
+        }
+    }
+
+    public string LocalIncomingMappingText
+    {
+        get => _localIncomingMappingText;
+        set => SetField(ref _localIncomingMappingText, value ?? string.Empty);
     }
 
     public string StatusText
@@ -326,11 +349,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         string displayTarget = normalization.Value.Length == 0 ? "Incoming" : normalization.Value;
+        bool needsDeepPreparation = !existingCoreDirectory
+            && normalization.Value
+                .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Length > 1;
+
         IsBusy = true;
-        StatusText = $"Setze Core-Zielverzeichnis: {displayTarget}";
 
         try
         {
+            if (needsDeepPreparation)
+            {
+                StatusText = $"Bereite lokale Zielordnerstruktur vor: {displayTarget}";
+                HostIncomingDirectoryPreparationResult preparation = _incomingDirectoryPreparer.Prepare(
+                    LocalIncomingMappingText,
+                    normalization.Value);
+                if (!preparation.Success)
+                {
+                    StatusText = "Zielverzeichnis konnte nicht vorbereitet werden: " + preparation.ErrorMessage;
+                    return;
+                }
+            }
+
+            StatusText = $"Setze Core-Zielverzeichnis: {displayTarget}";
             await client.SetTargetDirAsync(download.Id, normalization.Value).ConfigureAwait(true);
             StatusText = $"Zielverzeichnis angefordert: {displayTarget}";
         }
@@ -452,6 +493,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await DisconnectInternalAsync(clearState: true).ConfigureAwait(true);
 
             CoreEndpoint endpoint = CoreEndpoint.Parse(EndpointText);
+            _mappingStore.TrySave(endpoint.BaseUri.ToString(), LocalIncomingMappingText, out _);
             HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
             AppleJuiceCoreClient client = new(endpoint, password ?? string.Empty, httpClient);
 
