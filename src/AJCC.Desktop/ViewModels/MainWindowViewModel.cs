@@ -16,6 +16,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly HostIncomingDirectoryPreparer _incomingDirectoryPreparer = new();
     private readonly LocalIncomingMappingStore _mappingStore = new();
+    private readonly ServerReconnectRestrictionState _serverReconnectRestriction = new();
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
@@ -235,12 +236,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     }
 
-    public async Task LoginServerAsync(AjServer server)
+    public async Task LoginServerAsync(AjServer server, bool rapidSwitchConfirmed = false)
     {
         ThrowIfDisposed();
         AppleJuiceCoreClient? client = _client;
         if (!IsConnected || IsBusy || client is null)
             return;
+
+        DateTimeOffset nowUtc = DateTimeOffset.UtcNow;
+        RefreshServerReconnectRestrictionState(nowUtc);
+        if (_serverReconnectRestriction.IsActive(nowUtc))
+        {
+            TimeSpan remaining = _serverReconnectRestriction.GetRemaining(nowUtc);
+            int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+            string remainingText = _serverReconnectRestriction.HasExactCountdown
+                ? $"noch ca. {minutes} Minuten"
+                : $"noch bis zu ca. {minutes} Minuten";
+            StatusText = $"Serverlogin blockiert: lokale Reconnect-Sperre ({remainingText}). Ziel: {server.Name}";
+            return;
+        }
+
+        if (rapidSwitchConfirmed)
+        {
+            _serverReconnectRestriction.Mark(
+                ServerReconnectPolicy.RestrictionWindow,
+                hasExactCountdown: true,
+                targetServerId: server.Id,
+                nowUtc: nowUtc);
+        }
 
         IsBusy = true;
         StatusText = $"Fordere Serverlogin an: {server.Name}";
@@ -251,6 +274,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (ServerReconnectPolicy.LooksLikeRestrictionResponse(response))
             {
                 TimeSpan remaining = ServerReconnectPolicy.ExtractRestrictionRemaining(response);
+                _serverReconnectRestriction.Mark(
+                    remaining,
+                    hasExactCountdown: false,
+                    targetServerId: server.Id,
+                    nowUtc: DateTimeOffset.UtcNow);
                 int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
                 StatusText = $"Core meldet Reconnect-Sperre: noch ca. {minutes} Minuten. Ziel: {server.Name}";
                 return;
@@ -702,6 +730,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (result.CoreTimestamp > 0)
                 _state.LastTimestamp = result.CoreTimestamp;
 
+            RefreshServerReconnectRestrictionState(DateTimeOffset.UtcNow);
+
             if (SelectedDownload is not null && !_state.Downloads.Any(download => download.Id == SelectedDownload.Id))
                 SelectedDownload = null;
 
@@ -716,6 +746,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             RaiseStateProperties();
         });
+    }
+
+    private void RefreshServerReconnectRestrictionState(DateTimeOffset nowUtc)
+    {
+        if (_state is not null
+            && _serverReconnectRestriction.ClearIfConnected(_state.NetworkInfo.ConnectedWithServerId))
+        {
+            return;
+        }
+
+        _serverReconnectRestriction.ClearIfExpired(nowUtc);
     }
 
     private void PollingOnConnectionDegraded(int errors, string message)

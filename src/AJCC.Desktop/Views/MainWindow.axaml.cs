@@ -194,6 +194,7 @@ public sealed partial class MainWindow : Window
         if (_selectedServerForContext is not { } server || !_viewModel.IsConnected || _viewModel.IsBusy)
             return;
 
+        bool rapidSwitchConfirmed = false;
         var evaluation = _viewModel.EvaluateServerLogin(server);
         if (evaluation.RequiresConfirmation)
         {
@@ -216,9 +217,11 @@ public sealed partial class MainWindow : Window
             bool confirmed = await dialog.ShowDialog<bool>(this);
             if (!confirmed)
                 return;
+
+            rapidSwitchConfirmed = true;
         }
 
-        await _viewModel.LoginServerAsync(server);
+        await _viewModel.LoginServerAsync(server, rapidSwitchConfirmed);
     }
 
     private async void ServerContextRemove_OnClick(object? sender, RoutedEventArgs e)
