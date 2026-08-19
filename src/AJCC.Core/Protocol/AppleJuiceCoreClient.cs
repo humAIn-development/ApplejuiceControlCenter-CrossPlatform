@@ -52,6 +52,12 @@ public sealed class AppleJuiceCoreClient
         return GetXmlAsync(AjEndpoints.Directory, parameters, cancellationToken);
     }
 
+    public Task<string> GetDownloadPartListXmlAsync(long id, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.DownloadPartList,
+            new Dictionary<string, string> { ["id"] = id.ToString(CultureInfo.InvariantCulture) },
+            cancellationToken);
+
     public Task<string> GetModifiedXmlAsync(long timestamp, string? sessionId = null, string? filter = null, CancellationToken cancellationToken = default)
     {
         Dictionary<string, string> parameters = new()
