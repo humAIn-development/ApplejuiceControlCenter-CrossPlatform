@@ -384,6 +384,37 @@ public sealed class AjUpload
     public string ProgressPercentText => UploadSize > 0 || Loaded > 0 ? $"{ProgressPercent:0.0} %" : "-";
     public string WatermarkText => Loaded > 0 ? $"{Loaded:0.0} %" : ProgressPercentText;
     public string ClientText => string.IsNullOrWhiteSpace(Version) ? "-" : Version;
+    public string LastConnectionText
+    {
+        get
+        {
+            if (LastConnection <= 0)
+                return "-";
+
+            try
+            {
+                if (LastConnection > 10_000_000_000L)
+                    return DateTimeOffset.FromUnixTimeMilliseconds(LastConnection).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
+
+                if (LastConnection > 1_000_000_000L)
+                    return DateTimeOffset.FromUnixTimeSeconds(LastConnection).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
+
+                TimeSpan age = TimeSpan.FromSeconds(LastConnection);
+                if (age.TotalDays >= 1)
+                    return $"vor {(int)age.TotalDays} d";
+                if (age.TotalHours >= 1)
+                    return $"vor {(int)age.TotalHours} h";
+                if (age.TotalMinutes >= 1)
+                    return $"vor {(int)age.TotalMinutes} min";
+
+                return "gerade eben";
+            }
+            catch
+            {
+                return "-";
+            }
+        }
+    }
 
     private static string GetFileNameOnly(string value)
     {
