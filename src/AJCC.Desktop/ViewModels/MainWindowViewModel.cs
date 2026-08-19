@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using AJCC.Core.Helpers;
 using AJCC.Core.Links;
@@ -215,6 +216,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public IEnumerable<AjDownload> Downloads => _state is null ? Array.Empty<AjDownload>() : _state.Downloads;
     public IEnumerable<AjUpload> Uploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads;
+    public IEnumerable<AjUpload> ActiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => upload.IsActiveTransfer);
+    public IEnumerable<AjUpload> InactiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => !upload.IsActiveTransfer);
     public IEnumerable<AjServer> Servers => _state is null ? Array.Empty<AjServer>() : _state.Servers;
     public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
@@ -1122,6 +1125,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         UpdateServerCoreStates();
         OnPropertyChanged(nameof(Downloads));
         OnPropertyChanged(nameof(Uploads));
+        OnPropertyChanged(nameof(ActiveUploads));
+        OnPropertyChanged(nameof(InactiveUploads));
         OnPropertyChanged(nameof(Servers));
         OnPropertyChanged(nameof(Searches));
         OnPropertyChanged(nameof(SelectedDownloadText));
