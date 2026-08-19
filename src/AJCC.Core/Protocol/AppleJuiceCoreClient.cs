@@ -115,6 +115,16 @@ public sealed class AppleJuiceCoreClient
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "dir" },
             cancellationToken);
 
+    public Task<string> SetPowerDownloadAsync(long id, int powerDownload, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.SetPowerDownload,
+            new Dictionary<string, string>
+            {
+                ["id"] = id.ToString(CultureInfo.InvariantCulture),
+                ["Powerdownload"] = powerDownload.ToString(CultureInfo.InvariantCulture)
+            },
+            cancellationToken);
+
     public Task<string> CleanDownloadListAsync(CancellationToken cancellationToken = default)
         => GetXmlAsync(AjEndpoints.CleanDownloadList, null, cancellationToken);
 

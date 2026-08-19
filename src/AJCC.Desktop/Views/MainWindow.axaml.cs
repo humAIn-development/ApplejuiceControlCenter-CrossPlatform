@@ -138,8 +138,9 @@ public sealed partial class MainWindow : Window
         bool canClean = _viewModel.CanCleanDownloadList;
         bool canRename = _viewModel.CanRenameSelectedDownload;
         bool canSetTargetDirectory = _viewModel.CanSetTargetDirectorySelectedDownload;
+        bool canSetPowerDownload = _viewModel.CanSetPowerDownloadSelectedDownload;
         bool hasControlActions = canPause || canResume || canCancel || canClean;
-        bool hasMetadataActions = canRename || canSetTargetDirectory;
+        bool hasMetadataActions = canRename || canSetTargetDirectory || canSetPowerDownload;
         int separatorIndex = 0;
 
         foreach (object? rawItem in menu.Items)
@@ -155,6 +156,8 @@ public sealed partial class MainWindow : Window
                     "Fertige/abgebrochene Downloads entfernen" => canClean,
                     "Umbenennen…" => canRename,
                     "Zielverzeichnis setzen…" => canSetTargetDirectory,
+                    "Powerdownload setzen…" => canSetPowerDownload,
+                    "Powerdownload löschen" => canSetPowerDownload,
                     _ => true
                 };
                 continue;
@@ -250,6 +253,12 @@ public sealed partial class MainWindow : Window
     private async void DownloadContextSetTargetDirectory_OnClick(object? sender, RoutedEventArgs e)
         => await SetSelectedDownloadTargetDirectoryWithDialogAsync();
 
+    private async void DownloadContextSetPowerDownload_OnClick(object? sender, RoutedEventArgs e)
+        => await SetSelectedDownloadPowerDownloadWithDialogAsync();
+
+    private async void DownloadContextClearPowerDownload_OnClick(object? sender, RoutedEventArgs e)
+        => await _viewModel.ClearSelectedDownloadPowerDownloadAsync();
+
     private async void SearchResultContextDownload_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
 
@@ -286,6 +295,27 @@ public sealed partial class MainWindow : Window
         bool accepted = await dialog.ShowDialog<bool>(this);
         if (accepted)
             await _viewModel.RenameSelectedDownloadAsync(dialog.TextValue);
+    }
+
+    private async Task SetSelectedDownloadPowerDownloadWithDialogAsync()
+    {
+        AjDownload? download = _viewModel.SelectedDownload;
+        if (download is null || !_viewModel.CanSetPowerDownloadSelectedDownload)
+            return;
+
+        double currentFactor = download.PowerDownload <= 0
+            ? 2.2
+            : AjDownload.PowerDownloadRawToFactor(download.PowerDownload);
+        TextPromptDialog dialog = new(
+            "Powerdownload setzen",
+            "Faktor 2,2 bis 50,0:",
+            currentFactor.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture),
+            "Punkt oder Komma sind erlaubt. Werte außerhalb des Core-Bereichs werden begrenzt.",
+            "Setzen");
+
+        bool accepted = await dialog.ShowDialog<bool>(this);
+        if (accepted)
+            await _viewModel.SetSelectedDownloadPowerDownloadAsync(dialog.TextValue);
     }
 
     private async Task SetSelectedDownloadTargetDirectoryWithDialogAsync()

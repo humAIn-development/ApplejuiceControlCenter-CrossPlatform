@@ -205,6 +205,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanResumeSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanResume(SelectedDownload);
     public bool CanCancelSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanCancel(SelectedDownload);
     public bool CanCleanDownloadList => IsConnected && !IsBusy && _state is not null && _state.Downloads.Any(DownloadActionSemantics.IsTerminal);
+    public bool CanSetPowerDownloadSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanRenameSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanSetTargetDirectorySelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanDownloadSelectedSearchEntry => IsConnected && !IsBusy && IsValidSearchEntryForDownload(SelectedSearchEntry);
@@ -474,6 +475,80 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Downloadliste konnte nicht bereinigt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task SetSelectedDownloadPowerDownloadAsync(string factorText)
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        if (download is null || client is null || !CanSetPowerDownloadSelectedDownload)
+            return;
+
+        string input = (factorText ?? string.Empty).Trim().Replace(',', '.');
+        if (!double.TryParse(
+                input,
+                System.Globalization.NumberStyles.AllowDecimalPoint,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out double factor)
+            || factor <= 1.0)
+        {
+            StatusText = "Powerdownload-Faktor ungültig. Erwartet: 2,2 bis 50,0.";
+            return;
+        }
+
+        int rawPowerDownload = AjDownload.PowerDownloadFactorToRaw(factor);
+        if (rawPowerDownload <= 0)
+        {
+            StatusText = "Powerdownload-Faktor ungültig. Erwartet: 2,2 bis 50,0.";
+            return;
+        }
+
+        double normalizedFactor = AjDownload.PowerDownloadRawToFactor(rawPowerDownload);
+        IsBusy = true;
+        StatusText = $"Setze Powerdownload Faktor {normalizedFactor:0.0}: {download.DisplayFilename}";
+
+        try
+        {
+            await client.SetPowerDownloadAsync(download.Id, rawPowerDownload).ConfigureAwait(true);
+            download.PowerDownload = rawPowerDownload;
+            StatusText = $"Powerdownload gesetzt: Faktor {normalizedFactor:0.0} · {download.DisplayFilename}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Powerdownload konnte nicht gesetzt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ClearSelectedDownloadPowerDownloadAsync()
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        if (download is null || client is null || !CanSetPowerDownloadSelectedDownload)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Lösche Powerdownload: {download.DisplayFilename}";
+
+        try
+        {
+            await client.SetPowerDownloadAsync(download.Id, 0).ConfigureAwait(true);
+            download.PowerDownload = 0;
+            StatusText = $"Powerdownload gelöscht: {download.DisplayFilename}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Powerdownload konnte nicht gelöscht werden: " + ex.Message;
         }
         finally
         {

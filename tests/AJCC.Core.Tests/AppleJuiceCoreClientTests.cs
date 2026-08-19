@@ -114,6 +114,23 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task SetPowerDownload_UsesHistoricalParameterNames()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.SetPowerDownloadAsync(1234, 37);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/setpowerdownload", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=1234");
+        StringAssert.Contains(query, "Powerdownload=37");
+    }
+
+    [TestMethod]
     public async Task CleanDownloadList_UsesGetWithoutDownloadId()
     {
         RecordingHandler handler = new("OK");
