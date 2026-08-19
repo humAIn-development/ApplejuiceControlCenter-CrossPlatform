@@ -268,7 +268,13 @@ public sealed partial class MainWindow : Window
             return;
 
         var partList = result.Value;
-        PartListDialog dialog = new(partList.Filename, partList.FileSize, partList.Parts);
+        PartListDialog dialog = new(
+            partList.Filename,
+            partList.FileSize,
+            partList.Parts,
+            partList.SourcePartListCount,
+            partList.SourceCandidateCount,
+            partList.SourceErrorCount);
         await dialog.ShowDialog<bool>(this);
     }
 

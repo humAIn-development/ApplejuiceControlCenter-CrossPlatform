@@ -21,7 +21,13 @@ public sealed partial class PartListDialog : Window
         InitializeComponent();
     }
 
-    public PartListDialog(string filename, long fileSize, IReadOnlyList<AjPart> parts)
+    public PartListDialog(
+        string filename,
+        long fileSize,
+        IReadOnlyList<AjPart> parts,
+        int sourcePartListCount = 0,
+        int sourceCandidateCount = 0,
+        int sourceErrorCount = 0)
         : this()
     {
         string displayName = string.IsNullOrWhiteSpace(filename) ? "unbekannte Datei" : filename;
@@ -40,8 +46,14 @@ public sealed partial class PartListDialog : Window
 
         if (summaryText is not null)
         {
+            string sourceSummary = sourceCandidateCount <= 0
+                ? "keine Quellenpartlisten"
+                : $"Quellenpartlisten {sourcePartListCount:N0}/{sourceCandidateCount:N0}";
+            if (sourceErrorCount > 0)
+                sourceSummary += $", Fehler {sourceErrorCount:N0}";
+
             summaryText.Text =
-                $"{DisplayFormatHelper.Bytes(fileSize)} · {segments.Count:N0} Anzeigeblöcke · geladen ca. {loadedPercent:N1} %\n" +
+                $"{DisplayFormatHelper.Bytes(fileSize)} · {segments.Count:N0} Anzeigeblöcke · geladen ca. {loadedPercent:N1} % · {sourceSummary}\n" +
                 "Grün: geladen · Blau: wird geladen · Gelb: 1 Quelle · Rot: mehrere Quellen · Schwarz: nicht geladen";
         }
 

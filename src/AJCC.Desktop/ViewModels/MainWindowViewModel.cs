@@ -288,7 +288,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             && SelectedDownload is { } download
             && !DownloadActionSemantics.IsTerminal(download);
 
-    public async Task<(string Filename, long FileSize, IReadOnlyList<AjPart> Parts)?> LoadSelectedDownloadPartListAsync()
+    public async Task<(string Filename, long FileSize, IReadOnlyList<AjPart> Parts, int SourcePartListCount, int SourceCandidateCount, int SourceErrorCount)?> LoadSelectedDownloadPartListAsync()
     {
         ThrowIfDisposed();
         AjDownload? download = SelectedDownload;
@@ -355,7 +355,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 sourceText += $", Fehler {sourceErrors:N0}";
 
             StatusText = $"Aggregierte Partliste geladen: {download.DisplayFilename} · {sourceText}";
-            return (download.DisplayFilename, fileSize, parts);
+            return (download.DisplayFilename, fileSize, parts, sourcePartLists.Count, sources.Count, sourceErrors);
         }
         catch (Exception ex)
         {
