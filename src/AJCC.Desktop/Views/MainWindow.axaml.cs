@@ -356,6 +356,12 @@ public sealed partial class MainWindow : Window
             await CopyTextAsync(download.Hash);
     }
 
+    private async void DownloadContextCopyId_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedDownload is { } download)
+            await CopyTextAsync(download.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     private async void SearchResultContextCopyAjfsp_OnClick(object? sender, RoutedEventArgs e)
     {
         AjSearchEntry? entry = _viewModel.SelectedSearchEntry;

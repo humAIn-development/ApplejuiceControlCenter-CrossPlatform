@@ -198,6 +198,7 @@
                       <MenuItem Header="AJFSP-Link kopieren" Click="DownloadContextCopyAjfsp_OnClick" />
                       <MenuItem Header="Dateiname kopieren" Click="DownloadContextCopyFilename_OnClick" />
                       <MenuItem Header="Hash kopieren" Click="DownloadContextCopyHash_OnClick" />
+                      <MenuItem Header="ID kopieren" Click="DownloadContextCopyId_OnClick" />
                     </ContextMenu>
                   </Grid.ContextMenu>
                   <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
