@@ -1209,8 +1209,44 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void UpdateDownloadSourceCounts()
+    {
+        AjState? state = _state;
+        if (state is null)
+            return;
+
+        Dictionary<long, int> totalCounts = state.Users
+            .Where(user => user.DownloadId > 0)
+            .GroupBy(user => user.DownloadId)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        Dictionary<long, int> activeCounts = state.Users
+            .Where(user => user.DownloadId > 0 && IsActiveConnectedSource(user))
+            .GroupBy(user => user.DownloadId)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        Dictionary<long, long> speedByDownload = state.Users
+            .Where(user => user.DownloadId > 0)
+            .GroupBy(user => user.DownloadId)
+            .ToDictionary(group => group.Key, group => group.Sum(user => Math.Max(0, user.Speed)));
+
+        foreach (AjDownload download in state.Downloads)
+        {
+            totalCounts.TryGetValue(download.Id, out int sourceCount);
+            activeCounts.TryGetValue(download.Id, out int activeSourceCount);
+            speedByDownload.TryGetValue(download.Id, out long downloadSpeed);
+            download.SourceCount = sourceCount;
+            download.ActiveSourceCount = activeSourceCount;
+            download.DownloadSpeed = downloadSpeed;
+        }
+    }
+
+    private static bool IsActiveConnectedSource(AjUserSource user)
+        => user.Status == 7 || user.Speed > 0;
+
     private void RaiseStateProperties()
     {
+        UpdateDownloadSourceCounts();
         UpdateUploadSpeedHistories();
         UpdateServerCoreStates();
         OnPropertyChanged(nameof(Downloads));
