@@ -19,6 +19,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly ServerReconnectRestrictionStore _serverReconnectRestrictionStore = new();
     private readonly ServerReconnectRestrictionState _serverReconnectRestriction = new();
     private readonly DispatcherTimer _serverReconnectRestrictionTimer = new();
+    private readonly DispatcherTimer _serverReachabilityTimer = new();
+    private static readonly TimeSpan ServerReachabilityProbeInterval = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan ServerReachabilityProbeTimeout = TimeSpan.FromMilliseconds(1500);
+    private static readonly TimeSpan ServerReachabilityProbeFreshness = TimeSpan.FromMinutes(3);
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
@@ -35,6 +39,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isBusy;
     private bool _isConnected;
     private bool _serverReconnectAutoReconnectAttemptRunning;
+    private bool _isServerReachabilityProbeRunning;
+    private int _serverReachabilityNextIndex;
     private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -45,6 +51,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _serverReconnectRestrictionTimer.Interval = TimeSpan.FromSeconds(1);
         _serverReconnectRestrictionTimer.Tick += ServerReconnectRestrictionTimerOnTick;
         _serverReconnectRestrictionTimer.Start();
+        _serverReachabilityTimer.Interval = ServerReachabilityProbeInterval;
+        _serverReachabilityTimer.Tick += ServerReachabilityTimerOnTick;
     }
 
     public string EndpointText
@@ -658,6 +666,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             RaiseStateProperties();
 
             await _polling.StartAsync(_state, intervalMs: 2000).ConfigureAwait(true);
+            StartServerReachabilityTimer();
             StatusText = $"Verbunden mit {endpoint.BaseUri}";
         }
         catch (Exception ex)
@@ -734,6 +743,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             await polling.StopAsync().ConfigureAwait(true);
         }
 
+        StopServerReachabilityTimer();
         _client = null;
         _httpClient?.Dispose();
         _httpClient = null;
@@ -918,6 +928,85 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return $"{remaining.Minutes:00}:{remaining.Seconds:00}";
     }
 
+    private void ServerReachabilityTimerOnTick(object? sender, EventArgs e)
+    {
+        if (_disposed)
+            return;
+
+        _ = ProbeNextServerReachabilityAsync();
+    }
+
+    private void StartServerReachabilityTimer()
+    {
+        if (_disposed || !IsConnected)
+            return;
+
+        _serverReachabilityTimer.Start();
+        _ = ProbeNextServerReachabilityAsync();
+    }
+
+    private void StopServerReachabilityTimer()
+    {
+        _serverReachabilityTimer.Stop();
+        _serverReachabilityNextIndex = 0;
+    }
+
+    private async Task ProbeNextServerReachabilityAsync()
+    {
+        AjState? state = _state;
+        if (_isServerReachabilityProbeRunning || !IsConnected || state is null || state.Servers.Count == 0)
+            return;
+
+        long connectedId = state.NetworkInfo.ConnectedWithServerId;
+        List<AjServer> servers = state.Servers.ToList();
+        AjServer? server = null;
+
+        for (int i = 0; i < servers.Count; i++)
+        {
+            int index = (_serverReachabilityNextIndex + i) % servers.Count;
+            AjServer candidate = servers[index];
+            if (candidate.Id == connectedId)
+                continue;
+            if (string.IsNullOrWhiteSpace(candidate.Host) || candidate.Port <= 0)
+                continue;
+
+            server = candidate;
+            _serverReachabilityNextIndex = (index + 1) % servers.Count;
+            break;
+        }
+
+        if (server is null)
+            return;
+
+        _isServerReachabilityProbeRunning = true;
+        server.ReachabilityProbeRunning = true;
+        UpdateServerCoreStates();
+
+        bool reachable = false;
+        try
+        {
+            reachable = await TcpReachabilityProbe.TestAsync(
+                server.Host,
+                server.Port,
+                ServerReachabilityProbeTimeout).ConfigureAwait(true);
+        }
+        finally
+        {
+            bool currentState = !_disposed && ReferenceEquals(_state, state) && IsConnected;
+            if (currentState)
+            {
+                server.ReachabilityProbeSucceeded = reachable;
+                server.ReachabilityProbeUtc = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            }
+
+            server.ReachabilityProbeRunning = false;
+            _isServerReachabilityProbeRunning = false;
+
+            if (currentState)
+                UpdateServerCoreStates();
+        }
+    }
+
     private void UpdateServerCoreStates()
     {
         AjState? state = _state;
@@ -931,6 +1020,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         foreach (AjServer server in state.Servers)
         {
+            bool probeFresh = server.ReachabilityProbeUtc > 0
+                && Math.Abs(now - server.ReachabilityProbeUtc) <= ServerReachabilityProbeFreshness.TotalMilliseconds;
+
             if (connectedId > 0 && server.Id == connectedId)
             {
                 server.ServerStatusKind = "connected";
@@ -943,6 +1035,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 server.ServerStatusKind = "connecting";
                 server.ServerStatusText = "Verbindungsversuch";
+                server.ConnectionDurationText = "-";
+            }
+            else if (server.ReachabilityProbeRunning)
+            {
+                server.ServerStatusKind = "checking";
+                server.ServerStatusText = "Prüfung";
+                server.ConnectionDurationText = "-";
+            }
+            else if (probeFresh && server.ReachabilityProbeSucceeded == true)
+            {
+                server.ServerStatusKind = "reachable";
+                server.ServerStatusText = "erreichbar";
+                server.ConnectionDurationText = "-";
+            }
+            else if (probeFresh && server.ReachabilityProbeSucceeded == false)
+            {
+                server.ServerStatusKind = "unreachable";
+                server.ServerStatusText = "nicht erreichbar";
                 server.ConnectionDurationText = "-";
             }
             else
@@ -976,6 +1086,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private void PollingOnConnectionLost(string message)
         => Dispatcher.UIThread.Post(() =>
         {
+            StopServerReachabilityTimer();
             IsConnected = false;
             UpdateServerCoreStates();
             StatusText = "Core-Verbindung verloren: " + message;
@@ -1064,6 +1175,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         _serverReconnectRestrictionTimer.Stop();
         _serverReconnectRestrictionTimer.Tick -= ServerReconnectRestrictionTimerOnTick;
+        _serverReachabilityTimer.Stop();
+        _serverReachabilityTimer.Tick -= ServerReachabilityTimerOnTick;
         if (_polling is not null)
         {
             _polling.ModifiedReceived -= PollingOnModifiedReceived;
