@@ -64,6 +64,23 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task GetUserPartList_UsesLowercaseIdParameter()
+    {
+        RecordingHandler handler = new("<root />");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.GetUserPartListXmlAsync(5678);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/xml/userpartlist.xml", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=5678");
+        Assert.IsFalse(query.Contains("ID=", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task Search_UsesPostAndJavaGuiStyleEncoding()
     {
         RecordingHandler handler = new(string.Empty);
