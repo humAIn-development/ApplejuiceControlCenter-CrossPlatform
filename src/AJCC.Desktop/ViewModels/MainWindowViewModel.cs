@@ -281,6 +281,51 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         string xml = await client.GetDirectoryXmlAsync(directory).ConfigureAwait(true);
         return AjXmlParser.ParseDirectoryList(xml);
     }
+
+    public bool CanShowSelectedDownloadPartList
+        => IsConnected
+            && !IsBusy
+            && SelectedDownload is { } download
+            && !DownloadActionSemantics.IsTerminal(download);
+
+    public async Task<(string Filename, long FileSize, IReadOnlyList<AjPart> Parts)?> LoadSelectedDownloadPartListAsync()
+    {
+        ThrowIfDisposed();
+        AjDownload? download = SelectedDownload;
+        AppleJuiceCoreClient? client = _client;
+        if (download is null || client is null || !CanShowSelectedDownloadPartList)
+            return null;
+
+        IsBusy = true;
+        StatusText = $"Lade Partliste: {download.DisplayFilename}";
+
+        try
+        {
+            string xml = await client.GetDownloadPartListXmlAsync(download.Id).ConfigureAwait(true);
+            List<AjPart> parts = AjXmlParser.ParseParts(xml)
+                .Where(part => part.FromPosition >= 0)
+                .OrderBy(part => part.FromPosition)
+                .ToList();
+            long fileSize = AjXmlParser.ParseFileSizeFromPartList(xml);
+            if (fileSize <= 0)
+                fileSize = download.Size;
+
+            StatusText = parts.Count == 0
+                ? $"Core lieferte keine Partlist-Segmente: {download.DisplayFilename}"
+                : $"Partliste geladen: {download.DisplayFilename}";
+            return (download.DisplayFilename, fileSize, parts);
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Partliste konnte nicht geladen werden: " + ex.Message;
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task ToggleConnectionAsync(string password)
     {
         ThrowIfDisposed();

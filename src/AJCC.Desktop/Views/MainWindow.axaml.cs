@@ -139,8 +139,9 @@ public sealed partial class MainWindow : Window
         bool canRename = _viewModel.CanRenameSelectedDownload;
         bool canSetTargetDirectory = _viewModel.CanSetTargetDirectorySelectedDownload;
         bool canSetPowerDownload = _viewModel.CanSetPowerDownloadSelectedDownload;
+        bool canShowPartList = _viewModel.CanShowSelectedDownloadPartList;
         bool hasControlActions = canPause || canResume || canCancel || canClean;
-        bool hasMetadataActions = canRename || canSetTargetDirectory || canSetPowerDownload;
+        bool hasMetadataActions = canRename || canSetTargetDirectory || canSetPowerDownload || canShowPartList;
         int separatorIndex = 0;
 
         foreach (object? rawItem in menu.Items)
@@ -158,6 +159,7 @@ public sealed partial class MainWindow : Window
                     "Zielverzeichnis setzen…" => canSetTargetDirectory,
                     "Powerdownload setzen…" => canSetPowerDownload,
                     "Powerdownload löschen" => canSetPowerDownload,
+                    "Partliste anzeigen…" => canShowPartList,
                     _ => true
                 };
                 continue;
@@ -258,6 +260,17 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadContextClearPowerDownload_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.ClearSelectedDownloadPowerDownloadAsync();
+
+    private async void DownloadContextShowPartList_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var result = await _viewModel.LoadSelectedDownloadPartListAsync();
+        if (!result.HasValue)
+            return;
+
+        var partList = result.Value;
+        PartListDialog dialog = new(partList.Filename, partList.FileSize, partList.Parts);
+        await dialog.ShowDialog<bool>(this);
+    }
 
     private async void SearchResultContextDownload_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
