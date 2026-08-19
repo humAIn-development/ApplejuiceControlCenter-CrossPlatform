@@ -918,6 +918,55 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return $"{remaining.Minutes:00}:{remaining.Seconds:00}";
     }
 
+    private void UpdateServerCoreStates()
+    {
+        AjState? state = _state;
+        if (state is null)
+            return;
+
+        long connectedId = IsConnected ? state.NetworkInfo.ConnectedWithServerId : 0;
+        long tryingId = IsConnected ? state.NetworkInfo.TryConnectToServer : 0;
+        long connectedSince = IsConnected ? state.NetworkInfo.ConnectedSince : 0;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        foreach (AjServer server in state.Servers)
+        {
+            if (connectedId > 0 && server.Id == connectedId)
+            {
+                server.ServerStatusKind = "connected";
+                server.ServerStatusText = "Verbunden";
+                server.ConnectionDurationText = connectedSince > 0
+                    ? FormatServerConnectionElapsed(now - connectedSince)
+                    : "verbunden";
+            }
+            else if (tryingId > 0 && server.Id == tryingId)
+            {
+                server.ServerStatusKind = "connecting";
+                server.ServerStatusText = "Verbindungsversuch";
+                server.ConnectionDurationText = "-";
+            }
+            else
+            {
+                server.ServerStatusKind = "unknown";
+                server.ServerStatusText = "ungeprüft";
+                server.ConnectionDurationText = "-";
+            }
+        }
+    }
+
+    private static string FormatServerConnectionElapsed(long milliseconds)
+    {
+        if (milliseconds <= 0)
+            return "0m";
+
+        TimeSpan elapsed = TimeSpan.FromMilliseconds(milliseconds);
+        if (elapsed.TotalDays >= 1)
+            return $"{(int)elapsed.TotalDays}d {elapsed.Hours}h {elapsed.Minutes}m";
+        if (elapsed.TotalHours >= 1)
+            return $"{(int)elapsed.TotalHours}h {elapsed.Minutes}m";
+        return $"{Math.Max(0, (int)elapsed.TotalMinutes)}m {elapsed.Seconds}s";
+    }
+
     private void PollingOnConnectionDegraded(int errors, string message)
         => Dispatcher.UIThread.Post(() => StatusText = $"Core-Verbindung gestört ({errors}/6): {message}");
 
@@ -928,6 +977,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         => Dispatcher.UIThread.Post(() =>
         {
             IsConnected = false;
+            UpdateServerCoreStates();
             StatusText = "Core-Verbindung verloren: " + message;
         });
 
@@ -958,6 +1008,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RaiseStateProperties()
     {
+        UpdateServerCoreStates();
         OnPropertyChanged(nameof(Downloads));
         OnPropertyChanged(nameof(Uploads));
         OnPropertyChanged(nameof(Servers));
