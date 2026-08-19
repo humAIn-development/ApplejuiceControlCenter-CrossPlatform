@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly LocalIncomingMappingStore _mappingStore = new();
     private readonly ServerReconnectRestrictionStore _serverReconnectRestrictionStore = new();
     private readonly ServerReconnectRestrictionState _serverReconnectRestriction = new();
+    private readonly DispatcherTimer _serverReconnectRestrictionTimer = new();
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
@@ -40,6 +41,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public MainWindowViewModel()
     {
         _localIncomingMappingText = _mappingStore.Get(_endpointText);
+        _serverReconnectRestrictionTimer.Interval = TimeSpan.FromSeconds(1);
+        _serverReconnectRestrictionTimer.Tick += ServerReconnectRestrictionTimerOnTick;
+        _serverReconnectRestrictionTimer.Start();
     }
 
     public string EndpointText
@@ -157,6 +161,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(IsDisconnected));
             OnPropertyChanged(nameof(ConnectButtonText));
             OnPropertyChanged(nameof(ConnectionStateText));
+            OnPropertyChanged(nameof(HasServerReconnectRestriction));
+            OnPropertyChanged(nameof(ServerReconnectRestrictionText));
             OnPropertyChanged(nameof(CanEditConnectionSettings));
             OnPropertyChanged(nameof(CanSearch));
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
@@ -180,6 +186,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanDownloadSelectedSearchEntry => IsConnected && !IsBusy && IsValidSearchEntryForDownload(SelectedSearchEntry);
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
+    public bool HasServerReconnectRestriction => IsConnected && _serverReconnectRestriction.IsActive(DateTimeOffset.UtcNow);
+    public string ServerReconnectRestrictionText
+    {
+        get
+        {
+            DateTimeOffset nowUtc = DateTimeOffset.UtcNow;
+            if (!IsConnected || !_serverReconnectRestriction.IsActive(nowUtc))
+                return string.Empty;
+
+            string countdown = FormatServerReconnectCountdown(_serverReconnectRestriction.GetRemaining(nowUtc));
+            return _serverReconnectRestriction.HasExactCountdown
+                ? $"Reconnect-Sperre {countdown}"
+                : $"Reconnect-Sperre bis zu {countdown}";
+        }
+    }
     public string SelectedDownloadText => SelectedDownload is null ? "Kein Download ausgewählt" : SelectedDownload.DisplayFilename;
     public string SelectedSearchEntryText => SelectedSearchEntry is null ? "Kein Treffer ausgewählt" : SelectedSearchEntry.Filename;
 
@@ -266,6 +287,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 targetServerId: server.Id,
                 nowUtc: nowUtc);
             PersistServerReconnectRestrictionState();
+            RaiseServerReconnectRestrictionProperties();
         }
 
         IsBusy = true;
@@ -283,6 +305,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     targetServerId: server.Id,
                     nowUtc: DateTimeOffset.UtcNow);
                 PersistServerReconnectRestrictionState();
+                RaiseServerReconnectRestrictionProperties();
                 int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
                 StatusText = $"Core meldet Reconnect-Sperre: noch ca. {minutes} Minuten. Ziel: {server.Name}";
                 return;
@@ -802,6 +825,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             PersistServerReconnectRestrictionState();
     }
 
+    private void ServerReconnectRestrictionTimerOnTick(object? sender, EventArgs e)
+    {
+        if (_disposed)
+            return;
+
+        RefreshServerReconnectRestrictionState(DateTimeOffset.UtcNow);
+        RaiseServerReconnectRestrictionProperties();
+    }
+
+    private void RaiseServerReconnectRestrictionProperties()
+    {
+        OnPropertyChanged(nameof(HasServerReconnectRestriction));
+        OnPropertyChanged(nameof(ServerReconnectRestrictionText));
+    }
+
+    private static string FormatServerReconnectCountdown(TimeSpan remaining)
+    {
+        if (remaining < TimeSpan.Zero)
+            remaining = TimeSpan.Zero;
+
+        if (remaining.TotalHours >= 1)
+            return $"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+
+        return $"{remaining.Minutes:00}:{remaining.Seconds:00}";
+    }
+
     private void PollingOnConnectionDegraded(int errors, string message)
         => Dispatcher.UIThread.Post(() => StatusText = $"Core-Verbindung gestört ({errors}/6): {message}");
 
@@ -867,6 +916,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ServerCountText));
         OnPropertyChanged(nameof(SearchCountText));
         OnPropertyChanged(nameof(CoreTimestampText));
+        RaiseServerReconnectRestrictionProperties();
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
@@ -894,6 +944,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         _disposed = true;
+        _serverReconnectRestrictionTimer.Stop();
+        _serverReconnectRestrictionTimer.Tick -= ServerReconnectRestrictionTimerOnTick;
         if (_polling is not null)
         {
             _polling.ModifiedReceived -= PollingOnModifiedReceived;

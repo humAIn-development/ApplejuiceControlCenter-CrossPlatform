@@ -369,12 +369,18 @@
     </TabControl>
 
     <Border Grid.Row="3" Classes="statusBar" Margin="0,10,0,0">
-      <Grid ColumnDefinitions="*,Auto">
+      <Grid ColumnDefinitions="*,Auto,Auto">
         <TextBlock Classes="muted"
                    Text="{Binding StatusText}"
                    TextTrimming="CharacterEllipsis"
                    VerticalAlignment="Center" />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+        <TextBlock Grid.Column="1"
+                   Classes="muted"
+                   Margin="12,0,0,0"
+                   IsVisible="{Binding HasServerReconnectRestriction}"
+                   Text="{Binding ServerReconnectRestrictionText}"
+                   VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
           <TextBlock Classes="muted" Text="Core-Timestamp" FontSize="12" />
           <TextBlock Text="{Binding CoreTimestampText}" FontSize="12" />
         </StackPanel>
