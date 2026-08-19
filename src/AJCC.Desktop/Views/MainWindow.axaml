@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AJCC.Desktop.ViewModels"
         xmlns:models="using:AJCC.Core.Models"
+        xmlns:controls="using:AJCC.Desktop.Controls"
         x:Class="AJCC.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Applejuice-Control-Center X — FirstLight"
@@ -214,23 +215,30 @@
                      FontWeight="SemiBold"
                      Margin="4,0,0,6" />
           <Border Grid.Row="1" Classes="tableHeader">
-            <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.2*">
+            <Grid ColumnDefinitions="3.2*,1.4*,1.1*,1.1*,1.2*,1.8*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Nutzer" FontWeight="SemiBold" />
               <TextBlock Grid.Column="2" Text="Status" FontWeight="SemiBold" />
               <TextBlock Grid.Column="3" Text="Fortschritt" FontWeight="SemiBold" />
               <TextBlock Grid.Column="4" Text="Geschwindigkeit" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Aktivität" FontWeight="SemiBold" />
             </Grid>
           </Border>
           <ListBox Grid.Row="2" ItemsSource="{Binding ActiveUploads}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjUpload">
-                <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.2*" Margin="8,6">
+                <Grid ColumnDefinitions="3.2*,1.4*,1.1*,1.1*,1.2*,1.8*" Margin="8,6">
                   <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding StatusText}" />
                   <TextBlock Grid.Column="3" Text="{Binding ProgressPercentText}" />
                   <TextBlock Grid.Column="4" Text="{Binding SpeedText}" />
+                  <controls:UploadSpeedSparkline Grid.Column="5"
+                                                 Values="{Binding SpeedHistory}"
+                                                 CurrentSpeed="{Binding Speed}"
+                                                 Height="18"
+                                                 MinHeight="18"
+                                                 VerticalAlignment="Center" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
