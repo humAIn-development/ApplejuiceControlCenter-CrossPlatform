@@ -119,6 +119,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
 
             OnPropertyChanged(nameof(SelectedDownloadText));
+            OnPropertyChanged(nameof(SelectedDownloadSources));
+            OnPropertyChanged(nameof(SelectedDownloadSourcesText));
             OnPropertyChanged(nameof(CanPauseSelectedDownload));
             OnPropertyChanged(nameof(CanResumeSelectedDownload));
             OnPropertyChanged(nameof(CanCancelSelectedDownload));
@@ -230,6 +232,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string SelectedSearchEntryText => SelectedSearchEntry is null ? "Kein Treffer ausgewählt" : SelectedSearchEntry.Filename;
 
     public IEnumerable<AjDownload> Downloads => _state is null ? Array.Empty<AjDownload>() : _state.Downloads;
+    public IEnumerable<AjUserSource> SelectedDownloadSources
+        => _state is null || SelectedDownload is null
+            ? Array.Empty<AjUserSource>()
+            : _state.Users
+                .Where(user => user.DownloadId == SelectedDownload.Id)
+                .Where(IsVisibleDownloadSource);
+
+    public string SelectedDownloadSourcesText
+    {
+        get
+        {
+            AjState? state = _state;
+            AjDownload? download = SelectedDownload;
+            if (state is null || download is null)
+                return "keine Datei ausgewählt";
+
+            int visible = state.Users.Count(user =>
+                user.DownloadId == download.Id && IsVisibleDownloadSource(user));
+            int active = state.Users.Count(user =>
+                user.DownloadId == download.Id
+                && IsVisibleDownloadSource(user)
+                && IsActiveConnectedSource(user));
+            return $"{visible:N0} sichtbar · {active:N0} aktiv";
+        }
+    }
+
     public IEnumerable<AjUpload> Uploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads;
     public IEnumerable<AjUpload> ActiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => upload.IsActiveTransfer);
     public IEnumerable<AjUpload> InactiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => !upload.IsActiveTransfer);
@@ -368,9 +396,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private static bool IsVisibleDownloadSource(AjUserSource user)
+        => user.Status is not (3 or 4 or 8 or 16);
+
     private static bool IsPartListSourceCandidate(AjUserSource user)
         => user.Id > 0
-            && user.Status is not (3 or 4 or 6 or 8 or 16);
+            && IsVisibleDownloadSource(user)
+            && user.Status != 6;
 
     private static List<(long From, long To)> BuildPartListActiveTransferRanges(
         IEnumerable<AjUserSource> sources,
@@ -1595,6 +1627,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         UpdateUploadSpeedHistories();
         UpdateServerCoreStates();
         OnPropertyChanged(nameof(Downloads));
+        OnPropertyChanged(nameof(SelectedDownloadSources));
+        OnPropertyChanged(nameof(SelectedDownloadSourcesText));
         OnPropertyChanged(nameof(Uploads));
         OnPropertyChanged(nameof(ActiveUploads));
         OnPropertyChanged(nameof(InactiveUploads));

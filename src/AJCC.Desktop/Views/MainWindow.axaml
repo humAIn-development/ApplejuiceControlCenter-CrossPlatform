@@ -137,7 +137,7 @@
 
     <TabControl Grid.Row="2">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+        <Grid RowDefinitions="Auto,Auto,2*,Auto,Auto,*" Margin="0,8,0,0">
           <Border Grid.Row="0" Classes="panel" Padding="8" Margin="0,0,0,8">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
               <TextBlock Grid.Column="0"
@@ -209,6 +209,44 @@
                   <TextBlock Grid.Column="3" Text="{Binding SourceCountText}" />
                   <TextBlock Grid.Column="4" Text="{Binding DownloadSpeedText}" />
                   <TextBlock Grid.Column="5" Text="{Binding PowerDownloadText}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <StackPanel Grid.Row="3"
+                      Orientation="Horizontal"
+                      Spacing="12"
+                      Margin="4,10,0,6">
+            <TextBlock Text="Quellen zur markierten Datei"
+                       FontWeight="SemiBold" />
+            <TextBlock Classes="muted"
+                       Text="{Binding SelectedDownloadSourcesText}" />
+          </StackPanel>
+
+          <Border Grid.Row="4" Classes="tableHeader">
+            <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*">
+              <TextBlock Text="Nutzer" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Queue" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Größe" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="4" Text="Geladen" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Geschwindigkeit" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="6" Text="Fortschritt" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+
+          <ListBox Grid.Row="5" ItemsSource="{Binding SelectedDownloadSources}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjUserSource">
+                <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*" Margin="8,6">
+                  <TextBlock Text="{Binding NicknameText}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
+                  <TextBlock Grid.Column="2" Text="{Binding QueuePositionText}" />
+                  <TextBlock Grid.Column="3" Text="{Binding SizeText}" />
+                  <TextBlock Grid.Column="4" Text="{Binding AlreadyLoadedText}" />
+                  <TextBlock Grid.Column="5" Text="{Binding SpeedText}" />
+                  <TextBlock Grid.Column="6" Text="{Binding ProgressPercentText}" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
