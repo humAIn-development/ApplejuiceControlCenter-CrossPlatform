@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -24,6 +25,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan ServerReachabilityProbeInterval = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan ServerReachabilityProbeTimeout = TimeSpan.FromMilliseconds(1500);
     private static readonly TimeSpan ServerReachabilityProbeFreshness = TimeSpan.FromMinutes(3);
+    private const int UploadSpeedHistoryLength = 48;
+    private static readonly TimeSpan UploadSpeedHistoryMinimumSampleDistance = TimeSpan.FromMilliseconds(1500);
+    private readonly Dictionary<long, Queue<long>> _uploadSpeedHistory = new();
+    private readonly Dictionary<long, UploadSpeedSampleSignature> _lastUploadSpeedSamples = new();
+    private readonly Dictionary<long, DateTime> _lastUploadSpeedSampleTimesUtc = new();
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
@@ -43,6 +49,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isServerReachabilityProbeRunning;
     private int _serverReachabilityNextIndex;
     private bool _disposed;
+
+    private readonly record struct UploadSpeedSampleSignature(
+        int Status,
+        long Speed,
+        long UploadFrom,
+        long UploadTo,
+        long ActualUploadPosition);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -1120,8 +1133,85 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             throw new InvalidOperationException("Das Suchergebnis enthält keine gültige Dateigröße.");
     }
 
+    private void UpdateUploadSpeedHistories()
+    {
+        AjState? state = _state;
+        if (state is null)
+        {
+            _uploadSpeedHistory.Clear();
+            _lastUploadSpeedSamples.Clear();
+            _lastUploadSpeedSampleTimesUtc.Clear();
+            return;
+        }
+
+        DateTime nowUtc = DateTime.UtcNow;
+        HashSet<long> currentIds = new();
+
+        foreach (AjUpload upload in state.Uploads)
+        {
+            long key = upload.Id;
+            if (key <= 0)
+                continue;
+
+            currentIds.Add(key);
+
+            UploadSpeedSampleSignature signature = new(
+                upload.Status,
+                Math.Max(0L, upload.Speed),
+                upload.UploadFrom,
+                upload.UploadTo,
+                upload.ActualUploadPosition);
+
+            bool hasLastSignature = _lastUploadSpeedSamples.TryGetValue(key, out UploadSpeedSampleSignature lastSignature);
+            bool hasLastTime = _lastUploadSpeedSampleTimesUtc.TryGetValue(key, out DateTime lastSampleTimeUtc);
+            bool changed = !hasLastSignature || !signature.Equals(lastSignature);
+            bool due = !hasLastTime || nowUtc - lastSampleTimeUtc >= UploadSpeedHistoryMinimumSampleDistance;
+
+            if (changed || due)
+            {
+                Queue<long> history = GetUploadSpeedHistory(key);
+                history.Enqueue(Math.Max(0L, upload.Speed));
+                while (history.Count > UploadSpeedHistoryLength)
+                    history.Dequeue();
+
+                _lastUploadSpeedSamples[key] = signature;
+                _lastUploadSpeedSampleTimesUtc[key] = nowUtc;
+            }
+
+            if (_uploadSpeedHistory.TryGetValue(key, out Queue<long>? existingHistory))
+                upload.SpeedHistory = existingHistory.ToArray();
+        }
+
+        CleanupUploadSpeedHistories(currentIds);
+    }
+
+    private Queue<long> GetUploadSpeedHistory(long uploadId)
+    {
+        if (_uploadSpeedHistory.TryGetValue(uploadId, out Queue<long>? history))
+            return history;
+
+        history = new Queue<long>();
+        _uploadSpeedHistory[uploadId] = history;
+        return history;
+    }
+
+    private void CleanupUploadSpeedHistories(HashSet<long> currentIds)
+    {
+        List<long> staleIds = _uploadSpeedHistory.Keys
+            .Where(id => !currentIds.Contains(id))
+            .ToList();
+
+        foreach (long id in staleIds)
+        {
+            _uploadSpeedHistory.Remove(id);
+            _lastUploadSpeedSamples.Remove(id);
+            _lastUploadSpeedSampleTimesUtc.Remove(id);
+        }
+    }
+
     private void RaiseStateProperties()
     {
+        UpdateUploadSpeedHistories();
         UpdateServerCoreStates();
         OnPropertyChanged(nameof(Downloads));
         OnPropertyChanged(nameof(Uploads));
