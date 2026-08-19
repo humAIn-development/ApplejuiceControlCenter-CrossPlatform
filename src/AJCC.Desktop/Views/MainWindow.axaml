@@ -196,6 +196,7 @@
                       <MenuItem Header="Powerdownload löschen" Click="DownloadContextClearPowerDownload_OnClick" />
                       <Separator />
                       <MenuItem Header="AJFSP-Link kopieren" Click="DownloadContextCopyAjfsp_OnClick" />
+                      <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="DownloadContextCopyAjfspWithSource_OnClick" />
                       <MenuItem Header="Dateiname kopieren" Click="DownloadContextCopyFilename_OnClick" />
                       <MenuItem Header="Hash kopieren" Click="DownloadContextCopyHash_OnClick" />
                       <MenuItem Header="ID kopieren" Click="DownloadContextCopyId_OnClick" />

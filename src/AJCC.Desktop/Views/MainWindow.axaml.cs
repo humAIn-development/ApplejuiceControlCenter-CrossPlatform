@@ -344,6 +344,13 @@ public sealed partial class MainWindow : Window
         await CopyTextAsync(link);
     }
 
+    private async void DownloadContextCopyAjfspWithSource_OnClick(object? sender, RoutedEventArgs e)
+    {
+        string link = _viewModel.BuildSelectedDownloadAjfspLinkWithSource();
+        if (!string.IsNullOrWhiteSpace(link))
+            await CopyTextAsync(link);
+    }
+
     private async void DownloadContextCopyFilename_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel.SelectedDownload is { } download)

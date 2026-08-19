@@ -18,6 +18,14 @@ public sealed class AjLinkTests
     }
 
     [TestMethod]
+    public void BuildFileLink_WithSource_AppendsLegacySourceField()
+    {
+        string link = AjfspLinkBuilder.BuildFileLink("example.bin", Checksum, 123456, "CoreNick");
+
+        Assert.AreEqual($"ajfsp://file|example.bin|{Checksum}|123456|CoreNick/", link);
+    }
+
+    [TestMethod]
     public void BuildFileUri_UsesEncodedSeparators()
     {
         string link = AjfspLinkBuilder.BuildFileUri("example.bin", Checksum, 123456);

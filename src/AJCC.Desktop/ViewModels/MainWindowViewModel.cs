@@ -250,6 +250,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string SearchCountText => _state?.Searches.Count.ToString("N0") ?? "0";
     public string CoreTimestampText => _state is null || _state.LastTimestamp <= 0 ? "-" : _state.LastTimestamp.ToString();
 
+    public string BuildSelectedDownloadAjfspLinkWithSource()
+    {
+        AjDownload? download = SelectedDownload;
+        if (download is null || string.IsNullOrWhiteSpace(download.Hash) || download.Size <= 0)
+            return string.Empty;
+
+        AjState? state = _state;
+        string sourceText = state?.Settings.Nick?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(sourceText) && state is not null)
+        {
+            sourceText = state.Users
+                .Where(user => user.DownloadId == download.Id)
+                .OrderByDescending(IsActiveConnectedSource)
+                .ThenBy(user => user.QueueSortKey)
+                .Select(user => user.Nickname?.Trim() ?? string.Empty)
+                .FirstOrDefault(nickname => !string.IsNullOrWhiteSpace(nickname)) ?? string.Empty;
+        }
+
+        return AjfspLinkBuilder.BuildFileLink(download.DisplayFilename, download.Hash, download.Size, sourceText);
+    }
+
     public async Task<AjDirectoryListResult> LoadCoreDirectoryAsync(string? directory)
     {
         ThrowIfDisposed();
