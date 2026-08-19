@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AJCC.Core.Helpers;
 using AJCC.Core.Models;
+using AJCC.Core.Services;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -14,7 +15,6 @@ namespace AJCC.Desktop.Views;
 public sealed partial class PartListDialog : Window
 {
     private const int MaxVisualSegments = 300;
-    private const int ActiveDownloadPartType = -2;
 
     public PartListDialog()
     {
@@ -42,7 +42,7 @@ public sealed partial class PartListDialog : Window
         {
             summaryText.Text =
                 $"{DisplayFormatHelper.Bytes(fileSize)} · {segments.Count:N0} Anzeigeblöcke · geladen ca. {loadedPercent:N1} %\n" +
-                "Grün: geladen · Blau: wird geladen · Gelb: Quelle vorhanden · Schwarz: nicht geladen";
+                "Grün: geladen · Blau: wird geladen · Gelb: 1 Quelle · Rot: mehrere Quellen · Schwarz: nicht geladen";
         }
 
         if (segmentsPanel is null)
@@ -124,8 +124,8 @@ public sealed partial class PartListDialog : Window
             if (partEnd <= start)
                 continue;
 
-            if (orderedParts[index].Type == ActiveDownloadPartType)
-                return ActiveDownloadPartType;
+            if (orderedParts[index].Type == DownloadPartListAggregator.ActiveDownloadPartType)
+                return DownloadPartListAggregator.ActiveDownloadPartType;
         }
 
         return orderedParts[midpointPartIndex].Type;
@@ -157,13 +157,21 @@ public sealed partial class PartListDialog : Window
 
     private static IBrush BrushForType(int type)
     {
-        if (type == ActiveDownloadPartType)
+        if (type == DownloadPartListAggregator.ActiveDownloadPartType)
             return new SolidColorBrush(Color.FromRgb(129, 212, 250));
         if (type < 0)
             return new SolidColorBrush(Color.FromRgb(46, 125, 50));
         if (type == 0)
             return new SolidColorBrush(Color.FromRgb(5, 5, 5));
-        return new SolidColorBrush(Color.FromRgb(255, 224, 130));
+        if (type == 1)
+            return new SolidColorBrush(Color.FromRgb(255, 224, 130));
+
+        int clamped = Math.Clamp(type, 2, 8);
+        double t = (clamped - 2) / 6.0;
+        byte r = (byte)Math.Round(239 - (56 * t));
+        byte g = (byte)Math.Round(154 - (126 * t));
+        byte b = (byte)Math.Round(154 - (126 * t));
+        return new SolidColorBrush(Color.FromRgb(r, g, b));
     }
 
     private readonly record struct VisualSegment(long Start, long End, int Type);

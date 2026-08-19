@@ -293,16 +293,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ThrowIfDisposed();
         AjDownload? download = SelectedDownload;
         AppleJuiceCoreClient? client = _client;
-        if (download is null || client is null || !CanShowSelectedDownloadPartList)
+        AjState? state = _state;
+        if (download is null || client is null || state is null || !CanShowSelectedDownloadPartList)
             return null;
 
         IsBusy = true;
-        StatusText = $"Lade Partliste: {download.DisplayFilename}";
+        StatusText = $"Lade aggregierte Partliste: {download.DisplayFilename}";
 
         try
         {
             string xml = await client.GetDownloadPartListXmlAsync(download.Id).ConfigureAwait(true);
-            List<AjPart> parts = AjXmlParser.ParseParts(xml)
+            List<AjPart> downloadParts = AjXmlParser.ParseParts(xml)
                 .Where(part => part.FromPosition >= 0)
                 .OrderBy(part => part.FromPosition)
                 .ToList();
@@ -310,9 +311,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (fileSize <= 0)
                 fileSize = download.Size;
 
-            StatusText = parts.Count == 0
-                ? $"Core lieferte keine Partlist-Segmente: {download.DisplayFilename}"
-                : $"Partliste geladen: {download.DisplayFilename}";
+            List<AjUserSource> sources = state.Users
+                .Where(user => user.DownloadId == download.Id)
+                .Where(IsPartListSourceCandidate)
+                .GroupBy(user => user.Id)
+                .Select(group => group.First())
+                .OrderByDescending(IsActiveConnectedSource)
+                .ThenBy(user => user.QueueSortKey)
+                .ThenByDescending(user => user.Speed)
+                .ToList();
+
+            List<IReadOnlyList<AjPart>> sourcePartLists = new();
+            int sourceErrors = 0;
+            foreach (AjUserSource source in sources)
+            {
+                try
+                {
+                    string sourceXml = await client.GetUserPartListXmlAsync(source.Id).ConfigureAwait(true);
+                    List<AjPart> sourceParts = AjXmlParser.ParseParts(sourceXml)
+                        .Where(part => part.FromPosition >= 0)
+                        .OrderBy(part => part.FromPosition)
+                        .ToList();
+                    if (sourceParts.Count > 0)
+                        sourcePartLists.Add(sourceParts);
+                }
+                catch
+                {
+                    sourceErrors++;
+                }
+            }
+
+            List<(long From, long To)> activeTransferRanges = BuildPartListActiveTransferRanges(sources, fileSize);
+            List<AjPart> parts = DownloadPartListAggregator.Aggregate(
+                downloadParts,
+                sourcePartLists,
+                fileSize,
+                activeTransferRanges);
+
+            string sourceText = sources.Count == 0
+                ? "keine Quellenpartlisten"
+                : $"Quellenpartlisten {sourcePartLists.Count:N0}/{sources.Count:N0}";
+            if (sourceErrors > 0)
+                sourceText += $", Fehler {sourceErrors:N0}";
+
+            StatusText = $"Aggregierte Partliste geladen: {download.DisplayFilename} · {sourceText}";
             return (download.DisplayFilename, fileSize, parts);
         }
         catch (Exception ex)
@@ -324,6 +366,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    private static bool IsPartListSourceCandidate(AjUserSource user)
+        => user.Id > 0
+            && user.Status is not (3 or 4 or 6 or 8 or 16);
+
+    private static List<(long From, long To)> BuildPartListActiveTransferRanges(
+        IEnumerable<AjUserSource> sources,
+        long fileSize)
+    {
+        List<(long From, long To)> ranges = new();
+        if (fileSize <= 0)
+            return ranges;
+
+        const int maxVisualSegments = 300;
+        long minimumVisibleRange = Math.Max(1, fileSize / maxVisualSegments);
+
+        foreach (AjUserSource source in sources)
+        {
+            if (!IsActiveConnectedSource(source))
+                continue;
+
+            long from = Math.Clamp(source.DownloadFrom, 0, fileSize);
+            long to = Math.Clamp(source.DownloadTo, 0, fileSize);
+            if (to > from)
+            {
+                ranges.Add((from, to));
+                continue;
+            }
+
+            long position = Math.Clamp(source.ActualDownloadPosition, 0, fileSize);
+            if (position <= 0 && fileSize > 1)
+                continue;
+
+            long fallbackFrom = Math.Clamp(position - (minimumVisibleRange / 2), 0, fileSize - 1);
+            long fallbackTo = Math.Clamp(fallbackFrom + minimumVisibleRange, fallbackFrom + 1, fileSize);
+            ranges.Add((fallbackFrom, fallbackTo));
+        }
+
+        return ranges;
     }
 
     public async Task ToggleConnectionAsync(string password)
