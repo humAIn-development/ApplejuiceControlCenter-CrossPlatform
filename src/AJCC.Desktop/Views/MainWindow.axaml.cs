@@ -14,6 +14,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel = new();
     private AjServer? _selectedServerForContext;
+    private AjUserSource? _selectedDownloadSourceForContext;
 
     public MainWindow()
     {
@@ -79,6 +80,9 @@ public sealed partial class MainWindow : Window
             case AjDownload download:
                 _viewModel.SelectedDownload = download;
                 break;
+            case AjUserSource userSource:
+                _selectedDownloadSourceForContext = userSource;
+                break;
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
                 break;
@@ -103,6 +107,10 @@ public sealed partial class MainWindow : Window
             case AjDownload download:
                 _viewModel.SelectedDownload = download;
                 isDownloadRow = true;
+                break;
+            case AjUserSource userSource:
+                _selectedDownloadSourceForContext = userSource;
+                isDownloadRow = false;
                 break;
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
@@ -386,6 +394,24 @@ public sealed partial class MainWindow : Window
     {
         if (_viewModel.SelectedDownload is { } download)
             await CopyTextAsync(download.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    private async void DownloadSourceContextCopyNick_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedDownloadSourceForContext is { } source)
+            await CopyTextAsync(source.Nickname);
+    }
+
+    private async void DownloadSourceContextCopyFilename_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedDownloadSourceForContext is { } source)
+            await CopyTextAsync(source.Filename);
+    }
+
+    private async void DownloadSourceContextCopyDownloadId_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedDownloadSourceForContext is { } source)
+            await CopyTextAsync(source.DownloadId.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private async void SearchResultContextCopyAjfsp_OnClick(object? sender, RoutedEventArgs e)

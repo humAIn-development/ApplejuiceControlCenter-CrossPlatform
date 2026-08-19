@@ -240,6 +240,13 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjUserSource">
                 <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*" Margin="8,6">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Nick kopieren" Click="DownloadSourceContextCopyNick_OnClick" />
+                      <MenuItem Header="Dateiname kopieren" Click="DownloadSourceContextCopyFilename_OnClick" />
+                      <MenuItem Header="DownloadID kopieren" Click="DownloadSourceContextCopyDownloadId_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
                   <TextBlock Text="{Binding NicknameText}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
                   <TextBlock Grid.Column="2" Text="{Binding QueuePositionText}" />
