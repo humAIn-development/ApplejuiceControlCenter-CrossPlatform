@@ -34,6 +34,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private AjSearchEntry? _selectedSearchEntry;
     private bool _isBusy;
     private bool _isConnected;
+    private bool _serverReconnectAutoReconnectAttemptRunning;
     private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -814,15 +815,81 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshServerReconnectRestrictionState(DateTimeOffset nowUtc)
     {
-        if (_state is not null
-            && _serverReconnectRestriction.ClearIfConnected(_state.NetworkInfo.ConnectedWithServerId))
+        AjState? state = _state;
+        if (state is not null
+            && _serverReconnectRestriction.ClearIfConnected(state.NetworkInfo.ConnectedWithServerId))
         {
             PersistServerReconnectRestrictionState();
             return;
         }
 
-        if (_serverReconnectRestriction.ClearIfExpired(nowUtc))
-            PersistServerReconnectRestrictionState();
+        if (!_serverReconnectRestriction.IsMarked || _serverReconnectRestriction.IsActive(nowUtc))
+            return;
+
+        long expiredTargetServerId = _serverReconnectRestriction.TargetServerId;
+        bool shouldAutoReconnect = state?.Settings.AutoConnect == true && expiredTargetServerId > 0;
+
+        if (!_serverReconnectRestriction.ClearIfExpired(nowUtc))
+            return;
+
+        PersistServerReconnectRestrictionState();
+
+        if (shouldAutoReconnect)
+            StartServerReconnectAfterRestriction(expiredTargetServerId);
+    }
+
+    private void StartServerReconnectAfterRestriction(long targetServerId)
+    {
+        if (_serverReconnectAutoReconnectAttemptRunning || !IsConnected || _state is null)
+            return;
+
+        AjServer? targetServer = _state.Servers.FirstOrDefault(server => server.Id == targetServerId);
+        if (targetServer is null)
+        {
+            StatusText = $"Autoverbindung übersprungen: Zielserver ID {targetServerId} ist nicht mehr vorhanden.";
+            return;
+        }
+
+        _ = AutoReconnectAfterRestrictionAsync(targetServer);
+    }
+
+    private async Task AutoReconnectAfterRestrictionAsync(AjServer targetServer)
+    {
+        if (_serverReconnectAutoReconnectAttemptRunning || !IsConnected || _client is null)
+            return;
+
+        _serverReconnectAutoReconnectAttemptRunning = true;
+        StatusText = $"Autoverbindung nach Reconnect-Sperre: {targetServer.Name}";
+
+        try
+        {
+            string response = await _client.ServerLoginAsync(targetServer.Id).ConfigureAwait(true);
+            if (ServerReconnectPolicy.LooksLikeRestrictionResponse(response))
+            {
+                TimeSpan remaining = ServerReconnectPolicy.ExtractRestrictionRemaining(response);
+                _serverReconnectRestriction.Mark(
+                    remaining,
+                    hasExactCountdown: false,
+                    targetServerId: targetServer.Id,
+                    nowUtc: DateTimeOffset.UtcNow);
+                PersistServerReconnectRestrictionState();
+                RaiseServerReconnectRestrictionProperties();
+
+                int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+                StatusText = $"Core meldet nach Autoverbindung erneut Reconnect-Sperre: noch ca. {minutes} Minuten. Ziel: {targetServer.Name}";
+                return;
+            }
+
+            StatusText = $"Autoverbindung angefordert: {targetServer.Name}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Autoverbindung nach Reconnect-Sperre fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _serverReconnectAutoReconnectAttemptRunning = false;
+        }
     }
 
     private void ServerReconnectRestrictionTimerOnTick(object? sender, EventArgs e)
