@@ -384,6 +384,19 @@ public sealed class AjUpload
     public string ProgressPercentText => UploadSize > 0 || Loaded > 0 ? $"{ProgressPercent:0.0} %" : "-";
     public string WatermarkText => Loaded > 0 ? $"{Loaded:0.0} %" : ProgressPercentText;
     public string ClientText => string.IsNullOrWhiteSpace(Version) ? "-" : Version;
+    public bool IsActiveTransfer
+    {
+        get
+        {
+            if (Status != 1)
+                return false;
+
+            if (Speed > 0)
+                return true;
+
+            return UploadTo > UploadFrom && ActualUploadPosition < UploadTo;
+        }
+    }
     public string LastConnectionText
     {
         get

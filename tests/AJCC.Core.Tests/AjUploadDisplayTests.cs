@@ -46,4 +46,71 @@ public sealed class AjUploadDisplayTests
         AjUpload upload = new() { LastConnection = long.MaxValue };
         Assert.AreEqual("-", upload.LastConnectionText);
     }
+
+    [TestMethod]
+    public void IsActiveTransfer_RequiresStatusOne()
+    {
+        AjUpload upload = new()
+        {
+            Status = 2,
+            Speed = 1024,
+            UploadFrom = 0,
+            UploadTo = 4096,
+            ActualUploadPosition = 1024
+        };
+
+        Assert.IsFalse(upload.IsActiveTransfer);
+    }
+
+    [TestMethod]
+    public void IsActiveTransfer_PositiveSpeedWinsEvenIfRangeLooksFinished()
+    {
+        AjUpload upload = new()
+        {
+            Status = 1,
+            Speed = 1024,
+            UploadFrom = 0,
+            UploadTo = 4096,
+            ActualUploadPosition = 4096
+        };
+
+        Assert.IsTrue(upload.IsActiveTransfer);
+    }
+
+    [TestMethod]
+    public void IsActiveTransfer_ZeroSpeedWithOpenRange_IsActive()
+    {
+        AjUpload upload = new()
+        {
+            Status = 1,
+            Speed = 0,
+            UploadFrom = 100,
+            UploadTo = 500,
+            ActualUploadPosition = 499
+        };
+
+        Assert.IsTrue(upload.IsActiveTransfer);
+    }
+
+    [TestMethod]
+    public void IsActiveTransfer_ZeroSpeedWithFinishedOrInvalidRange_IsInactive()
+    {
+        Assert.IsFalse(new AjUpload
+        {
+            Status = 1,
+            Speed = 0,
+            UploadFrom = 100,
+            UploadTo = 500,
+            ActualUploadPosition = 500
+        }.IsActiveTransfer);
+
+        Assert.IsFalse(new AjUpload
+        {
+            Status = 1,
+            Speed = 0,
+            UploadFrom = 500,
+            UploadTo = 500,
+            ActualUploadPosition = 0
+        }.IsActiveTransfer);
+    }
 }
