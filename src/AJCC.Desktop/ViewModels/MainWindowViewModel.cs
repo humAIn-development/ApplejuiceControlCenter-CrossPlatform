@@ -204,6 +204,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanPauseSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanPause(SelectedDownload);
     public bool CanResumeSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanResume(SelectedDownload);
     public bool CanCancelSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanCancel(SelectedDownload);
+    public bool CanCleanDownloadList => IsConnected && !IsBusy && _state is not null && _state.Downloads.Any(DownloadActionSemantics.IsTerminal);
     public bool CanRenameSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanSetTargetDirectorySelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanDownloadSelectedSearchEntry => IsConnected && !IsBusy && IsValidSearchEntryForDownload(SelectedSearchEntry);
@@ -444,6 +445,35 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Download konnte nicht abgebrochen werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task CleanTerminalDownloadsAsync()
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (client is null || state is null || !CanCleanDownloadList)
+            return;
+
+        SelectedDownload = null;
+        IsBusy = true;
+        StatusText = "Entferne fertige/abgebrochene Downloads ...";
+
+        try
+        {
+            await client.CleanDownloadListAsync().ConfigureAwait(true);
+            StatusText = "Downloadliste wird vollständig neu geladen ...";
+            await ForceReloadDownloadsAfterCleanAsync(client, state).ConfigureAwait(true);
+            StatusText = "Fertige/abgebrochene Downloads entfernt.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Downloadliste konnte nicht bereinigt werden: " + ex.Message;
         }
         finally
         {
@@ -811,6 +841,27 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (SelectedDownload is not null && state.Downloads.All(download => download.Id != SelectedDownload.Id))
                 SelectedDownload = null;
 
+            RaiseStateProperties();
+        });
+    }
+
+    private async Task ForceReloadDownloadsAfterCleanAsync(AppleJuiceCoreClient client, AjState state)
+    {
+        string xml = await client.GetModifiedXmlAsync(
+            timestamp: 0,
+            sessionId: null,
+            filter: "ids;down;user;informations").ConfigureAwait(false);
+        ModifiedParseResult result = AjXmlParser.ParseModified(xml);
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (!ReferenceEquals(_state, state) || !IsConnected)
+                return;
+
+            state.Downloads.Clear();
+            state.Users.Clear();
+            AjStateUpdater.Apply(state, result);
+            SelectedDownload = null;
             RaiseStateProperties();
         });
     }

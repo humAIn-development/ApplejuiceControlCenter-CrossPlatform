@@ -135,9 +135,10 @@ public sealed partial class MainWindow : Window
         bool canPause = _viewModel.CanPauseSelectedDownload;
         bool canResume = _viewModel.CanResumeSelectedDownload;
         bool canCancel = _viewModel.CanCancelSelectedDownload;
+        bool canClean = _viewModel.CanCleanDownloadList;
         bool canRename = _viewModel.CanRenameSelectedDownload;
         bool canSetTargetDirectory = _viewModel.CanSetTargetDirectorySelectedDownload;
-        bool hasControlActions = canPause || canResume || canCancel;
+        bool hasControlActions = canPause || canResume || canCancel || canClean;
         bool hasMetadataActions = canRename || canSetTargetDirectory;
         int separatorIndex = 0;
 
@@ -151,6 +152,7 @@ public sealed partial class MainWindow : Window
                     "Pausieren" => canPause,
                     "Fortsetzen" => canResume,
                     "Download abbrechen…" => canCancel,
+                    "Fertige/abgebrochene Downloads entfernen" => canClean,
                     "Umbenennen…" => canRename,
                     "Zielverzeichnis setzen…" => canSetTargetDirectory,
                     _ => true
@@ -238,6 +240,9 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadContextCancel_OnClick(object? sender, RoutedEventArgs e)
         => await ConfirmAndCancelSelectedDownloadAsync();
+
+    private async void DownloadContextClean_OnClick(object? sender, RoutedEventArgs e)
+        => await _viewModel.CleanTerminalDownloadsAsync();
 
     private async void DownloadContextRename_OnClick(object? sender, RoutedEventArgs e)
         => await RenameSelectedDownloadWithDialogAsync();

@@ -115,6 +115,9 @@ public sealed class AppleJuiceCoreClient
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "dir" },
             cancellationToken);
 
+    public Task<string> CleanDownloadListAsync(CancellationToken cancellationToken = default)
+        => GetXmlAsync(AjEndpoints.CleanDownloadList, null, cancellationToken);
+
     public Task<string> ServerLoginAsync(long id, CancellationToken cancellationToken = default)
         => GetXmlAsync(
             AjEndpoints.ServerLogin,

@@ -187,6 +187,7 @@
                       <MenuItem Header="Pausieren" Click="DownloadContextPause_OnClick" />
                       <MenuItem Header="Fortsetzen" Click="DownloadContextResume_OnClick" />
                       <MenuItem Header="Download abbrechen…" Click="DownloadContextCancel_OnClick" />
+                      <MenuItem Header="Fertige/abgebrochene Downloads entfernen" Click="DownloadContextClean_OnClick" />
                       <Separator />
                       <MenuItem Header="Umbenennen…" Click="DownloadContextRename_OnClick" />
                       <MenuItem Header="Zielverzeichnis setzen…" Click="DownloadContextSetTargetDirectory_OnClick" />

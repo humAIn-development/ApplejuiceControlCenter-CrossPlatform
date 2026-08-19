@@ -114,6 +114,22 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task CleanDownloadList_UsesGetWithoutDownloadId()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.CleanDownloadListAsync();
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/cleandownloadlist", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        Assert.IsFalse(query.Contains("id=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
     public async Task ServerLogin_UsesGetWithServerId()
     {
         RecordingHandler handler = new("OK");
