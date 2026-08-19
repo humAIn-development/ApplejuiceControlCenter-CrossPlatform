@@ -514,7 +514,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             {
                 StatusText = $"Bereite lokale Zielordnerstruktur vor: {displayTarget}";
                 HostIncomingDirectoryPreparationResult preparation = _incomingDirectoryPreparer.Prepare(
-                    LocalIncomingMappingText,
+                    ResolveHostIncomingRoot(state),
                     normalization.Value);
                 if (!preparation.Success)
                 {
@@ -534,6 +534,77 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private string ResolveHostIncomingRoot(AjState state)
+    {
+        string coreIncoming = (state.Settings.IncomingDirectory ?? string.Empty).Trim().Trim('"');
+        if (CanUseCoreIncomingDirectoryDirectly(coreIncoming))
+            return coreIncoming;
+
+        return LocalIncomingMappingText;
+    }
+
+    private bool CanUseCoreIncomingDirectoryDirectly(string coreIncoming)
+    {
+        if (string.IsNullOrWhiteSpace(coreIncoming))
+            return false;
+
+        try
+        {
+            if (coreIncoming.StartsWith(@"\\", StringComparison.Ordinal))
+                return Directory.Exists(coreIncoming);
+
+            if (!OperatingSystem.IsWindows() || !Path.IsPathRooted(coreIncoming))
+                return false;
+
+            if (!Uri.TryCreate(EndpointText.Trim(), UriKind.Absolute, out Uri? endpoint))
+                return false;
+
+            return IsLocalCoreHost(endpoint.Host) && Directory.Exists(coreIncoming);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsLocalCoreHost(string host)
+    {
+        string value = (host ?? string.Empty).Trim();
+        if (value.Length == 0
+            || string.Equals(value, "localhost", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "::1", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        try
+        {
+            System.Net.IPAddress[] localAddresses = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName());
+
+            if (System.Net.IPAddress.TryParse(value, out System.Net.IPAddress? address))
+            {
+                return System.Net.IPAddress.IsLoopback(address)
+                    || localAddresses.Contains(address);
+            }
+
+            string machineName = Environment.MachineName;
+            string dnsHostName = System.Net.Dns.GetHostName();
+            if (string.Equals(value, machineName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, dnsHostName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return System.Net.Dns.GetHostAddresses(value)
+                .Any(resolved => System.Net.IPAddress.IsLoopback(resolved) || localAddresses.Contains(resolved));
+        }
+        catch
+        {
+            return false;
         }
     }
 
