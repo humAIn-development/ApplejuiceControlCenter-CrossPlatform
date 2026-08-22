@@ -15,6 +15,8 @@ public sealed partial class MainWindow : Window
     private readonly MainWindowViewModel _viewModel = new();
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
+    private int _embeddedPartListRequestVersion;
+    private long _embeddedPartListDownloadId;
 
     public MainWindow()
     {
@@ -284,6 +286,99 @@ public sealed partial class MainWindow : Window
             partList.SourceCandidateCount,
             partList.SourceErrorCount);
         await dialog.ShowDialog<bool>(this);
+    }
+
+    private async void DownloadsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        int requestVersion = ++_embeddedPartListRequestVersion;
+        AjDownload? selected = (sender as ListBox)?.SelectedItem as AjDownload;
+        _viewModel.SelectedDownload = selected;
+        if (selected is null)
+        {
+            _embeddedPartListDownloadId = 0;
+            ClearEmbeddedPartList("Markiere einen Download, um die Partliste zu laden.");
+            return;
+        }
+
+        if (_embeddedPartListDownloadId == selected.Id)
+            return;
+
+        _embeddedPartListDownloadId = 0;
+        ClearEmbeddedPartList("Partliste wird geladen…");
+        await Task.Delay(140);
+        if (requestVersion != _embeddedPartListRequestVersion)
+            return;
+
+        await LoadEmbeddedPartListAsync(requestVersion);
+    }
+
+    private async void EmbeddedPartListRefresh_OnClick(object? sender, RoutedEventArgs e)
+    {
+        int requestVersion = ++_embeddedPartListRequestVersion;
+        _embeddedPartListDownloadId = 0;
+        await LoadEmbeddedPartListAsync(requestVersion);
+    }
+
+    private async Task LoadEmbeddedPartListAsync(int requestVersion)
+    {
+        if (!_viewModel.CanShowSelectedDownloadPartList)
+        {
+            ClearEmbeddedPartList(
+                _viewModel.SelectedDownload is null
+                    ? "Markiere einen Download, um die Partliste zu laden."
+                    : "Für diesen Download ist keine Partliste verfügbar.");
+            return;
+        }
+
+        var result = await _viewModel.LoadSelectedDownloadPartListAsync();
+        if (requestVersion != _embeddedPartListRequestVersion)
+            return;
+
+        if (!result.HasValue)
+        {
+            ClearEmbeddedPartList("Partliste konnte nicht geladen werden.");
+            return;
+        }
+
+        var partList = result.Value;
+        WrapPanel? segmentsPanel = this.FindControl<WrapPanel>("EmbeddedPartListSegmentsPanel");
+        TextBlock? summaryText = this.FindControl<TextBlock>("EmbeddedPartListSummaryText");
+        if (segmentsPanel is null || summaryText is null)
+            return;
+
+        segmentsPanel.Children.Clear();
+        List<PartListDialog.VisualSegment> segments =
+            PartListDialog.BuildVisualSegments(partList.Parts, partList.FileSize);
+        foreach (PartListDialog.VisualSegment segment in segments)
+        {
+            segmentsPanel.Children.Add(new Border
+            {
+                Width = 12,
+                Height = 18,
+                Margin = new Avalonia.Thickness(1),
+                CornerRadius = new Avalonia.CornerRadius(2),
+                Background = PartListDialog.BrushForType(segment.Type)
+            });
+        }
+
+        string sourceSummary = partList.SourceCandidateCount <= 0
+            ? "keine Quellenpartlisten"
+            : $"Quellenpartlisten {partList.SourcePartListCount:N0}/{partList.SourceCandidateCount:N0}";
+        if (partList.SourceErrorCount > 0)
+            sourceSummary += $", Fehler {partList.SourceErrorCount:N0}";
+
+        summaryText.Text = $"{segments.Count:N0} Blöcke · {sourceSummary}";
+        _embeddedPartListDownloadId = _viewModel.SelectedDownload?.Id ?? 0;
+    }
+
+    private void ClearEmbeddedPartList(string message)
+    {
+        WrapPanel? segmentsPanel = this.FindControl<WrapPanel>("EmbeddedPartListSegmentsPanel");
+        TextBlock? summaryText = this.FindControl<TextBlock>("EmbeddedPartListSummaryText");
+        if (segmentsPanel is not null)
+            segmentsPanel.Children.Clear();
+        if (summaryText is not null)
+            summaryText.Text = message;
     }
 
     private async void SearchResultContextDownload_OnClick(object? sender, RoutedEventArgs e)

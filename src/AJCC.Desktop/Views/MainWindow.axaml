@@ -137,8 +137,10 @@
 
     <TabControl Grid.Row="2">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,Auto,2*,Auto,Auto,*" Margin="0,8,0,0">
-          <Border Grid.Row="0" Classes="panel" Padding="8" Margin="0,0,0,8">
+        <Grid RowDefinitions="Auto,Auto,2*,Auto,Auto,*"
+              ColumnDefinitions="*,430"
+              Margin="0,8,0,0">
+          <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="panel" Padding="8" Margin="0,0,0,8">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
               <TextBlock Grid.Column="0"
                          Classes="muted"
@@ -165,7 +167,7 @@
             </Grid>
           </Border>
 
-          <Border Grid.Row="1" Classes="tableHeader">
+          <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="tableHeader">
             <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
@@ -176,8 +178,10 @@
             </Grid>
           </Border>
           <ListBox Grid.Row="2"
+                   Grid.ColumnSpan="2"
                    ItemsSource="{Binding Downloads}"
-                   SelectedItem="{Binding SelectedDownload}">
+                   SelectedItem="{Binding SelectedDownload}"
+                   SelectionChanged="DownloadsList_OnSelectionChanged">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjDownload">
                 <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*"
@@ -258,6 +262,39 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+
+          <Border Grid.Row="3"
+                  Grid.RowSpan="3"
+                  Grid.Column="1"
+                  Classes="panel"
+                  Margin="12,10,0,0"
+                  Padding="10">
+            <Grid RowDefinitions="Auto,Auto,*">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Partliste"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        MinWidth="96"
+                        Content="Aktualisieren"
+                        Click="EmbeddedPartListRefresh_OnClick" />
+              </Grid>
+
+              <TextBlock x:Name="EmbeddedPartListSummaryText"
+                         Grid.Row="1"
+                         Classes="muted"
+                         Margin="0,6,0,8"
+                         Text="Markiere einen Download, um die Partliste zu laden."
+                         TextWrapping="Wrap" />
+
+              <ScrollViewer Grid.Row="2"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto">
+                <WrapPanel x:Name="EmbeddedPartListSegmentsPanel"
+                           Orientation="Horizontal" />
+              </ScrollViewer>
+            </Grid>
+          </Border>
         </Grid>
       </TabItem>
 

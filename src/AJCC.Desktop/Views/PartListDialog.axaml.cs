@@ -79,7 +79,7 @@ public sealed partial class PartListDialog : Window
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
         => Close(false);
 
-    private static List<VisualSegment> BuildVisualSegments(IReadOnlyList<AjPart> parts, long fileSize)
+    internal static List<VisualSegment> BuildVisualSegments(IReadOnlyList<AjPart> parts, long fileSize)
     {
         if (parts.Count == 0 || fileSize <= 0)
             return new List<VisualSegment>();
@@ -167,7 +167,7 @@ public sealed partial class PartListDialog : Window
         return sum;
     }
 
-    private static IBrush BrushForType(int type)
+    internal static IBrush BrushForType(int type)
     {
         if (type == DownloadPartListAggregator.ActiveDownloadPartType)
             return new SolidColorBrush(Color.FromRgb(129, 212, 250));
@@ -186,5 +186,5 @@ public sealed partial class PartListDialog : Window
         return new SolidColorBrush(Color.FromRgb(r, g, b));
     }
 
-    private readonly record struct VisualSegment(long Start, long End, int Type);
+    internal readonly record struct VisualSegment(long Start, long End, int Type);
 }
