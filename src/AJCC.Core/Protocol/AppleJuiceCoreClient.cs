@@ -140,6 +140,27 @@ public sealed class AppleJuiceCoreClient
             },
             cancellationToken);
 
+    public Task<string> SetPriorityAsync(long id, int priority, CancellationToken cancellationToken = default)
+        => SetPriorityAsync(new[] { id }, priority, cancellationToken);
+
+    public Task<string> SetPriorityAsync(IEnumerable<long> ids, int priority, CancellationToken cancellationToken = default)
+    {
+        List<long> idList = ids.Distinct().ToList();
+        if (idList.Count == 0)
+            throw new ArgumentException("Keine ID übergeben.", nameof(ids));
+
+        Dictionary<string, string> parameters = new()
+        {
+            ["id"] = idList[0].ToString(CultureInfo.InvariantCulture),
+            ["priority"] = priority.ToString(CultureInfo.InvariantCulture)
+        };
+
+        for (int index = 1; index < idList.Count; index++)
+            parameters[$"id{index}"] = idList[index].ToString(CultureInfo.InvariantCulture);
+
+        return GetXmlAsync(AjEndpoints.SetPriority, parameters, cancellationToken);
+    }
+
     public Task<string> CleanDownloadListAsync(CancellationToken cancellationToken = default)
         => GetXmlAsync(AjEndpoints.CleanDownloadList, null, cancellationToken);
 

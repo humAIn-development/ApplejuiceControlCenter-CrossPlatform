@@ -179,6 +179,25 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task SetPriority_UsesProductiveMultiIdParameters()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.SetPriorityAsync(new long[] { 41, 42, 41 }, 17);
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/setpriority", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "id=41");
+        StringAssert.Contains(query, "priority=17");
+        StringAssert.Contains(query, "id1=42");
+        Assert.IsFalse(query.Contains("id2=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
     public async Task CleanDownloadList_UsesGetWithoutDownloadId()
     {
         RecordingHandler handler = new("OK");
