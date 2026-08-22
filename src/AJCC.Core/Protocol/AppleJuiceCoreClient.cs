@@ -40,6 +40,9 @@ public sealed class AppleJuiceCoreClient
     public Task<string> GetInformationXmlAsync(CancellationToken cancellationToken = default)
         => GetXmlAsync(AjEndpoints.Information, null, cancellationToken);
 
+    public Task<string> GetShareXmlAsync(CancellationToken cancellationToken = default)
+        => GetXmlAsync(AjEndpoints.Share, null, cancellationToken);
+
     public Task<string> GetSessionXmlAsync(CancellationToken cancellationToken = default)
         => GetXmlAsync(AjEndpoints.GetSession, null, cancellationToken);
 
