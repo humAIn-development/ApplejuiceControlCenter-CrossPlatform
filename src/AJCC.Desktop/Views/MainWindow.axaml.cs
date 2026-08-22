@@ -399,7 +399,7 @@ public sealed partial class MainWindow : Window
     private async void DownloadSourceContextCopyNick_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_selectedDownloadSourceForContext is { } source)
-            await CopyTextAsync(source.Nickname);
+            await CopyTextAsync(source.NicknameText);
     }
 
     private async void DownloadSourceContextCopyFilename_OnClick(object? sender, RoutedEventArgs e)

@@ -35,7 +35,7 @@ public sealed partial class PartListDialog : Window
 
         TextBlock? fileNameText = this.FindControl<TextBlock>("FileNameText");
         TextBlock? summaryText = this.FindControl<TextBlock>("SummaryText");
-        StackPanel? segmentsPanel = this.FindControl<StackPanel>("SegmentsPanel");
+        WrapPanel? segmentsPanel = this.FindControl<WrapPanel>("SegmentsPanel");
 
         if (fileNameText is not null)
             fileNameText.Text = displayName;

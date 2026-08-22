@@ -21,10 +21,10 @@
 
     <ScrollViewer Grid.Row="2"
                   Margin="0,14,0,14"
-                  HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Disabled">
-      <StackPanel x:Name="SegmentsPanel"
-                  Orientation="Horizontal" />
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <WrapPanel x:Name="SegmentsPanel"
+                 Orientation="Horizontal" />
     </ScrollViewer>
 
     <Button Grid.Row="3"
