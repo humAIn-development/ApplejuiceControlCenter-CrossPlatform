@@ -350,6 +350,45 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task SetSharePriorityAsync(AjShareFile share, string priorityText)
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || IsBusy || client is null || state is null || share.Id <= 0)
+            return;
+
+        if (!int.TryParse((priorityText ?? string.Empty).Trim(), out int requestedPriority))
+        {
+            StatusText = "Share-Priorität ungültig. Erwartet: 1 bis 250.";
+            return;
+        }
+
+        int priority = Math.Clamp(requestedPriority, 1, 250);
+        IsBusy = true;
+        StatusText = $"Setze Share-Priorität {priority}: {share.DisplayFilename}";
+
+        try
+        {
+            await client.SetPriorityAsync(share.Id, priority).ConfigureAwait(true);
+            share.Priority = priority;
+
+            int index = state.Shares.IndexOf(share);
+            if (index >= 0)
+                state.Shares[index] = share;
+
+            StatusText = $"Share-Priorität gesetzt: {priority} · {share.DisplayFilename}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Share-Priorität konnte nicht gesetzt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public bool CanShowSelectedDownloadPartList
         => IsConnected
             && !IsBusy

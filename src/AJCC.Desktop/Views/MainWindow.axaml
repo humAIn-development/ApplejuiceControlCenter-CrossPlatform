@@ -532,6 +532,11 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjShareFile">
                 <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*" Margin="8,6">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Priorität setzen…" Click="ShareContextSetPriority_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
                   <TextBlock Text="{Binding Id}" />
                   <TextBlock Grid.Column="1" Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding FileType}" />

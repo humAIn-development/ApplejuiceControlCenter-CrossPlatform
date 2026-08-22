@@ -15,6 +15,7 @@ public sealed partial class MainWindow : Window
     private readonly MainWindowViewModel _viewModel = new();
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
+    private AjShareFile? _selectedShareForContext;
     private int _embeddedPartListRequestVersion;
     private long _embeddedPartListDownloadId;
 
@@ -69,6 +70,24 @@ public sealed partial class MainWindow : Window
     private async void ReloadSharesButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.ReloadSharesAsync();
 
+    private async void ShareContextSetPriority_OnClick(object? sender, RoutedEventArgs e)
+    {
+        AjShareFile? share = _selectedShareForContext;
+        if (share is null || !_viewModel.IsConnected || _viewModel.IsBusy)
+            return;
+
+        TextPromptDialog dialog = new(
+            "Share-Priorität setzen",
+            "Priorität 1 bis 250:",
+            share.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "Werte außerhalb des Bereichs werden wie im produktiven AJCC auf 1 bis 250 begrenzt.",
+            "Setzen");
+
+        bool accepted = await dialog.ShowDialog<bool>(this);
+        if (accepted)
+            await _viewModel.SetSharePriorityAsync(share, dialog.TextValue);
+    }
+
     private async void DownloadSearchResultButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
 
@@ -87,6 +106,9 @@ public sealed partial class MainWindow : Window
                 break;
             case AjUserSource userSource:
                 _selectedDownloadSourceForContext = userSource;
+                break;
+            case AjShareFile share:
+                _selectedShareForContext = share;
                 break;
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
@@ -115,6 +137,10 @@ public sealed partial class MainWindow : Window
                 break;
             case AjUserSource userSource:
                 _selectedDownloadSourceForContext = userSource;
+                isDownloadRow = false;
+                break;
+            case AjShareFile share:
+                _selectedShareForContext = share;
                 isDownloadRow = false;
                 break;
             case AjSearchEntry entry:
