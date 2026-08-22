@@ -353,8 +353,8 @@ public sealed partial class MainWindow : Window
         {
             segmentsPanel.Children.Add(new Border
             {
-                Width = 12,
-                Height = 18,
+                Width = 8,
+                Height = 10,
                 Margin = new Avalonia.Thickness(1),
                 CornerRadius = new Avalonia.CornerRadius(2),
                 Background = PartListDialog.BrushForType(segment.Type)
