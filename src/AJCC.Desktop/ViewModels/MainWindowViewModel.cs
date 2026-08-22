@@ -264,6 +264,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjServer> Servers => _state is null ? Array.Empty<AjServer>() : _state.Servers;
     public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
+    public IEnumerable<AjShareFile> Shares => _state is null ? Array.Empty<AjShareFile>() : _state.Shares;
+    public string ShareCountText => _state is null ? "0 Dateien" : $"{_state.Shares.Count:N0} Dateien";
+    public string ShareSizeText => _state is null
+        ? DisplayFormatHelper.Bytes(0)
+        : DisplayFormatHelper.Bytes(_state.Shares.Sum(share => Math.Max(0L, share.Size)));
 
     public string CoreNick => string.IsNullOrWhiteSpace(_state?.Settings.Nick) ? "-" : _state.Settings.Nick;
     public string CoreIncomingDirectory => string.IsNullOrWhiteSpace(_state?.Settings.IncomingDirectory) ? "-" : _state.Settings.IncomingDirectory;
@@ -308,6 +313,41 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         string xml = await client.GetDirectoryXmlAsync(directory).ConfigureAwait(true);
         return AjXmlParser.ParseDirectoryList(xml);
+    }
+
+    public async Task ReloadSharesAsync()
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || IsBusy || client is null || state is null)
+            return;
+
+        IsBusy = true;
+        StatusText = "Lade Share-Dateiliste ...";
+
+        try
+        {
+            string xml = await client.GetShareXmlAsync().ConfigureAwait(true);
+            List<AjShareFile> shares = AjXmlParser.ParseShares(xml);
+
+            state.Shares.Clear();
+            foreach (AjShareFile share in shares)
+                state.Shares.Add(share);
+
+            OnPropertyChanged(nameof(Shares));
+            OnPropertyChanged(nameof(ShareCountText));
+            OnPropertyChanged(nameof(ShareSizeText));
+            StatusText = $"Share-Dateiliste geladen: {shares.Count:N0} Dateien · {ShareSizeText}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Share-Dateiliste konnte nicht geladen werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     public bool CanShowSelectedDownloadPartList
@@ -1634,6 +1674,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(InactiveUploads));
         OnPropertyChanged(nameof(Servers));
         OnPropertyChanged(nameof(Searches));
+        OnPropertyChanged(nameof(Shares));
+        OnPropertyChanged(nameof(ShareCountText));
+        OnPropertyChanged(nameof(ShareSizeText));
         OnPropertyChanged(nameof(SelectedDownloadText));
         OnPropertyChanged(nameof(CanPauseSelectedDownload));
         OnPropertyChanged(nameof(CanResumeSelectedDownload));

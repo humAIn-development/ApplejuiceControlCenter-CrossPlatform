@@ -498,6 +498,53 @@
           </Grid>
         </Grid>
       </TabItem>
+      <TabItem Header="Share">
+        <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+          <Border Grid.Row="0" Classes="panel" Padding="8" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <TextBlock Text="Share-Dateiliste" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" Text="{Binding ShareCountText}" />
+                <TextBlock Classes="muted" Text="{Binding ShareSizeText}" />
+                <TextBlock Classes="muted" Text="nur manuell geladen" />
+              </StackPanel>
+              <Button Grid.Column="1"
+                      MinWidth="100"
+                      Content="Neu laden"
+                      IsEnabled="{Binding IsConnected}"
+                      Click="ReloadSharesButton_OnClick" />
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="1" Classes="tableHeader">
+            <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*">
+              <TextBlock Text="ID" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Typ" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Pfad" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="4" Text="Größe" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Priorität" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="6" Text="Suchanfragen" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+
+          <ListBox Grid.Row="2" ItemsSource="{Binding Shares}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjShareFile">
+                <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*" Margin="8,6">
+                  <TextBlock Text="{Binding Id}" />
+                  <TextBlock Grid.Column="1" Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding FileType}" />
+                  <TextBlock Grid.Column="3" Text="{Binding DirectoryPath}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="4" Text="{Binding SizeText}" />
+                  <TextBlock Grid.Column="5" Text="{Binding Priority}" />
+                  <TextBlock Grid.Column="6" Text="{Binding AskCount}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
     </TabControl>
 
     <Border Grid.Row="3" Classes="statusBar" Margin="0,10,0,0">

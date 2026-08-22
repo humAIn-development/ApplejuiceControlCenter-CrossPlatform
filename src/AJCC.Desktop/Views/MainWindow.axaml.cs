@@ -66,6 +66,9 @@ public sealed partial class MainWindow : Window
     private async void SearchButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.StartSearchAsync();
 
+    private async void ReloadSharesButton_OnClick(object? sender, RoutedEventArgs e)
+        => await _viewModel.ReloadSharesAsync();
+
     private async void DownloadSearchResultButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
 
