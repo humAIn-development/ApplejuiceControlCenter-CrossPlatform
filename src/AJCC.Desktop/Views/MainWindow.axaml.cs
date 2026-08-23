@@ -110,6 +110,32 @@ public sealed partial class MainWindow : Window
             await _viewModel.ResetAllSharePrioritiesAsync();
     }
 
+    private async void ShareContextCopyFilename_OnClick(object? sender, RoutedEventArgs e)
+        => await CopySelectedShareValuesAsync(share => share.DisplayFilename);
+
+    private async void ShareContextCopyPath_OnClick(object? sender, RoutedEventArgs e)
+        => await CopySelectedShareValuesAsync(share => share.DirectoryPath);
+
+    private async void ShareContextCopyChecksum_OnClick(object? sender, RoutedEventArgs e)
+        => await CopySelectedShareValuesAsync(share => share.Checksum);
+
+    private async void ShareContextCopyId_OnClick(object? sender, RoutedEventArgs e)
+        => await CopySelectedShareValuesAsync(share => share.Id.ToString());
+
+    private async Task CopySelectedShareValuesAsync(Func<AjShareFile, string?> selector)
+    {
+        List<string> values = GetSelectedShareFilesForContext()
+            .Select(selector)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .ToList();
+
+        if (values.Count == 0)
+            return;
+
+        await CopyTextAsync(string.Join(Environment.NewLine, values));
+    }
+
     private List<AjShareFile> GetSelectedShareFilesForContext()
     {
         ListBox? sharesList = this.FindControl<ListBox>("SharesList");

@@ -536,6 +536,11 @@
                     <ContextMenu>
                       <MenuItem Header="Priorität setzen…" Click="ShareContextSetPriority_OnClick" />
                       <MenuItem Header="Alle Prioritäten auf 1 setzen" Click="ShareContextResetAllPriorities_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Dateiname kopieren" Click="ShareContextCopyFilename_OnClick" />
+                      <MenuItem Header="Pfad kopieren" Click="ShareContextCopyPath_OnClick" />
+                      <MenuItem Header="Checksum kopieren" Click="ShareContextCopyChecksum_OnClick" />
+                      <MenuItem Header="ID kopieren" Click="ShareContextCopyId_OnClick" />
                     </ContextMenu>
                   </Grid.ContextMenu>
                   <TextBlock Text="{Binding Id}" />
