@@ -90,6 +90,26 @@ public sealed partial class MainWindow : Window
             await _viewModel.SetSharePriorityAsync(shares, dialog.TextValue);
     }
 
+    private async void ShareContextResetAllPriorities_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsConnected || _viewModel.IsBusy)
+            return;
+
+        List<AjShareFile> shares = _viewModel.Shares.ToList();
+        if (shares.Count == 0)
+            return;
+
+        ConfirmDialog dialog = new(
+            "Alle Share-Prioritäten zurücksetzen",
+            $"Priorität von {shares.Count:N0} Share-Dateien auf 1 setzen?",
+            "Auf 1 setzen",
+            "Abbrechen");
+
+        bool confirmed = await dialog.ShowDialog<bool>(this);
+        if (confirmed)
+            await _viewModel.ResetAllSharePrioritiesAsync();
+    }
+
     private List<AjShareFile> GetSelectedShareFilesForContext()
     {
         ListBox? sharesList = this.FindControl<ListBox>("SharesList");

@@ -405,6 +405,55 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task ResetAllSharePrioritiesAsync()
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || IsBusy || client is null || state is null)
+            return;
+
+        List<AjShareFile> shares = state.Shares.ToList();
+        if (shares.Count == 0)
+            return;
+
+        List<long> ids = shares
+            .Select(share => share.Id)
+            .Distinct()
+            .ToList();
+        if (ids.Count == 0)
+            return;
+
+        IsBusy = true;
+        StatusText = $"Setze alle Share-Prioritäten auf 1: {shares.Count:N0} Dateien";
+
+        try
+        {
+            const int batchSize = 75;
+            for (int offset = 0; offset < ids.Count; offset += batchSize)
+            {
+                long[] batch = ids
+                    .Skip(offset)
+                    .Take(batchSize)
+                    .ToArray();
+                await client.SetPriorityAsync(batch, 1).ConfigureAwait(true);
+            }
+
+            foreach (AjShareFile share in shares)
+                share.Priority = 1;
+
+            StatusText = $"Alle Share-Prioritäten auf 1 gesetzt: {ids.Count:N0} Dateien";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Alle Share-Prioritäten konnten nicht auf 1 gesetzt werden: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public bool CanShowSelectedDownloadPartList
         => IsConnected
             && !IsBusy
