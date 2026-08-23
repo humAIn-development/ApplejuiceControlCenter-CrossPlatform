@@ -39,6 +39,11 @@ public sealed partial class TextPromptDialog : Window
             input.Text = initialValue ?? string.Empty;
             input.SelectionStart = 0;
             input.SelectionEnd = input.Text?.Length ?? 0;
+            Opened += (_, _) =>
+            {
+                input.Focus();
+                input.SelectAll();
+            };
         }
         if (acceptButton is not null)
             acceptButton.Content = acceptText;

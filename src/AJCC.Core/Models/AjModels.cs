@@ -33,8 +33,12 @@ public sealed class AjShareDirectory
     public string ShareModeText => ShareMode == "subdirectory" ? "Freigegeben inkl. Unterordner" : "Freigegeben";
 }
 
-public sealed class AjShareFile
+public sealed class AjShareFile : INotifyPropertyChanged
 {
+    private int _priority;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public long Id { get; set; }
     public string Filename { get; set; } = "";
     public long Size { get; set; }
@@ -43,7 +47,18 @@ public sealed class AjShareFile
     public string DisplayFilename => GetFileNameOnly(Filename);
     public string DirectoryPath => GetDirectoryOnly(Filename);
     public string Checksum { get; set; } = "";
-    public int Priority { get; set; }
+    public int Priority
+    {
+        get => _priority;
+        set
+        {
+            if (_priority == value)
+                return;
+
+            _priority = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Priority)));
+        }
+    }
     public long LastAsked { get; set; }
     public long AskCount { get; set; }
     public long SearchCount { get; set; }

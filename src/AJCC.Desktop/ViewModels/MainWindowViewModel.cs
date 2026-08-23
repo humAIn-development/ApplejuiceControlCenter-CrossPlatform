@@ -354,13 +354,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     {
         ThrowIfDisposed();
         AppleJuiceCoreClient? client = _client;
-        AjState? state = _state;
         List<AjShareFile> selectedShares = (shares ?? Array.Empty<AjShareFile>())
             .Where(share => share.Id > 0)
             .GroupBy(share => share.Id)
             .Select(group => group.First())
             .ToList();
-        if (!IsConnected || IsBusy || client is null || state is null || selectedShares.Count == 0)
+        if (!IsConnected || IsBusy || client is null || _state is null || selectedShares.Count == 0)
             return;
 
         if (!int.TryParse((priorityText ?? string.Empty).Trim(), out int requestedPriority))
@@ -390,13 +389,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             foreach (AjShareFile share in selectedShares)
-            {
                 share.Priority = priority;
-
-                int index = state.Shares.IndexOf(share);
-                if (index >= 0)
-                    state.Shares[index] = share;
-            }
 
             StatusText = selectedShares.Count == 1
                 ? $"Share-Priorität gesetzt: {priority} · {selectedShares[0].DisplayFilename}"
