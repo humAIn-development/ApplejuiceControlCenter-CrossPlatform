@@ -34,7 +34,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
     private AjState? _state;
-    private string _endpointText = "http://127.0.0.1:8851/";
+    private string _endpointText = "http://192.168.178.25:9851/";
     private string _localIncomingMappingText = string.Empty;
     private string _serverReconnectRestrictionEndpoint = string.Empty;
     private string _statusText = "Nicht verbunden";
