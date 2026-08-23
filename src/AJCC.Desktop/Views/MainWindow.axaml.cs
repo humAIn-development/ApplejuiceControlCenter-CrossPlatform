@@ -3,7 +3,9 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using System.Text;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
 using AJCC.Desktop.ViewModels;
@@ -115,6 +117,68 @@ public sealed partial class MainWindow : Window
 
     private async void ShareContextCopyAjfspWithSource_OnClick(object? sender, RoutedEventArgs e)
         => await CopySelectedShareValuesAsync(share => _viewModel.BuildShareAjfspLink(share, includeOwnSource: true));
+
+
+    private async void ShareContextExportAjl_OnClick(object? sender, RoutedEventArgs e)
+    {
+        IReadOnlyList<AjShareFile> shares =
+            AjLegacyLinkListBuilder.PrepareShareExport(GetSelectedShareFilesForContext());
+        if (shares.Count == 0)
+            return;
+
+        FilePickerSaveOptions options = new()
+        {
+            Title = "AppleJuice-Linkliste (.ajl) exportieren",
+            SuggestedFileName = BuildDefaultAjlExportFileName(shares),
+            DefaultExtension = "ajl",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("AppleJuice-Linkliste")
+                {
+                    Patterns = new[] { "*.ajl" }
+                }
+            }
+        };
+
+        IStorageFile? file = await StorageProvider.SaveFilePickerAsync(options);
+        if (file is null)
+            return;
+
+        await using Stream stream = await file.OpenWriteAsync();
+        stream.SetLength(0);
+
+        await using StreamWriter writer = new(
+            stream,
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        await writer.WriteAsync(AjLegacyLinkListBuilder.BuildLegacyContent(shares));
+    }
+
+    private static string BuildDefaultAjlExportFileName(IReadOnlyList<AjShareFile> selectedShares)
+    {
+        if (selectedShares.Count == 1)
+        {
+            string baseName = Path.GetFileNameWithoutExtension(selectedShares[0].DisplayFilename.Trim());
+            baseName = SanitizeFileNameForExport(baseName);
+            if (!string.IsNullOrWhiteSpace(baseName))
+                return baseName + ".ajl";
+        }
+
+        return $"ApplejuiceControlCenter_ShareExport_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.ajl";
+    }
+
+    private static string SanitizeFileNameForExport(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+        StringBuilder builder = new(value.Length);
+        foreach (char c in value.Trim())
+            builder.Append(invalidChars.Contains(c) ? '_' : c);
+
+        string result = builder.ToString().Trim(' ', '.');
+        return result.Length > 80 ? result[..80] : result;
+    }
 
     private async void ShareContextCopyFilename_OnClick(object? sender, RoutedEventArgs e)
         => await CopySelectedShareValuesAsync(share => share.DisplayFilename);

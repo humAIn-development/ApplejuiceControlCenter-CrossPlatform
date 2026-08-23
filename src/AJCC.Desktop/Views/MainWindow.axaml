@@ -536,6 +536,7 @@
                     <ContextMenu>
                       <MenuItem Header="AJFSP-Link kopieren" Click="ShareContextCopyAjfsp_OnClick" />
                       <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="ShareContextCopyAjfspWithSource_OnClick" />
+                      <MenuItem Header="AppleJuice-Linkliste (.ajl) exportieren" Click="ShareContextExportAjl_OnClick" />
                       <Separator />
                       <MenuItem Header="Priorität setzen…" Click="ShareContextSetPriority_OnClick" />
                       <MenuItem Header="Alle Prioritäten auf 1 setzen" Click="ShareContextResetAllPriorities_OnClick" />
