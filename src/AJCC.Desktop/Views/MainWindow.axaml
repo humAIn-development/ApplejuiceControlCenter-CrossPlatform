@@ -528,7 +528,7 @@
             </Grid>
           </Border>
 
-          <ListBox Grid.Row="2" ItemsSource="{Binding Shares}">
+          <ListBox x:Name="SharesList" Grid.Row="2" SelectionMode="Multiple" ItemsSource="{Binding Shares}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjShareFile">
                 <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*" Margin="8,6">

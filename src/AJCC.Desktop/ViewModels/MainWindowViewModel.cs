@@ -350,12 +350,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public async Task SetSharePriorityAsync(AjShareFile share, string priorityText)
+    public async Task SetSharePriorityAsync(IEnumerable<AjShareFile> shares, string priorityText)
     {
         ThrowIfDisposed();
         AppleJuiceCoreClient? client = _client;
         AjState? state = _state;
-        if (!IsConnected || IsBusy || client is null || state is null || share.Id <= 0)
+        List<AjShareFile> selectedShares = (shares ?? Array.Empty<AjShareFile>())
+            .Where(share => share.Id > 0)
+            .GroupBy(share => share.Id)
+            .Select(group => group.First())
+            .ToList();
+        if (!IsConnected || IsBusy || client is null || state is null || selectedShares.Count == 0)
             return;
 
         if (!int.TryParse((priorityText ?? string.Empty).Trim(), out int requestedPriority))
@@ -365,19 +370,37 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         int priority = Math.Clamp(requestedPriority, 1, 250);
+        string targetText = selectedShares.Count == 1
+            ? selectedShares[0].DisplayFilename
+            : $"{selectedShares.Count:N0} Share-Dateien";
         IsBusy = true;
-        StatusText = $"Setze Share-Priorität {priority}: {share.DisplayFilename}";
+        StatusText = $"Setze Share-Priorität {priority}: {targetText}";
 
         try
         {
-            await client.SetPriorityAsync(share.Id, priority).ConfigureAwait(true);
-            share.Priority = priority;
+            const int batchSize = 75;
+            for (int offset = 0; offset < selectedShares.Count; offset += batchSize)
+            {
+                long[] ids = selectedShares
+                    .Skip(offset)
+                    .Take(batchSize)
+                    .Select(share => share.Id)
+                    .ToArray();
+                await client.SetPriorityAsync(ids, priority).ConfigureAwait(true);
+            }
 
-            int index = state.Shares.IndexOf(share);
-            if (index >= 0)
-                state.Shares[index] = share;
+            foreach (AjShareFile share in selectedShares)
+            {
+                share.Priority = priority;
 
-            StatusText = $"Share-Priorität gesetzt: {priority} · {share.DisplayFilename}";
+                int index = state.Shares.IndexOf(share);
+                if (index >= 0)
+                    state.Shares[index] = share;
+            }
+
+            StatusText = selectedShares.Count == 1
+                ? $"Share-Priorität gesetzt: {priority} · {selectedShares[0].DisplayFilename}"
+                : $"Share-Priorität gesetzt: {priority} · {selectedShares.Count:N0} Dateien";
         }
         catch (Exception ex)
         {

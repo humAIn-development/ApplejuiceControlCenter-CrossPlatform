@@ -72,20 +72,54 @@ public sealed partial class MainWindow : Window
 
     private async void ShareContextSetPriority_OnClick(object? sender, RoutedEventArgs e)
     {
-        AjShareFile? share = _selectedShareForContext;
-        if (share is null || !_viewModel.IsConnected || _viewModel.IsBusy)
+        List<AjShareFile> shares = GetSelectedShareFilesForContext();
+        if (shares.Count == 0 || !_viewModel.IsConnected || _viewModel.IsBusy)
             return;
 
         TextPromptDialog dialog = new(
             "Share-Priorität setzen",
             "Priorität 1 bis 250:",
-            share.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            "Werte außerhalb des Bereichs werden wie im produktiven AJCC auf 1 bis 250 begrenzt.",
+            shares[0].Priority.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            shares.Count == 1
+                ? "Werte außerhalb des Bereichs werden wie im produktiven AJCC auf 1 bis 250 begrenzt."
+                : $"{shares.Count:N0} markierte Share-Dateien erhalten dieselbe Priorität. Werte werden auf 1 bis 250 begrenzt.",
             "Setzen");
 
         bool accepted = await dialog.ShowDialog<bool>(this);
         if (accepted)
-            await _viewModel.SetSharePriorityAsync(share, dialog.TextValue);
+            await _viewModel.SetSharePriorityAsync(shares, dialog.TextValue);
+    }
+
+    private List<AjShareFile> GetSelectedShareFilesForContext()
+    {
+        ListBox? sharesList = this.FindControl<ListBox>("SharesList");
+        List<AjShareFile> selectedShares = sharesList?.SelectedItems?
+            .OfType<AjShareFile>()
+            .Where(share => share.Id > 0)
+            .GroupBy(share => share.Id)
+            .Select(group => group.First())
+            .ToList()
+            ?? new List<AjShareFile>();
+
+        if (selectedShares.Count == 0 && _selectedShareForContext is { Id: > 0 } share)
+            selectedShares.Add(share);
+
+        return selectedShares;
+    }
+
+    private void SelectShareForContext(AjShareFile share)
+    {
+        _selectedShareForContext = share;
+
+        ListBox? sharesList = this.FindControl<ListBox>("SharesList");
+        if (sharesList?.SelectedItems is not { } selectedItems)
+            return;
+
+        if (selectedItems.OfType<AjShareFile>().Any(selected => selected.Id == share.Id))
+            return;
+
+        selectedItems.Clear();
+        selectedItems.Add(share);
     }
 
     private async void DownloadSearchResultButton_OnClick(object? sender, RoutedEventArgs e)
@@ -108,7 +142,7 @@ public sealed partial class MainWindow : Window
                 _selectedDownloadSourceForContext = userSource;
                 break;
             case AjShareFile share:
-                _selectedShareForContext = share;
+                SelectShareForContext(share);
                 break;
             case AjSearchEntry entry:
                 _viewModel.SelectedSearchEntry = entry;
@@ -140,7 +174,7 @@ public sealed partial class MainWindow : Window
                 isDownloadRow = false;
                 break;
             case AjShareFile share:
-                _selectedShareForContext = share;
+                SelectShareForContext(share);
                 isDownloadRow = false;
                 break;
             case AjSearchEntry entry:
