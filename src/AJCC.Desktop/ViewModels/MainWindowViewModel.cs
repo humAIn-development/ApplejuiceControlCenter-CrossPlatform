@@ -304,6 +304,24 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return AjfspLinkBuilder.BuildFileLink(download.DisplayFilename, download.Hash, download.Size, sourceText);
     }
 
+    public string BuildShareAjfspLink(AjShareFile? share, bool includeOwnSource)
+    {
+        if (share is null
+            || string.IsNullOrWhiteSpace(share.DisplayFilename)
+            || string.IsNullOrWhiteSpace(share.Checksum)
+            || share.Size <= 0)
+        {
+            return string.Empty;
+        }
+
+        string sourceText = includeOwnSource
+            ? _state?.Settings.Nick?.Trim() ?? string.Empty
+            : string.Empty;
+        return string.IsNullOrWhiteSpace(sourceText)
+            ? AjfspLinkBuilder.BuildFileLink(share.DisplayFilename, share.Checksum, share.Size)
+            : AjfspLinkBuilder.BuildFileLink(share.DisplayFilename, share.Checksum, share.Size, sourceText);
+    }
+
     public async Task<AjDirectoryListResult> LoadCoreDirectoryAsync(string? directory)
     {
         ThrowIfDisposed();

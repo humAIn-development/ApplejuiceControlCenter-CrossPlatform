@@ -534,6 +534,9 @@
                 <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*" Margin="8,6">
                   <Grid.ContextMenu>
                     <ContextMenu>
+                      <MenuItem Header="AJFSP-Link kopieren" Click="ShareContextCopyAjfsp_OnClick" />
+                      <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="ShareContextCopyAjfspWithSource_OnClick" />
+                      <Separator />
                       <MenuItem Header="Priorität setzen…" Click="ShareContextSetPriority_OnClick" />
                       <MenuItem Header="Alle Prioritäten auf 1 setzen" Click="ShareContextResetAllPriorities_OnClick" />
                       <Separator />

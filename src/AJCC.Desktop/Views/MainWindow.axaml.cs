@@ -110,6 +110,12 @@ public sealed partial class MainWindow : Window
             await _viewModel.ResetAllSharePrioritiesAsync();
     }
 
+    private async void ShareContextCopyAjfsp_OnClick(object? sender, RoutedEventArgs e)
+        => await CopySelectedShareValuesAsync(share => _viewModel.BuildShareAjfspLink(share, includeOwnSource: false));
+
+    private async void ShareContextCopyAjfspWithSource_OnClick(object? sender, RoutedEventArgs e)
+        => await CopySelectedShareValuesAsync(share => _viewModel.BuildShareAjfspLink(share, includeOwnSource: true));
+
     private async void ShareContextCopyFilename_OnClick(object? sender, RoutedEventArgs e)
         => await CopySelectedShareValuesAsync(share => share.DisplayFilename);
 
