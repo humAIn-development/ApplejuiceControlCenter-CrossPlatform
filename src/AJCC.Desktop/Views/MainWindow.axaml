@@ -77,11 +77,18 @@
                    Text="Incoming-Mapping" />
         <TextBox Grid.Row="1"
                  Grid.Column="1"
-                 Grid.ColumnSpan="3"
-                 Margin="0,8,0,0"
+                 Grid.ColumnSpan="2"
+                 Margin="0,8,10,0"
                  IsEnabled="{Binding CanEditConnectionSettings}"
                  PlaceholderText="Optional: lokales/gemountetes Abbild des Core-Incoming (z. B. Z:\ oder /mnt/applejuice-incoming)"
                  Text="{Binding LocalIncomingMappingText}" />
+        <Button Grid.Row="1"
+                Grid.Column="3"
+                MinWidth="120"
+                Margin="0,8,0,0"
+                IsEnabled="{Binding CanEditConnectionSettings}"
+                Content="Auswählen…"
+                Click="BrowseLocalIncomingMappingButton_OnClick" />
       </Grid>
     </Border>
 

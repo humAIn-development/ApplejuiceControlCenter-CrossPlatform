@@ -57,6 +57,28 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void BrowseLocalIncomingMappingButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanEditConnectionSettings)
+            return;
+
+        IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions
+            {
+                Title = "Lokales Incoming-Mapping auswählen",
+                AllowMultiple = false
+            });
+
+        if (folders.Count == 0)
+            return;
+
+        Uri path = folders[0].Path;
+        if (!path.IsFile)
+            return;
+
+        _viewModel.LocalIncomingMappingText = path.LocalPath;
+    }
+
     private async void PauseDownloadButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.PauseSelectedDownloadAsync();
 
