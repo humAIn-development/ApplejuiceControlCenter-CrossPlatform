@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel = new();
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
+    private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
     private AjShareFile? _selectedShareForContext;
@@ -30,6 +31,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        ConfigureLocalIncomingMappingControls();
         LoadExternalVlcConfiguration();
         AddHandler(
             InputElement.PointerPressedEvent,
@@ -63,9 +65,31 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void ConfigureLocalIncomingMappingControls()
+    {
+        TextBox? mappingInput = this.GetVisualDescendants()
+            .OfType<TextBox>()
+            .FirstOrDefault(input =>
+                (input.PlaceholderText ?? string.Empty).StartsWith(
+                    "Optional: lokales/gemountetes Abbild",
+                    StringComparison.Ordinal));
+        if (mappingInput is not null)
+        {
+            mappingInput.IsEnabled = true;
+            mappingInput.IsReadOnly = true;
+        }
+
+        Button? mappingButton = this.GetVisualDescendants()
+            .OfType<Button>()
+            .FirstOrDefault(button =>
+                string.Equals(button.Content?.ToString(), "Auswählen…", StringComparison.Ordinal));
+        if (mappingButton is not null)
+            mappingButton.IsEnabled = true;
+    }
+
     private async void BrowseLocalIncomingMappingButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!_viewModel.CanEditConnectionSettings)
+        if (_viewModel.IsBusy)
             return;
 
         IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(
@@ -83,6 +107,7 @@ public sealed partial class MainWindow : Window
             return;
 
         _viewModel.LocalIncomingMappingText = path.LocalPath;
+        _localIncomingMappingStore.TrySave(_viewModel.EndpointText, path.LocalPath, out _);
     }
 
     private async void BrowseExternalVlcButton_OnClick(object? sender, RoutedEventArgs e)
