@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml.Linq;
 using AJCC.Core.Helpers;
 using AJCC.Core.Links;
+using AJCC.Core.Models;
 using AJCC.Core.Services;
 
 namespace AJCC.Core.Protocol;
@@ -139,6 +140,28 @@ public sealed class AppleJuiceCoreClient
                 ["Powerdownload"] = powerDownload.ToString(CultureInfo.InvariantCulture)
             },
             cancellationToken);
+
+    public Task<string> SetShareDirectoriesAsync(
+        IEnumerable<AjShareDirectory> directories,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(directories);
+
+        Dictionary<string, string> parameters = new();
+        int index = 1;
+
+        foreach (AjShareDirectory directory in directories.Where(directory => !string.IsNullOrWhiteSpace(directory.Name)))
+        {
+            parameters[$"sharedirectory{index}"] = directory.Name;
+            parameters[$"sharesub{index}"] = directory.ShareMode.Equals("subdirectory", StringComparison.OrdinalIgnoreCase)
+                ? "true"
+                : "false";
+            index++;
+        }
+
+        parameters["countshares"] = (index - 1).ToString(CultureInfo.InvariantCulture);
+        return GetXmlAsync(AjEndpoints.SetSettings, parameters, cancellationToken);
+    }
 
     public Task<string> SetPriorityAsync(long id, int priority, CancellationToken cancellationToken = default)
         => SetPriorityAsync(new[] { id }, priority, cancellationToken);

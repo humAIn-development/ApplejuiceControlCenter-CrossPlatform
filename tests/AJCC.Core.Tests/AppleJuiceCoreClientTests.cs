@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using AJCC.Core.Models;
 using AJCC.Core.Protocol;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -195,6 +196,34 @@ public sealed class AppleJuiceCoreClientTests
         StringAssert.Contains(query, "priority=17");
         StringAssert.Contains(query, "id1=42");
         Assert.IsFalse(query.Contains("id2=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task SetShareDirectories_UsesProductiveSetSettingsParameters()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.SetShareDirectoriesAsync(
+            new[]
+            {
+                new AjShareDirectory { Name = @"D:\Music", ShareMode = "subdirectory" },
+                new AjShareDirectory { Name = @"D:\Movies", ShareMode = "singledirectory" },
+                new AjShareDirectory { Name = " ", ShareMode = "subdirectory" }
+            });
+
+        Assert.AreEqual(HttpMethod.Get, handler.LastMethod);
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/function/setsettings", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, @"sharedirectory1=D:\Music");
+        StringAssert.Contains(query, "sharesub1=true");
+        StringAssert.Contains(query, @"sharedirectory2=D:\Movies");
+        StringAssert.Contains(query, "sharesub2=false");
+        StringAssert.Contains(query, "countshares=2");
+        Assert.IsFalse(query.Contains("sharedirectory3=", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(query.Contains("sharesub3=", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]
