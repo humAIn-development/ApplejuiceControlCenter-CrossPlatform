@@ -321,6 +321,17 @@ public sealed partial class MainWindow : Window
     private async void ReloadSharesButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.ReloadSharesAsync();
 
+    private async void ShareDirectoriesButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsConnected || _viewModel.IsBusy)
+            return;
+
+        ShareDirectoryDialog dialog = new(
+            _viewModel.ConfiguredShareDirectories,
+            _viewModel.LoadCoreDirectoryAsync);
+        await dialog.ShowDialog<bool>(this);
+    }
+
     private async void ShareContextSetPriority_OnClick(object? sender, RoutedEventArgs e)
     {
         List<AjShareFile> shares = GetSelectedShareFilesForContext();

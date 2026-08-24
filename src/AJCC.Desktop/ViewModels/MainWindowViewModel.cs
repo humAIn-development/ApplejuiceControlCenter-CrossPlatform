@@ -265,6 +265,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
     public IEnumerable<AjShareFile> Shares => _state is null ? Array.Empty<AjShareFile>() : _state.Shares;
+    public IReadOnlyList<AjShareDirectory> ConfiguredShareDirectories
+        => _state is null ? Array.Empty<AjShareDirectory>() : _state.Settings.SharedDirectories.ToList();
     public string ShareCountText => _state is null ? "0 Dateien" : $"{_state.Shares.Count:N0} Dateien";
     public string ShareSizeText => _state is null
         ? DisplayFormatHelper.Bytes(0)

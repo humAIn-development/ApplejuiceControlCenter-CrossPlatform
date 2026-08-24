@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.ShareDirectoryDialog"
+        x:CompileBindings="False"
+        Title="Share-Verzeichnisse"
+        Width="820"
+        Height="610"
+        MinWidth="640"
+        MinHeight="480"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18">
+    <TextBlock Text="Freigegebene Core-Verzeichnisse"
+               FontSize="17"
+               FontWeight="SemiBold" />
+
+    <StackPanel Grid.Row="1" Margin="0,8,0,12">
+      <TextBlock x:Name="CurrentPathText"
+                 Classes="muted"
+                 Text="Core-Dateisystem"
+                 TextWrapping="Wrap" />
+      <TextBlock x:Name="DirectoryStatusText"
+                 Classes="muted"
+                 Margin="0,4,0,0"
+                 Text="Core-Verzeichnisse werden beim Öffnen geladen."
+                 TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Border Grid.Row="2" Classes="panel" Padding="8">
+      <ListBox x:Name="DirectoryList"
+               MinHeight="300"
+               ItemsSource="{Binding Directories}"
+               SelectionMode="Single">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid ColumnDefinitions="*,Auto" Margin="6,5">
+              <TextBlock Text="{Binding Name}"
+                         TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="1"
+                         Classes="muted"
+                         Margin="16,0,0,0"
+                         Text="{Binding ShareStatus}" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <Grid Grid.Row="3"
+          ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+          Margin="0,14,0,0">
+      <Button Grid.Column="0"
+              MinWidth="100"
+              Content="Öffnen"
+              Click="OpenDirectoryButton_OnClick" />
+      <Button Grid.Column="1"
+              MinWidth="130"
+              Margin="8,0,0,0"
+              Content="Eine Ebene hoch"
+              Click="UpDirectoryButton_OnClick" />
+      <Button Grid.Column="2"
+              MinWidth="100"
+              Margin="8,0,0,0"
+              Content="Neu laden"
+              Click="ReloadDirectoryButton_OnClick" />
+      <Button Grid.Column="4"
+              MinWidth="100"
+              Content="Schließen"
+              Click="CloseButton_OnClick" />
+    </Grid>
+  </Grid>
+</Window>
