@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 
 $Repository = "humAIn-development/ApplejuiceControlCenter-CrossPlatform"
 $IssueNumber = 3
-$IssueApiUrl = "https://api.github.com/repos/$Repository/issues/$IssueNumber"
+$IssueApiUrl = "https://api.github.com/repos/$Repository/issues/${IssueNumber}?nocache=$([Guid]::NewGuid().ToString('N'))"
 $ExpectedIssueOwner = "humAIn-development"
 $ExpectedEmail = "ajcc-feedback@martin-bruenig.de"
 $Solution = ".\ApplejuiceControlCenter-CrossPlatform.sln"
@@ -75,6 +75,7 @@ catch {
 $headers = @{
     "User-Agent" = "AJCC-X-RemotePatchBridge"
     "Accept" = "application/vnd.github+json"
+    "Cache-Control" = "no-cache"
 }
 
 Write-Host "Reading AJCC-X patch channel..." -ForegroundColor Cyan
