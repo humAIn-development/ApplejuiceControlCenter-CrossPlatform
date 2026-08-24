@@ -545,6 +545,8 @@
                       <MenuItem Header="Pfad kopieren" Click="ShareContextCopyPath_OnClick" />
                       <MenuItem Header="Checksum kopieren" Click="ShareContextCopyChecksum_OnClick" />
                       <MenuItem Header="ID kopieren" Click="ShareContextCopyId_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Share-Dateiliste neu laden" Click="ReloadSharesButton_OnClick" />
                     </ContextMenu>
                   </Grid.ContextMenu>
                   <TextBlock Text="{Binding Id}" />
