@@ -5,7 +5,9 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using System.Diagnostics;
 using System.Text;
+using AJCC.Core.Helpers;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
 using AJCC.Desktop.Services;
@@ -171,6 +173,108 @@ public sealed partial class MainWindow : Window
             status.Text = "VLC-Programm nicht erreichbar";
         else
             status.Text = "bereit";
+    }
+
+    private void ShareContextOpenWithVlc_OnClick(object? sender, RoutedEventArgs e)
+    {
+        List<AjShareFile> shares = GetSelectedShareFilesForContext();
+        if (shares.Count != 1)
+        {
+            SetExternalVlcRuntimeStatus("genau eine Share-Datei markieren");
+            return;
+        }
+
+        ExternalVlcConfiguration configuration = _externalVlcConfigurationStore.Load();
+        if (!configuration.Enabled
+            || string.IsNullOrWhiteSpace(configuration.ExecutablePath)
+            || !File.Exists(configuration.ExecutablePath))
+        {
+            UpdateExternalVlcStatus();
+            return;
+        }
+
+        AjShareFile share = shares[0];
+        if (!ShareMediaPathSemantics.IsPlausibleMediaFileName(share.Filename))
+        {
+            SetExternalVlcRuntimeStatus("kein unterstütztes Audio-/Videoformat");
+            return;
+        }
+
+        if (!TryResolveShareMediaFile(share, out string localFile))
+        {
+            SetExternalVlcRuntimeStatus("Datei über Incoming-Mapping nicht erreichbar");
+            return;
+        }
+
+        try
+        {
+            ProcessStartInfo startInfo = new()
+            {
+                FileName = configuration.ExecutablePath,
+                UseShellExecute = false
+            };
+            startInfo.ArgumentList.Add(localFile);
+            Process.Start(startInfo);
+            SetExternalVlcRuntimeStatus("VLC gestartet");
+        }
+        catch (Exception ex)
+        {
+            SetExternalVlcRuntimeStatus("VLC-Start fehlgeschlagen: " + ex.Message);
+        }
+    }
+
+    private bool TryResolveShareMediaFile(AjShareFile share, out string localFile)
+    {
+        localFile = string.Empty;
+        if (!ShareMediaPathSemantics.TryGetRelativePathBelowIncoming(
+                _viewModel.CoreIncomingDirectory,
+                share.Filename,
+                out string relativePath))
+        {
+            return false;
+        }
+
+        string coreIncoming = _viewModel.CoreIncomingDirectory.Trim().Trim('"');
+        string mapping = _viewModel.LocalIncomingMappingText.Trim().Trim('"');
+        string root = Directory.Exists(coreIncoming)
+            ? coreIncoming
+            : Directory.Exists(mapping)
+                ? mapping
+                : string.Empty;
+        if (root.Length == 0)
+            return false;
+
+        try
+        {
+            string fullRoot = Path.GetFullPath(root);
+            string candidate = fullRoot;
+            foreach (string part in relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+                candidate = Path.Combine(candidate, part);
+
+            candidate = Path.GetFullPath(candidate);
+            string relativeCheck = Path.GetRelativePath(fullRoot, candidate);
+            if (relativeCheck == ".."
+                || relativeCheck.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+                || Path.IsPathRooted(relativeCheck)
+                || !File.Exists(candidate))
+            {
+                return false;
+            }
+
+            localFile = candidate;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void SetExternalVlcRuntimeStatus(string text)
+    {
+        TextBlock? status = this.FindControl<TextBlock>("ExternalVlcStatusText");
+        if (status is not null)
+            status.Text = text;
     }
 
     private async void PauseDownloadButton_OnClick(object? sender, RoutedEventArgs e)
