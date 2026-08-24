@@ -508,7 +508,7 @@
       <TabItem Header="Share">
         <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
           <Border Grid.Row="0" Classes="panel" Padding="8" Margin="0,0,0,8">
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <TextBlock Text="Share-Dateiliste" FontWeight="SemiBold" />
                 <TextBlock Classes="muted" Text="{Binding ShareCountText}" />
@@ -520,6 +520,37 @@
                       Content="Neu laden"
                       IsEnabled="{Binding IsConnected}"
                       Click="ReloadSharesButton_OnClick" />
+
+              <Grid Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                    Margin="0,8,0,0">
+                <TextBlock Text="VLC"
+                           FontWeight="SemiBold"
+                           Margin="2,0,10,0"
+                           VerticalAlignment="Center" />
+                <TextBox x:Name="ExternalVlcPathTextBox"
+                         Grid.Column="1"
+                         Margin="0,0,8,0"
+                         IsReadOnly="True"
+                         PlaceholderText="Externes VLC-Programm auswählen" />
+                <Button Grid.Column="2"
+                        MinWidth="100"
+                        Margin="0,0,12,0"
+                        Content="Auswählen…"
+                        Click="BrowseExternalVlcButton_OnClick" />
+                <CheckBox x:Name="ExternalVlcEnabledCheckBox"
+                          Grid.Column="3"
+                          Margin="0,0,12,0"
+                          Content="aktiv"
+                          VerticalAlignment="Center"
+                          Click="ExternalVlcEnabledCheckBox_OnClick" />
+                <TextBlock x:Name="ExternalVlcStatusText"
+                           Grid.Column="4"
+                           Classes="muted"
+                           VerticalAlignment="Center"
+                           Text="deaktiviert" />
+              </Grid>
             </Grid>
           </Border>
 

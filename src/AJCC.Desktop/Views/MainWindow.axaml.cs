@@ -8,6 +8,7 @@ using Avalonia.VisualTree;
 using System.Text;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
+using AJCC.Desktop.Services;
 using AJCC.Desktop.ViewModels;
 
 namespace AJCC.Desktop.Views;
@@ -15,16 +16,19 @@ namespace AJCC.Desktop.Views;
 public sealed partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel = new();
+    private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
     private AjShareFile? _selectedShareForContext;
     private int _embeddedPartListRequestVersion;
     private long _embeddedPartListDownloadId;
+    private bool _loadingExternalVlcConfiguration;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _viewModel;
+        LoadExternalVlcConfiguration();
         AddHandler(
             InputElement.PointerPressedEvent,
             MainWindow_OnPointerPressed,
@@ -77,6 +81,96 @@ public sealed partial class MainWindow : Window
             return;
 
         _viewModel.LocalIncomingMappingText = path.LocalPath;
+    }
+
+    private async void BrowseExternalVlcButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(
+            new FilePickerOpenOptions
+            {
+                Title = "VLC-Programm auswählen",
+                AllowMultiple = false
+            });
+
+        if (files.Count == 0)
+            return;
+
+        Uri path = files[0].Path;
+        if (!path.IsFile)
+            return;
+
+        TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
+        if (pathInput is not null)
+            pathInput.Text = path.LocalPath;
+
+        SaveExternalVlcConfiguration();
+    }
+
+    private void ExternalVlcEnabledCheckBox_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_loadingExternalVlcConfiguration)
+            SaveExternalVlcConfiguration();
+    }
+
+    private void LoadExternalVlcConfiguration()
+    {
+        ExternalVlcConfiguration configuration = _externalVlcConfigurationStore.Load();
+
+        _loadingExternalVlcConfiguration = true;
+        try
+        {
+            TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
+            CheckBox? enabledInput = this.FindControl<CheckBox>("ExternalVlcEnabledCheckBox");
+            if (pathInput is not null)
+                pathInput.Text = configuration.ExecutablePath;
+            if (enabledInput is not null)
+                enabledInput.IsChecked = configuration.Enabled;
+        }
+        finally
+        {
+            _loadingExternalVlcConfiguration = false;
+        }
+
+        UpdateExternalVlcStatus();
+    }
+
+    private void SaveExternalVlcConfiguration()
+    {
+        TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
+        CheckBox? enabledInput = this.FindControl<CheckBox>("ExternalVlcEnabledCheckBox");
+        TextBlock? status = this.FindControl<TextBlock>("ExternalVlcStatusText");
+
+        ExternalVlcConfiguration configuration = new(
+            enabledInput?.IsChecked == true,
+            pathInput?.Text ?? string.Empty);
+
+        if (!_externalVlcConfigurationStore.TrySave(configuration, out string errorMessage))
+        {
+            if (status is not null)
+                status.Text = "Speichern fehlgeschlagen: " + errorMessage;
+            return;
+        }
+
+        UpdateExternalVlcStatus();
+    }
+
+    private void UpdateExternalVlcStatus()
+    {
+        TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
+        CheckBox? enabledInput = this.FindControl<CheckBox>("ExternalVlcEnabledCheckBox");
+        TextBlock? status = this.FindControl<TextBlock>("ExternalVlcStatusText");
+        if (status is null)
+            return;
+
+        string path = (pathInput?.Text ?? string.Empty).Trim();
+        if (enabledInput?.IsChecked != true)
+            status.Text = "deaktiviert";
+        else if (path.Length == 0)
+            status.Text = "kein VLC-Programm ausgewählt";
+        else if (!File.Exists(path))
+            status.Text = "VLC-Programm nicht erreichbar";
+        else
+            status.Text = "bereit";
     }
 
     private async void PauseDownloadButton_OnClick(object? sender, RoutedEventArgs e)
