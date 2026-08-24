@@ -75,6 +75,7 @@ public sealed partial class MainWindow : Window
                     StringComparison.Ordinal));
         if (mappingInput is not null)
         {
+            mappingInput.ClearValue(InputElement.IsEnabledProperty);
             mappingInput.IsEnabled = true;
             mappingInput.IsReadOnly = true;
         }
@@ -84,7 +85,10 @@ public sealed partial class MainWindow : Window
             .FirstOrDefault(button =>
                 string.Equals(button.Content?.ToString(), "Auswählen…", StringComparison.Ordinal));
         if (mappingButton is not null)
+        {
+            mappingButton.ClearValue(InputElement.IsEnabledProperty);
             mappingButton.IsEnabled = true;
+        }
     }
 
     private async void BrowseLocalIncomingMappingButton_OnClick(object? sender, RoutedEventArgs e)
