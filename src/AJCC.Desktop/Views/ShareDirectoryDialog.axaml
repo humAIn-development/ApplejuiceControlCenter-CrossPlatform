@@ -31,9 +31,25 @@
                MinHeight="300"
                ItemsSource="{Binding Directories}"
                SelectionMode="Single">
+        <ListBox.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="Öffnen"
+                      Click="OpenDirectoryMenuItem_OnClick" />
+            <Separator />
+            <MenuItem Header="Mit Unterordnern"
+                      Click="AddRecursiveShareMenuItem_OnClick" />
+            <MenuItem Header="Nur diesen Ordner"
+                      Click="AddSingleShareMenuItem_OnClick" />
+            <MenuItem Header="Vormerkung entfernen"
+                      Click="RemoveShareDraftMenuItem_OnClick" />
+          </ContextMenu>
+        </ListBox.ContextMenu>
         <ListBox.ItemTemplate>
           <DataTemplate>
-            <Grid ColumnDefinitions="*,Auto" Margin="6,5">
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="6,5"
+                  DoubleTapped="DirectoryItem_OnDoubleTapped"
+                  RightTapped="DirectoryItem_OnRightTapped">
               <TextBlock Text="{Binding Name}"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Column="1"

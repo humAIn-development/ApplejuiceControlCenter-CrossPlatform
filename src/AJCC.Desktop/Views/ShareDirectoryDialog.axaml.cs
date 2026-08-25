@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using AJCC.Core.Helpers;
 using AJCC.Core.Models;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 
@@ -116,13 +117,40 @@ public sealed partial class ShareDirectoryDialog : Window
 
     private async void OpenDirectoryButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        ListBox? list = this.FindControl<ListBox>("DirectoryList");
-        if (list?.SelectedItem is not ShareDirectoryChoice selected)
-        {
-            SetStatus("Bitte zuerst ein Verzeichnis auswählen.");
+        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
             return;
-        }
 
+        await OpenDirectoryAsync(selected);
+    }
+
+    private async void DirectoryItem_OnDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is not Control { DataContext: ShareDirectoryChoice selected })
+            return;
+
+        SelectDirectory(selected);
+        await OpenDirectoryAsync(selected);
+        e.Handled = true;
+    }
+
+    private void DirectoryItem_OnRightTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is not Control { DataContext: ShareDirectoryChoice selected })
+            return;
+
+        SelectDirectory(selected);
+    }
+
+    private async void OpenDirectoryMenuItem_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
+            return;
+
+        await OpenDirectoryAsync(selected);
+    }
+
+    private async Task OpenDirectoryAsync(ShareDirectoryChoice selected)
+    {
         if (!selected.CanOpen)
         {
             SetStatus("Dieses Element kann nicht als Verzeichnis geöffnet werden.");
@@ -156,6 +184,12 @@ public sealed partial class ShareDirectoryDialog : Window
     private void AddSingleShareButton_OnClick(object? sender, RoutedEventArgs e)
         => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.SingleDirectoryShareMode);
 
+    private void AddRecursiveShareMenuItem_OnClick(object? sender, RoutedEventArgs e)
+        => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.RecursiveShareMode);
+
+    private void AddSingleShareMenuItem_OnClick(object? sender, RoutedEventArgs e)
+        => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.SingleDirectoryShareMode);
+
     private void ApplySelectedShareDraft(string shareMode)
     {
         if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
@@ -185,6 +219,12 @@ public sealed partial class ShareDirectoryDialog : Window
     }
 
     private void RemoveShareDraftButton_OnClick(object? sender, RoutedEventArgs e)
+        => RemoveSelectedShareDraft();
+
+    private void RemoveShareDraftMenuItem_OnClick(object? sender, RoutedEventArgs e)
+        => RemoveSelectedShareDraft();
+
+    private void RemoveSelectedShareDraft()
     {
         if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
             return;
@@ -214,6 +254,13 @@ public sealed partial class ShareDirectoryDialog : Window
         selected = null!;
         SetStatus("Bitte zuerst ein Verzeichnis auswählen.");
         return false;
+    }
+
+    private void SelectDirectory(ShareDirectoryChoice selected)
+    {
+        ListBox? list = this.FindControl<ListBox>("DirectoryList");
+        if (list is not null)
+            list.SelectedItem = selected;
     }
 
     private void RefreshVisibleShareStatuses()
