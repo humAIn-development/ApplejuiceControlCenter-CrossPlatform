@@ -22,16 +22,22 @@
       <TextBlock x:Name="DirectoryStatusText"
                  Classes="muted"
                  Margin="0,4,0,0"
-                 Text="Core-Verzeichnisse werden beim Öffnen geladen. Änderungen bleiben lokal und werden noch nicht an den Core übertragen."
+                 Text="Core-Verzeichnisse werden als Baum geladen. Unterordner werden erst beim Aufklappen abgefragt; Änderungen bleiben lokal und werden noch nicht an den Core übertragen."
                  TextWrapping="Wrap" />
     </StackPanel>
 
     <Border Grid.Row="2" Classes="panel" Padding="8">
-      <ListBox x:Name="DirectoryList"
-               MinHeight="300"
-               ItemsSource="{Binding Directories}"
-               SelectionMode="Single">
-        <ListBox.ContextMenu>
+      <TreeView x:Name="DirectoryTree"
+                MinHeight="300"
+                ItemsSource="{Binding RootDirectories}"
+                SelectionMode="Single">
+        <TreeView.Styles>
+          <Style Selector="TreeViewItem">
+            <Setter Property="IsExpanded"
+                    Value="{Binding IsExpanded, Mode=TwoWay}" />
+          </Style>
+        </TreeView.Styles>
+        <TreeView.ContextMenu>
           <ContextMenu>
             <MenuItem Header="Öffnen"
                       Click="OpenDirectoryMenuItem_OnClick" />
@@ -43,55 +49,46 @@
             <MenuItem Header="Vormerkung entfernen"
                       Click="RemoveShareDraftMenuItem_OnClick" />
           </ContextMenu>
-        </ListBox.ContextMenu>
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <Grid ColumnDefinitions="*,Auto"
-                  Margin="6,5"
+        </TreeView.ContextMenu>
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate ItemsSource="{Binding Children}">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  Margin="4,3"
                   PointerPressed="DirectoryItem_OnPointerPressed"
                   RightTapped="DirectoryItem_OnRightTapped">
-              <TextBlock Text="{Binding Name}"
-                         TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="📁"
+                         Margin="0,0,6,0" />
               <TextBlock Grid.Column="1"
+                         Text="{Binding Name}"
+                         TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="2"
                          Classes="muted"
                          Margin="16,0,0,0"
                          Text="{Binding ShareStatus}" />
             </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
     </Border>
 
     <Grid Grid.Row="3"
           RowDefinitions="Auto,Auto"
-          ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+          ColumnDefinitions="Auto,*,Auto"
           Margin="0,14,0,0">
       <Button Grid.Row="0"
               Grid.Column="0"
-              MinWidth="100"
-              Content="Öffnen"
-              Click="OpenDirectoryButton_OnClick" />
-      <Button Grid.Row="0"
-              Grid.Column="1"
-              MinWidth="130"
-              Margin="8,0,0,0"
-              Content="Eine Ebene hoch"
-              Click="UpDirectoryButton_OnClick" />
-      <Button Grid.Row="0"
-              Grid.Column="2"
-              MinWidth="100"
-              Margin="8,0,0,0"
-              Content="Neu laden"
+              MinWidth="120"
+              Content="Baum neu laden"
               Click="ReloadDirectoryButton_OnClick" />
       <Button Grid.Row="0"
-              Grid.Column="4"
+              Grid.Column="2"
               MinWidth="100"
               Content="Schließen"
               Click="CloseButton_OnClick" />
 
       <StackPanel Grid.Row="1"
                   Grid.Column="0"
-                  Grid.ColumnSpan="5"
+                  Grid.ColumnSpan="3"
                   Orientation="Horizontal"
                   Margin="0,10,0,0">
         <Button MinWidth="150"

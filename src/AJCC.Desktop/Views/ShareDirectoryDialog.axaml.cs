@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using AJCC.Core.Helpers;
 using AJCC.Core.Models;
 using Avalonia.Controls;
@@ -10,11 +12,9 @@ namespace AJCC.Desktop.Views;
 
 public sealed partial class ShareDirectoryDialog : Window
 {
-    private readonly Stack<string?> _history = new();
     private IReadOnlyList<AjShareDirectory> _configuredDirectories = Array.Empty<AjShareDirectory>();
     private List<AjShareDirectory> _draftDirectories = new();
     private Func<string?, Task<AjDirectoryListResult>>? _loadDirectoryAsync;
-    private string? _currentDirectoryParameter;
     private char _separator = '\\';
     private bool _initialLoadStarted;
 
@@ -35,7 +35,7 @@ public sealed partial class ShareDirectoryDialog : Window
         _loadDirectoryAsync = loadDirectoryAsync ?? throw new ArgumentNullException(nameof(loadDirectoryAsync));
     }
 
-    public ObservableCollection<ShareDirectoryChoice> Directories { get; } = new();
+    public ObservableCollection<ShareDirectoryTreeNode> RootDirectories { get; } = new();
     public IReadOnlyList<AjShareDirectory> DraftDirectories => _draftDirectories;
 
     private void InitializeComponent()
@@ -47,137 +47,147 @@ public sealed partial class ShareDirectoryDialog : Window
             return;
 
         _initialLoadStarted = true;
-        await LoadDirectoryAsync(null);
+        await LoadRootDirectoriesAsync();
     }
 
-    private async Task<bool> LoadDirectoryAsync(string? directoryParameter)
+    private async Task LoadRootDirectoriesAsync()
     {
-        TextBlock? status = this.FindControl<TextBlock>("DirectoryStatusText");
-        TextBlock? currentPath = this.FindControl<TextBlock>("CurrentPathText");
-
         if (_loadDirectoryAsync is null)
         {
-            if (status is not null)
-                status.Text = "Core-Verzeichnisbrowser ist nicht verfügbar.";
-            return false;
+            SetStatus("Core-Verzeichnisbrowser ist nicht verfügbar.");
+            return;
         }
 
         try
         {
-            if (status is not null)
-                status.Text = "Lade Core-Verzeichnis …";
+            SetStatus("Lade Core-Verzeichnisbaum …");
+            AjDirectoryListResult result = await _loadDirectoryAsync(null);
+            UpdateSeparator(result);
 
-            AjDirectoryListResult result = await _loadDirectoryAsync(directoryParameter);
-            if (!string.IsNullOrWhiteSpace(result.Separator))
-            {
-                char separator = result.Separator.Trim()[0];
-                if (separator is '/' or '\\')
-                    _separator = separator;
-            }
+            List<ShareDirectoryTreeNode> roots = CreateNodes(result, null);
+            RootDirectories.Clear();
+            foreach (ShareDirectoryTreeNode root in roots)
+                RootDirectories.Add(root);
 
-            _currentDirectoryParameter = string.IsNullOrWhiteSpace(directoryParameter)
-                ? null
-                : directoryParameter.Trim();
+            TreeView? tree = this.FindControl<TreeView>("DirectoryTree");
+            if (tree is not null)
+                tree.SelectedItem = null;
 
-            Directories.Clear();
-            foreach (AjDirectoryEntry entry in result.Directories
-                         .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
-                         .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                string fullPath = !string.IsNullOrWhiteSpace(entry.Path)
-                    ? entry.Path.Trim()
-                    : BuildCorePath(_currentDirectoryParameter, entry.Name);
-
-                Directories.Add(new ShareDirectoryChoice(
-                    entry.Name.Trim(),
-                    fullPath,
-                    GetShareStatus(fullPath),
-                    CanHaveChildren(entry)));
-            }
-
-            if (currentPath is not null)
-                currentPath.Text = _currentDirectoryParameter ?? "Core-Dateisystem";
-
-            if (status is not null)
-            {
-                status.Text = Directories.Count == 0
-                    ? "Keine Unterverzeichnisse vorhanden. Änderungen bleiben nur im lokalen Entwurf."
-                    : $"{Directories.Count:N0} Verzeichnisse geladen. Aktiv- und Entwurfsstatus stehen rechts; es erfolgt noch keine Core-Übertragung.";
-            }
-
-            return true;
+            SetCurrentPath("Core-Dateisystem");
+            SetStatus(roots.Count == 0
+                ? "Keine Core-Verzeichnisse vorhanden. Änderungen bleiben nur im lokalen Entwurf."
+                : $"{roots.Count:N0} Stammverzeichnisse geladen. Unterordner werden beim Aufklappen nachgeladen; es erfolgt noch keine Core-Übertragung.");
         }
         catch (Exception ex)
         {
-            if (status is not null)
-                status.Text = "Core-Verzeichnis konnte nicht geladen werden: " + ex.Message;
-            return false;
+            SetStatus("Core-Verzeichnisbaum konnte nicht geladen werden: " + ex.Message);
         }
     }
 
-    private async void OpenDirectoryButton_OnClick(object? sender, RoutedEventArgs e)
+    private async Task LoadChildrenAsync(ShareDirectoryTreeNode node)
     {
-        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
+        if (_loadDirectoryAsync is null || node.IsLoaded)
             return;
 
-        await OpenDirectoryAsync(selected);
+        try
+        {
+            SetStatus($"Lade {node.FullPath} …");
+            AjDirectoryListResult result = await _loadDirectoryAsync(node.FullPath);
+            UpdateSeparator(result);
+
+            List<ShareDirectoryTreeNode> children = CreateNodes(result, node.FullPath);
+            node.Children.Clear();
+            foreach (ShareDirectoryTreeNode child in children)
+                node.Children.Add(child);
+            node.IsLoaded = true;
+
+            SetStatus(children.Count == 0
+                ? $"{node.FullPath}: keine Unterverzeichnisse."
+                : $"{node.FullPath}: {children.Count:N0} Unterverzeichnisse geladen.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Core-Verzeichnis '{node.FullPath}' konnte nicht geladen werden: {ex.Message}");
+        }
     }
 
-    private async void DirectoryItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    private List<ShareDirectoryTreeNode> CreateNodes(AjDirectoryListResult result, string? parentPath)
+        => result.Directories
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+            .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(entry =>
+            {
+                string fullPath = !string.IsNullOrWhiteSpace(entry.Path)
+                    ? entry.Path.Trim()
+                    : BuildCorePath(parentPath, entry.Name);
+                return new ShareDirectoryTreeNode(
+                    entry.Name.Trim(),
+                    fullPath,
+                    GetShareStatus(fullPath),
+                    CanHaveChildren(entry),
+                    LoadChildrenAsync);
+            })
+            .ToList();
+
+    private void UpdateSeparator(AjDirectoryListResult result)
     {
-        if (e.ClickCount != 2
-            || sender is not Control { DataContext: ShareDirectoryChoice selected })
+        if (string.IsNullOrWhiteSpace(result.Separator))
             return;
 
+        char separator = result.Separator.Trim()[0];
+        if (separator is '/' or '\\')
+            _separator = separator;
+    }
+
+    private void DirectoryItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: ShareDirectoryTreeNode selected }
+            || selected.IsPlaceholder)
+        {
+            return;
+        }
+
         SelectDirectory(selected);
+        if (e.ClickCount != 2)
+            return;
+
         e.Handled = true;
-        await OpenDirectoryAsync(selected);
-    }
-
-    private void DirectoryItem_OnRightTapped(object? sender, TappedEventArgs e)
-    {
-        if (sender is not Control { DataContext: ShareDirectoryChoice selected })
-            return;
-
-        SelectDirectory(selected);
-    }
-
-    private async void OpenDirectoryMenuItem_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
-            return;
-
-        await OpenDirectoryAsync(selected);
-    }
-
-    private async Task OpenDirectoryAsync(ShareDirectoryChoice selected)
-    {
         if (!selected.CanOpen)
         {
             SetStatus("Dieses Element kann nicht als Verzeichnis geöffnet werden.");
             return;
         }
 
-        string? previous = _currentDirectoryParameter;
-        if (await LoadDirectoryAsync(selected.FullPath))
-            _history.Push(previous);
+        selected.IsExpanded = !selected.IsExpanded;
     }
 
-    private async void UpDirectoryButton_OnClick(object? sender, RoutedEventArgs e)
+    private void DirectoryItem_OnRightTapped(object? sender, TappedEventArgs e)
     {
-        if (_history.Count == 0)
+        if (sender is not Control { DataContext: ShareDirectoryTreeNode selected }
+            || selected.IsPlaceholder)
         {
-            SetStatus("Die oberste Core-Ebene ist bereits erreicht.");
             return;
         }
 
-        string? previous = _history.Peek();
-        if (await LoadDirectoryAsync(previous))
-            _history.Pop();
+        SelectDirectory(selected);
+    }
+
+    private void OpenDirectoryMenuItem_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedDirectory(out ShareDirectoryTreeNode selected))
+            return;
+
+        if (!selected.CanOpen)
+        {
+            SetStatus("Dieses Element kann nicht als Verzeichnis geöffnet werden.");
+            return;
+        }
+
+        selected.IsExpanded = true;
     }
 
     private async void ReloadDirectoryButton_OnClick(object? sender, RoutedEventArgs e)
-        => await LoadDirectoryAsync(_currentDirectoryParameter);
+        => await LoadRootDirectoriesAsync();
 
     private void AddRecursiveShareButton_OnClick(object? sender, RoutedEventArgs e)
         => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.RecursiveShareMode);
@@ -193,7 +203,7 @@ public sealed partial class ShareDirectoryDialog : Window
 
     private void ApplySelectedShareDraft(string shareMode)
     {
-        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
+        if (!TryGetSelectedDirectory(out ShareDirectoryTreeNode selected))
             return;
 
         ShareDirectoryDraftResult result = ShareDirectoryDraftSemantics.Apply(
@@ -227,7 +237,7 @@ public sealed partial class ShareDirectoryDialog : Window
 
     private void RemoveSelectedShareDraft()
     {
-        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
+        if (!TryGetSelectedDirectory(out ShareDirectoryTreeNode selected))
             return;
 
         AjShareDirectory? exact = _draftDirectories.FirstOrDefault(
@@ -243,12 +253,12 @@ public sealed partial class ShareDirectoryDialog : Window
         SetStatus($"Lokal zum Entfernen vorgemerkt: {selected.FullPath}. Noch nicht an den Core übertragen.");
     }
 
-    private bool TryGetSelectedDirectory(out ShareDirectoryChoice selected)
+    private bool TryGetSelectedDirectory(out ShareDirectoryTreeNode selected)
     {
-        ListBox? list = this.FindControl<ListBox>("DirectoryList");
-        if (list?.SelectedItem is ShareDirectoryChoice choice)
+        TreeView? tree = this.FindControl<TreeView>("DirectoryTree");
+        if (tree?.SelectedItem is ShareDirectoryTreeNode node && !node.IsPlaceholder)
         {
-            selected = choice;
+            selected = node;
             return true;
         }
 
@@ -257,20 +267,28 @@ public sealed partial class ShareDirectoryDialog : Window
         return false;
     }
 
-    private void SelectDirectory(ShareDirectoryChoice selected)
+    private void SelectDirectory(ShareDirectoryTreeNode selected)
     {
-        ListBox? list = this.FindControl<ListBox>("DirectoryList");
-        if (list is not null)
-            list.SelectedItem = selected;
+        TreeView? tree = this.FindControl<TreeView>("DirectoryTree");
+        if (tree is not null)
+            tree.SelectedItem = selected;
+
+        SetCurrentPath(FormatBreadcrumb(selected.FullPath));
     }
 
     private void RefreshVisibleShareStatuses()
     {
-        for (int index = 0; index < Directories.Count; index++)
-        {
-            ShareDirectoryChoice choice = Directories[index];
-            Directories[index] = choice with { ShareStatus = GetShareStatus(choice.FullPath) };
-        }
+        foreach (ShareDirectoryTreeNode root in RootDirectories)
+            RefreshNodeShareStatuses(root);
+    }
+
+    private void RefreshNodeShareStatuses(ShareDirectoryTreeNode node)
+    {
+        if (!node.IsPlaceholder)
+            node.ShareStatus = GetShareStatus(node.FullPath);
+
+        foreach (ShareDirectoryTreeNode child in node.Children)
+            RefreshNodeShareStatuses(child);
     }
 
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
@@ -281,6 +299,33 @@ public sealed partial class ShareDirectoryDialog : Window
         TextBlock? status = this.FindControl<TextBlock>("DirectoryStatusText");
         if (status is not null)
             status.Text = text;
+    }
+
+    private void SetCurrentPath(string text)
+    {
+        TextBlock? currentPath = this.FindControl<TextBlock>("CurrentPathText");
+        if (currentPath is not null)
+            currentPath.Text = text;
+    }
+
+    private string FormatBreadcrumb(string path)
+    {
+        string normalized = NormalizePath(path);
+        if (normalized.Length == 0)
+            return "Core-Dateisystem";
+
+        if (_separator == '/')
+        {
+            if (normalized == "/")
+                return "Core-Dateisystem › /";
+
+            string[] parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            return "Core-Dateisystem › / › " + string.Join(" › ", parts);
+        }
+
+        string prefix = normalized.StartsWith("\\", StringComparison.Ordinal) ? "\\" : string.Empty;
+        string[] windowsParts = normalized.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+        return "Core-Dateisystem › " + prefix + string.Join(" › ", windowsParts);
     }
 
     private string GetShareStatus(string path)
@@ -380,9 +425,88 @@ public sealed partial class ShareDirectoryDialog : Window
     private static bool CanHaveChildren(AjDirectoryEntry entry)
         => entry.IsFileSystem || entry.Type is 1 or 2 or 4 or 5;
 
-    public sealed record ShareDirectoryChoice(
-        string Name,
-        string FullPath,
-        string ShareStatus,
-        bool CanOpen);
+    public sealed class ShareDirectoryTreeNode : INotifyPropertyChanged
+    {
+        private readonly Func<ShareDirectoryTreeNode, Task>? _loadChildrenAsync;
+        private bool _isExpanded;
+        private string _shareStatus;
+
+        public ShareDirectoryTreeNode(
+            string name,
+            string fullPath,
+            string shareStatus,
+            bool canOpen,
+            Func<ShareDirectoryTreeNode, Task>? loadChildrenAsync,
+            bool isPlaceholder = false)
+        {
+            Name = name;
+            FullPath = fullPath;
+            _shareStatus = shareStatus;
+            CanOpen = canOpen;
+            _loadChildrenAsync = loadChildrenAsync;
+            IsPlaceholder = isPlaceholder;
+
+            if (CanOpen && !IsPlaceholder)
+                Children.Add(CreatePlaceholder());
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public string Name { get; }
+        public string FullPath { get; }
+        public bool CanOpen { get; }
+        public bool IsPlaceholder { get; }
+        public bool IsLoaded { get; set; }
+        public bool IsLoading { get; private set; }
+        public ObservableCollection<ShareDirectoryTreeNode> Children { get; } = new();
+
+        public string ShareStatus
+        {
+            get => _shareStatus;
+            set
+            {
+                if (_shareStatus == value)
+                    return;
+
+                _shareStatus = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded == value)
+                    return;
+
+                _isExpanded = value;
+                OnPropertyChanged();
+
+                if (value && CanOpen && !IsLoaded && !IsLoading && _loadChildrenAsync is not null)
+                    _ = EnsureChildrenLoadedAsync();
+            }
+        }
+
+        private async Task EnsureChildrenLoadedAsync()
+        {
+            IsLoading = true;
+            try
+            {
+                if (_loadChildrenAsync is not null)
+                    await _loadChildrenAsync(this);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private static ShareDirectoryTreeNode CreatePlaceholder()
+            => new("Lade …", string.Empty, string.Empty, false, null, true);
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
