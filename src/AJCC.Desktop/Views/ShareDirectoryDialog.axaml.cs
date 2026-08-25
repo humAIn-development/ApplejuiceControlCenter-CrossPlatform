@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using AJCC.Core.Helpers;
 using AJCC.Core.Models;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -9,7 +10,8 @@ namespace AJCC.Desktop.Views;
 public sealed partial class ShareDirectoryDialog : Window
 {
     private readonly Stack<string?> _history = new();
-    private IReadOnlyList<AjShareDirectory> _sharedDirectories = Array.Empty<AjShareDirectory>();
+    private IReadOnlyList<AjShareDirectory> _configuredDirectories = Array.Empty<AjShareDirectory>();
+    private List<AjShareDirectory> _draftDirectories = new();
     private Func<string?, Task<AjDirectoryListResult>>? _loadDirectoryAsync;
     private string? _currentDirectoryParameter;
     private char _separator = '\\';
@@ -27,11 +29,13 @@ public sealed partial class ShareDirectoryDialog : Window
         Func<string?, Task<AjDirectoryListResult>> loadDirectoryAsync)
         : this()
     {
-        _sharedDirectories = sharedDirectories ?? Array.Empty<AjShareDirectory>();
+        _configuredDirectories = CloneDirectories(sharedDirectories);
+        _draftDirectories = CloneDirectories(_configuredDirectories);
         _loadDirectoryAsync = loadDirectoryAsync ?? throw new ArgumentNullException(nameof(loadDirectoryAsync));
     }
 
     public ObservableCollection<ShareDirectoryChoice> Directories { get; } = new();
+    public IReadOnlyList<AjShareDirectory> DraftDirectories => _draftDirectories;
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
@@ -96,8 +100,8 @@ public sealed partial class ShareDirectoryDialog : Window
             if (status is not null)
             {
                 status.Text = Directories.Count == 0
-                    ? "Keine Unterverzeichnisse vorhanden."
-                    : $"{Directories.Count:N0} Verzeichnisse geladen. Konfigurierte Freigaben sind rechts markiert.";
+                    ? "Keine Unterverzeichnisse vorhanden. Änderungen bleiben nur im lokalen Entwurf."
+                    : $"{Directories.Count:N0} Verzeichnisse geladen. Aktiv- und Entwurfsstatus stehen rechts; es erfolgt noch keine Core-Übertragung.";
             }
 
             return true;
@@ -146,6 +150,81 @@ public sealed partial class ShareDirectoryDialog : Window
     private async void ReloadDirectoryButton_OnClick(object? sender, RoutedEventArgs e)
         => await LoadDirectoryAsync(_currentDirectoryParameter);
 
+    private void AddRecursiveShareButton_OnClick(object? sender, RoutedEventArgs e)
+        => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.RecursiveShareMode);
+
+    private void AddSingleShareButton_OnClick(object? sender, RoutedEventArgs e)
+        => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.SingleDirectoryShareMode);
+
+    private void ApplySelectedShareDraft(string shareMode)
+    {
+        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
+            return;
+
+        ShareDirectoryDraftResult result = ShareDirectoryDraftSemantics.Apply(
+            _draftDirectories,
+            selected.FullPath,
+            shareMode);
+
+        if (result.BlockedByRecursiveAncestor)
+        {
+            SetStatus($"Nicht vorgemerkt: bereits durch rekursive Freigabe '{result.BlockingAncestorPath}' abgedeckt.");
+            return;
+        }
+
+        _draftDirectories = CloneDirectories(result.Directories);
+        RefreshVisibleShareStatuses();
+
+        string modeText = shareMode == ShareDirectoryDraftSemantics.RecursiveShareMode
+            ? "mit Unterordnern"
+            : "nur dieser Ordner";
+        string removedText = result.RemovedRedundantCount > 0
+            ? $" {result.RemovedRedundantCount:N0} redundante untergeordnete Vormerkung(en) wurden entfernt."
+            : string.Empty;
+        SetStatus($"Lokal vorgemerkt: {selected.FullPath} – {modeText}.{removedText} Noch nicht an den Core übertragen.");
+    }
+
+    private void RemoveShareDraftButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedDirectory(out ShareDirectoryChoice selected))
+            return;
+
+        AjShareDirectory? exact = _draftDirectories.FirstOrDefault(
+            directory => PathsEqual(directory.Name, selected.FullPath));
+        if (exact is null)
+        {
+            SetStatus("Für dieses Verzeichnis gibt es im lokalen Entwurf keine exakte Vormerkung.");
+            return;
+        }
+
+        _draftDirectories.Remove(exact);
+        RefreshVisibleShareStatuses();
+        SetStatus($"Lokal zum Entfernen vorgemerkt: {selected.FullPath}. Noch nicht an den Core übertragen.");
+    }
+
+    private bool TryGetSelectedDirectory(out ShareDirectoryChoice selected)
+    {
+        ListBox? list = this.FindControl<ListBox>("DirectoryList");
+        if (list?.SelectedItem is ShareDirectoryChoice choice)
+        {
+            selected = choice;
+            return true;
+        }
+
+        selected = null!;
+        SetStatus("Bitte zuerst ein Verzeichnis auswählen.");
+        return false;
+    }
+
+    private void RefreshVisibleShareStatuses()
+    {
+        for (int index = 0; index < Directories.Count; index++)
+        {
+            ShareDirectoryChoice choice = Directories[index];
+            Directories[index] = choice with { ShareStatus = GetShareStatus(choice.FullPath) };
+        }
+    }
+
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
         => Close(false);
 
@@ -158,15 +237,52 @@ public sealed partial class ShareDirectoryDialog : Window
 
     private string GetShareStatus(string path)
     {
-        AjShareDirectory? configured = _sharedDirectories.FirstOrDefault(
+        AjShareDirectory? configured = _configuredDirectories.FirstOrDefault(
             directory => PathsEqual(directory.Name, path));
-        if (configured is null)
-            return string.Empty;
+        AjShareDirectory? draft = _draftDirectories.FirstOrDefault(
+            directory => PathsEqual(directory.Name, path));
 
-        return configured.ShareMode.Equals("subdirectory", StringComparison.OrdinalIgnoreCase)
-            ? "Freigegeben inkl. Unterordner"
-            : "Freigegeben – nur dieser Ordner";
+        if (draft is not null)
+        {
+            string draftModeText = FormatShareMode(draft.ShareMode);
+            if (configured is null)
+                return "Entwurf: " + draftModeText;
+
+            if (configured.ShareMode.Equals(draft.ShareMode, StringComparison.OrdinalIgnoreCase))
+                return "Aktiv: " + draftModeText;
+
+            return "Entwurf: Modus → " + draftModeText;
+        }
+
+        if (configured is not null)
+            return "Entwurf: entfernen";
+
+        if (ShareDirectoryDraftSemantics.TryGetRecursiveAncestor(
+                _draftDirectories,
+                path,
+                out string ancestorPath))
+        {
+            return "Abgedeckt durch " + ancestorPath;
+        }
+
+        return string.Empty;
     }
+
+    private static string FormatShareMode(string shareMode)
+        => shareMode.Equals(ShareDirectoryDraftSemantics.RecursiveShareMode, StringComparison.OrdinalIgnoreCase)
+            ? "inkl. Unterordner"
+            : "nur dieser Ordner";
+
+    private static List<AjShareDirectory> CloneDirectories(IEnumerable<AjShareDirectory>? directories)
+        => directories?
+            .Where(directory => directory is not null)
+            .Select(directory => new AjShareDirectory
+            {
+                Name = directory.Name ?? string.Empty,
+                ShareMode = directory.ShareMode ?? string.Empty
+            })
+            .ToList()
+            ?? new List<AjShareDirectory>();
 
     private bool PathsEqual(string left, string right)
     {
