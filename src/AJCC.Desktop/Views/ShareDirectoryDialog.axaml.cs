@@ -15,8 +15,10 @@ public sealed partial class ShareDirectoryDialog : Window
     private IReadOnlyList<AjShareDirectory> _configuredDirectories = Array.Empty<AjShareDirectory>();
     private List<AjShareDirectory> _draftDirectories = new();
     private Func<string?, Task<AjDirectoryListResult>>? _loadDirectoryAsync;
+    private Func<IReadOnlyList<AjShareDirectory>, Task<IReadOnlyList<AjShareDirectory>>>? _transferDirectoriesAsync;
     private char _separator = '\\';
     private bool _initialLoadStarted;
+    private bool _transferRunning;
 
     public ShareDirectoryDialog()
     {
@@ -27,12 +29,14 @@ public sealed partial class ShareDirectoryDialog : Window
 
     public ShareDirectoryDialog(
         IReadOnlyList<AjShareDirectory> sharedDirectories,
-        Func<string?, Task<AjDirectoryListResult>> loadDirectoryAsync)
+        Func<string?, Task<AjDirectoryListResult>> loadDirectoryAsync,
+        Func<IReadOnlyList<AjShareDirectory>, Task<IReadOnlyList<AjShareDirectory>>> transferDirectoriesAsync)
         : this()
     {
         _configuredDirectories = CloneDirectories(sharedDirectories);
         _draftDirectories = CloneDirectories(_configuredDirectories);
         _loadDirectoryAsync = loadDirectoryAsync ?? throw new ArgumentNullException(nameof(loadDirectoryAsync));
+        _transferDirectoriesAsync = transferDirectoriesAsync ?? throw new ArgumentNullException(nameof(transferDirectoriesAsync));
     }
 
     public ObservableCollection<ShareDirectoryTreeNode> RootDirectories { get; } = new();
@@ -251,6 +255,82 @@ public sealed partial class ShareDirectoryDialog : Window
         _draftDirectories.Remove(exact);
         RefreshVisibleShareStatuses();
         SetStatus($"Lokal zum Entfernen vorgemerkt: {selected.FullPath}. Noch nicht an den Core übertragen.");
+    }
+
+    private async void ApplyToCoreButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_transferRunning)
+            return;
+        if (_transferDirectoriesAsync is null)
+        {
+            SetStatus("Core-Übertragung ist in diesem Dialog nicht verfügbar.");
+            return;
+        }
+        if (!HasPendingChanges())
+        {
+            SetStatus("Keine lokalen Änderungen zum Übertragen.");
+            return;
+        }
+
+        List<AjShareDirectory> transferDirectories = CloneDirectories(
+            ShareDirectoryDraftSemantics.Normalize(_draftDirectories));
+        string message = transferDirectories.Count == 0
+            ? "Der lokale Entwurf enthält keine Freigaben. Dadurch werden alle Share-Verzeichnisse im Core entfernt. Wirklich übertragen?"
+            : $"{transferDirectories.Count:N0} Share-Verzeichnis(se) aus dem lokalen Entwurf an den Core übertragen?";
+
+        ConfirmDialog confirm = new(
+            "Share-Verzeichnisse übertragen",
+            message,
+            "An Core übertragen",
+            "Abbrechen");
+        if (!await confirm.ShowDialog<bool>(this))
+            return;
+
+        _transferRunning = true;
+        SetTransferBusy(true);
+        SetStatus($"Übertrage {transferDirectories.Count:N0} Share-Verzeichnis(se) an den Core …");
+
+        try
+        {
+            IReadOnlyList<AjShareDirectory> effectiveDirectories =
+                await _transferDirectoriesAsync(transferDirectories);
+            _configuredDirectories = CloneDirectories(effectiveDirectories);
+            _draftDirectories = CloneDirectories(_configuredDirectories);
+            RefreshVisibleShareStatuses();
+            SetStatus($"Core-Übertragung abgeschlossen: {_configuredDirectories.Count:N0} Share-Verzeichnis(se) aktiv.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus("Core-Übertragung fehlgeschlagen. Der lokale Entwurf bleibt erhalten: " + ex.Message);
+        }
+        finally
+        {
+            _transferRunning = false;
+            SetTransferBusy(false);
+        }
+    }
+
+    private bool HasPendingChanges()
+    {
+        IReadOnlyList<AjShareDirectory> configured =
+            ShareDirectoryDraftSemantics.Normalize(_configuredDirectories);
+        IReadOnlyList<AjShareDirectory> draft =
+            ShareDirectoryDraftSemantics.Normalize(_draftDirectories);
+
+        if (configured.Count != draft.Count)
+            return true;
+
+        return draft.Any(candidate =>
+            !configured.Any(existing =>
+                PathsEqual(existing.Name, candidate.Name)
+                && existing.ShareMode.Equals(candidate.ShareMode, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private void SetTransferBusy(bool busy)
+    {
+        Grid? root = this.FindControl<Grid>("DialogRoot");
+        if (root is not null)
+            root.IsEnabled = !busy;
     }
 
     private bool TryGetSelectedDirectory(out ShareDirectoryTreeNode selected)

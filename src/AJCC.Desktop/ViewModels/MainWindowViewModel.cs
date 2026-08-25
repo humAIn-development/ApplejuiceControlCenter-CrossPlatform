@@ -335,6 +335,89 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return AjXmlParser.ParseDirectoryList(xml);
     }
 
+    public async Task<IReadOnlyList<AjShareDirectory>> TransferShareDirectoriesAsync(
+        IReadOnlyList<AjShareDirectory> directories)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(directories);
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        List<AjShareDirectory> normalizedDirectories = ShareDirectoryDraftSemantics
+            .Normalize(directories)
+            .Where(directory => !string.IsNullOrWhiteSpace(directory.Name))
+            .Select(directory => new AjShareDirectory
+            {
+                Name = directory.Name,
+                ShareMode = directory.ShareMode
+            })
+            .ToList();
+
+        IsBusy = true;
+        StatusText = $"Übertrage {normalizedDirectories.Count:N0} Share-Verzeichnis(se) an den Core ...";
+
+        try
+        {
+            await client.SetShareDirectoriesAsync(normalizedDirectories).ConfigureAwait(true);
+
+            IReadOnlyList<AjShareDirectory> effectiveDirectories;
+            try
+            {
+                string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+                state.Settings = AjXmlParser.ParseSettings(settingsXml);
+                effectiveDirectories = state.Settings.SharedDirectories
+                    .Select(directory => new AjShareDirectory
+                    {
+                        Name = directory.Name,
+                        ShareMode = directory.ShareMode
+                    })
+                    .ToList();
+                StatusText = $"Share-Verzeichnisse übertragen: {effectiveDirectories.Count:N0} Eintrag/Einträge vom Core zurückgelesen.";
+            }
+            catch (Exception refreshException)
+            {
+                state.Settings.SharedDirectories.Clear();
+                foreach (AjShareDirectory directory in normalizedDirectories)
+                {
+                    state.Settings.SharedDirectories.Add(new AjShareDirectory
+                    {
+                        Name = directory.Name,
+                        ShareMode = directory.ShareMode
+                    });
+                }
+
+                effectiveDirectories = normalizedDirectories
+                    .Select(directory => new AjShareDirectory
+                    {
+                        Name = directory.Name,
+                        ShareMode = directory.ShareMode
+                    })
+                    .ToList();
+                StatusText = "Share-Verzeichnisse wurden übertragen, konnten danach aber nicht erneut vom Core gelesen werden: "
+                    + refreshException.Message;
+            }
+
+            OnPropertyChanged(nameof(ConfiguredShareDirectories));
+            OnPropertyChanged(nameof(CoreNick));
+            OnPropertyChanged(nameof(CoreIncomingDirectory));
+            return effectiveDirectories;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Share-Verzeichnisse konnten nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task ReloadSharesAsync()
     {
         ThrowIfDisposed();

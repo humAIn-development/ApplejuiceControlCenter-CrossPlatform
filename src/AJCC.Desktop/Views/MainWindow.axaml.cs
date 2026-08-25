@@ -328,7 +328,8 @@ public sealed partial class MainWindow : Window
 
         ShareDirectoryDialog dialog = new(
             _viewModel.ConfiguredShareDirectories,
-            _viewModel.LoadCoreDirectoryAsync);
+            _viewModel.LoadCoreDirectoryAsync,
+            _viewModel.TransferShareDirectoriesAsync);
         await dialog.ShowDialog<bool>(this);
     }
 
