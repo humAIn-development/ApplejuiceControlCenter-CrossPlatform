@@ -363,7 +363,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
-            await client.SetShareDirectoriesAsync(normalizedDirectories).ConfigureAwait(true);
+            int previousShareCount = state.Settings.SharedDirectories.Count;
+            await client.SetShareDirectoriesAsync(normalizedDirectories, previousShareCount).ConfigureAwait(true);
 
             IReadOnlyList<AjShareDirectory> effectiveDirectories;
             try
@@ -402,6 +403,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     + refreshException.Message;
             }
 
+            if (!ShareDirectoriesMatch(normalizedDirectories, effectiveDirectories))
+            {
+                StatusText = $"Core hat die Share-Verzeichnisliste nicht vollständig übernommen: angefordert {normalizedDirectories.Count:N0}, zurückgelesen {effectiveDirectories.Count:N0}.";
+                throw new InvalidOperationException(StatusText);
+            }
+
             OnPropertyChanged(nameof(ConfiguredShareDirectories));
             OnPropertyChanged(nameof(CoreNick));
             OnPropertyChanged(nameof(CoreIncomingDirectory));
@@ -416,6 +423,43 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    private static bool ShareDirectoriesMatch(
+        IEnumerable<AjShareDirectory> expected,
+        IEnumerable<AjShareDirectory> actual)
+    {
+        static string BuildKey(AjShareDirectory directory)
+        {
+            string path = (directory.Name ?? string.Empty)
+                .Trim()
+                .Trim('"')
+                .Replace('\\', '/');
+            if (path.Length > 1)
+                path = path.TrimEnd('/');
+
+            string shareMode = directory.ShareMode.Equals(
+                ShareDirectoryDraftSemantics.RecursiveShareMode,
+                StringComparison.OrdinalIgnoreCase)
+                ? ShareDirectoryDraftSemantics.RecursiveShareMode
+                : ShareDirectoryDraftSemantics.SingleDirectoryShareMode;
+            return path + "\u001f" + shareMode;
+        }
+
+        string[] expectedKeys = ShareDirectoryDraftSemantics
+            .Normalize(expected)
+            .Where(directory => !string.IsNullOrWhiteSpace(directory.Name))
+            .Select(BuildKey)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        string[] actualKeys = ShareDirectoryDraftSemantics
+            .Normalize(actual)
+            .Where(directory => !string.IsNullOrWhiteSpace(directory.Name))
+            .Select(BuildKey)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return expectedKeys.SequenceEqual(actualKeys, StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task ReloadSharesAsync()

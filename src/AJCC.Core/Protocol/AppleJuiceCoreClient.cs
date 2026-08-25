@@ -144,23 +144,57 @@ public sealed class AppleJuiceCoreClient
     public Task<string> SetShareDirectoriesAsync(
         IEnumerable<AjShareDirectory> directories,
         CancellationToken cancellationToken = default)
+        => SetShareDirectoriesAsync(directories, previousShareCount: 0, cancellationToken: cancellationToken);
+
+    public async Task<string> SetShareDirectoriesAsync(
+        IEnumerable<AjShareDirectory> directories,
+        int previousShareCount,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(directories);
 
-        Dictionary<string, string> parameters = new();
-        int index = 1;
+        List<AjShareDirectory> validDirectories = directories
+            .Where(directory => !string.IsNullOrWhiteSpace(directory.Name))
+            .ToList();
+        int desiredShareCount = validDirectories.Count;
+        previousShareCount = Math.Max(0, previousShareCount);
 
-        foreach (AjShareDirectory directory in directories.Where(directory => !string.IsNullOrWhiteSpace(directory.Name)))
+        if (previousShareCount > desiredShareCount)
         {
-            parameters[$"sharedirectory{index}"] = directory.Name;
-            parameters[$"sharesub{index}"] = directory.ShareMode.Equals("subdirectory", StringComparison.OrdinalIgnoreCase)
-                ? "true"
-                : "false";
-            index++;
+            Dictionary<string, string> clearParameters = new();
+            for (int index = 0; index < validDirectories.Count; index++)
+            {
+                AjShareDirectory directory = validDirectories[index];
+                int slot = index + 1;
+                clearParameters[$"sharedirectory{slot}"] = directory.Name;
+                clearParameters[$"sharesub{slot}"] = directory.ShareMode.Equals("subdirectory", StringComparison.OrdinalIgnoreCase)
+                    ? "true"
+                    : "false";
+            }
+
+            for (int slot = desiredShareCount + 1; slot <= previousShareCount; slot++)
+            {
+                clearParameters[$"sharedirectory{slot}"] = string.Empty;
+                clearParameters[$"sharesub{slot}"] = "false";
+            }
+
+            clearParameters["countshares"] = previousShareCount.ToString(CultureInfo.InvariantCulture);
+            await GetXmlAsync(AjEndpoints.SetSettings, clearParameters, cancellationToken).ConfigureAwait(false);
         }
 
-        parameters["countshares"] = (index - 1).ToString(CultureInfo.InvariantCulture);
-        return GetXmlAsync(AjEndpoints.SetSettings, parameters, cancellationToken);
+        Dictionary<string, string> parameters = new();
+        for (int index = 0; index < validDirectories.Count; index++)
+        {
+            AjShareDirectory directory = validDirectories[index];
+            int slot = index + 1;
+            parameters[$"sharedirectory{slot}"] = directory.Name;
+            parameters[$"sharesub{slot}"] = directory.ShareMode.Equals("subdirectory", StringComparison.OrdinalIgnoreCase)
+                ? "true"
+                : "false";
+        }
+
+        parameters["countshares"] = desiredShareCount.ToString(CultureInfo.InvariantCulture);
+        return await GetXmlAsync(AjEndpoints.SetSettings, parameters, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<string> SetPriorityAsync(long id, int priority, CancellationToken cancellationToken = default)

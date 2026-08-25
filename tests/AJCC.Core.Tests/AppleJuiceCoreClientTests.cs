@@ -227,6 +227,63 @@ public sealed class AppleJuiceCoreClientTests
     }
 
     [TestMethod]
+    public async Task SetShareDirectories_ShrinkClearsTrailingLegacySlotsBeforeFinalCount()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.SetShareDirectoriesAsync(
+            new[]
+            {
+                new AjShareDirectory { Name = "/mnt/music", ShareMode = "singledirectory" }
+            },
+            previousShareCount: 3);
+
+        Assert.AreEqual(2, handler.RequestUris.Count);
+
+        string clearQuery = WebUtility.UrlDecode(handler.RequestUris[0].Query);
+        StringAssert.Contains(clearQuery, "sharedirectory1=/mnt/music");
+        StringAssert.Contains(clearQuery, "sharesub1=false");
+        StringAssert.Contains(clearQuery, "sharedirectory2=");
+        StringAssert.Contains(clearQuery, "sharesub2=false");
+        StringAssert.Contains(clearQuery, "sharedirectory3=");
+        StringAssert.Contains(clearQuery, "sharesub3=false");
+        StringAssert.Contains(clearQuery, "countshares=3");
+
+        string finalQuery = WebUtility.UrlDecode(handler.RequestUris[1].Query);
+        StringAssert.Contains(finalQuery, "sharedirectory1=/mnt/music");
+        StringAssert.Contains(finalQuery, "sharesub1=false");
+        StringAssert.Contains(finalQuery, "countshares=1");
+        Assert.IsFalse(finalQuery.Contains("sharedirectory2=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task SetShareDirectories_ZeroDesiredSharesClearsAllPreviousSlots()
+    {
+        RecordingHandler handler = new("OK");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.SetShareDirectoriesAsync(
+            Array.Empty<AjShareDirectory>(),
+            previousShareCount: 2);
+
+        Assert.AreEqual(2, handler.RequestUris.Count);
+
+        string clearQuery = WebUtility.UrlDecode(handler.RequestUris[0].Query);
+        StringAssert.Contains(clearQuery, "sharedirectory1=");
+        StringAssert.Contains(clearQuery, "sharesub1=false");
+        StringAssert.Contains(clearQuery, "sharedirectory2=");
+        StringAssert.Contains(clearQuery, "sharesub2=false");
+        StringAssert.Contains(clearQuery, "countshares=2");
+
+        string finalQuery = WebUtility.UrlDecode(handler.RequestUris[1].Query);
+        StringAssert.Contains(finalQuery, "countshares=0");
+        Assert.IsFalse(finalQuery.Contains("sharedirectory1=", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
     public async Task CleanDownloadList_UsesGetWithoutDownloadId()
     {
         RecordingHandler handler = new("OK");
@@ -321,11 +378,14 @@ public sealed class AppleJuiceCoreClientTests
 
         public Uri? LastRequestUri { get; private set; }
         public HttpMethod? LastMethod { get; private set; }
+        public System.Collections.Generic.List<Uri> RequestUris { get; } = new();
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             LastRequestUri = request.RequestUri;
             LastMethod = request.Method;
+            if (request.RequestUri is not null)
+                RequestUris.Add(request.RequestUri);
             HttpResponseMessage response = new(HttpStatusCode.OK)
             {
                 Content = new StringContent(_responseBody)
