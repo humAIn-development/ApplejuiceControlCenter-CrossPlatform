@@ -103,11 +103,17 @@ $commitMessage = [string]$payload.commit_message
 $expectedFiles = @($payload.expected_files | ForEach-Object { ([string]$_).Replace("\", "/") })
 $testProjects = @($payload.test_projects | ForEach-Object { [string]$_ })
 $patchShaExpected = ([string]$payload.patch_sha256).ToLowerInvariant()
-$patchBase64 = if ([string]$payload.schema -eq "AJCC_REMOTE_PATCH_V3") {
-    [string]$payload.patch_gzip_base64
+if ([string]$payload.schema -eq "AJCC_REMOTE_PATCH_V3") {
+    $chunkProperty = $payload.PSObject.Properties["patch_gzip_base64_chunks"]
+    if ($null -ne $chunkProperty) {
+        $patchBase64 = (@($chunkProperty.Value | ForEach-Object { [string]$_ }) -join "")
+    }
+    else {
+        $patchBase64 = [string]$payload.patch_gzip_base64
+    }
 }
 else {
-    [string]$payload.patch_base64
+    $patchBase64 = [string]$payload.patch_base64
 }
 
 if ($patchId -notmatch '^[A-Za-z0-9._-]+$') { Fail "Invalid patch_id." }
