@@ -123,14 +123,15 @@ public sealed partial class ShareDirectoryDialog : Window
         await OpenDirectoryAsync(selected);
     }
 
-    private async void DirectoryItem_OnDoubleTapped(object? sender, TappedEventArgs e)
+    private async void DirectoryItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control { DataContext: ShareDirectoryChoice selected })
+        if (e.ClickCount != 2
+            || sender is not Control { DataContext: ShareDirectoryChoice selected })
             return;
 
         SelectDirectory(selected);
-        await OpenDirectoryAsync(selected);
         e.Handled = true;
+        await OpenDirectoryAsync(selected);
     }
 
     private void DirectoryItem_OnRightTapped(object? sender, TappedEventArgs e)

@@ -48,7 +48,7 @@
           <DataTemplate>
             <Grid ColumnDefinitions="*,Auto"
                   Margin="6,5"
-                  DoubleTapped="DirectoryItem_OnDoubleTapped"
+                  PointerPressed="DirectoryItem_OnPointerPressed"
                   RightTapped="DirectoryItem_OnRightTapped">
               <TextBlock Text="{Binding Name}"
                          TextTrimming="CharacterEllipsis" />
