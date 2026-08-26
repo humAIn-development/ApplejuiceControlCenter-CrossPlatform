@@ -16,6 +16,7 @@ public sealed partial class SettingsDialog : Window
     private Func<int, Task<int>>? _applyMaxConnectionsAsync;
     private Func<int, Task<int>>? _applyMaxSourcesPerFileAsync;
     private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
+    private Func<bool, Task<bool>>? _applyAutoConnectAsync;
     private bool _coreSettingsWriteRunning;
 
     public SettingsDialog()
@@ -50,10 +51,12 @@ public sealed partial class SettingsDialog : Window
         int maxConnections,
         int maxSourcesPerFile,
         int maxNewConnectionsPerTurn,
+        bool autoConnect,
         bool canWriteCoreSettings,
         Func<int, Task<int>>? applyMaxConnectionsAsync,
         Func<int, Task<int>>? applyMaxSourcesPerFileAsync,
-        Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync)
+        Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync,
+        Func<bool, Task<bool>>? applyAutoConnectAsync)
     {
         SetCoreValue("CoreNickText", nick);
         SetCoreValue("CoreIncomingText", incomingDirectory);
@@ -64,6 +67,7 @@ public sealed partial class SettingsDialog : Window
         _applyMaxConnectionsAsync = applyMaxConnectionsAsync;
         _applyMaxSourcesPerFileAsync = applyMaxSourcesPerFileAsync;
         _applyMaxNewConnectionsPerTurnAsync = applyMaxNewConnectionsPerTurnAsync;
+        _applyAutoConnectAsync = applyAutoConnectAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -77,6 +81,10 @@ public sealed partial class SettingsDialog : Window
         if (maxNewConnectionsInput is not null)
             maxNewConnectionsInput.Text = maxNewConnectionsPerTurn.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
+        CheckBox? autoConnectInput = this.FindControl<CheckBox>("CoreAutoConnectCheckBox");
+        if (autoConnectInput is not null)
+            autoConnectInput.IsChecked = autoConnect;
+
         Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
         if (applyButton is not null)
             applyButton.IsEnabled = canWriteCoreSettings && _applyMaxConnectionsAsync is not null;
@@ -88,6 +96,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyMaxNewConnectionsButton = this.FindControl<Button>("ApplyMaxNewConnectionsPerTurnButton");
         if (applyMaxNewConnectionsButton is not null)
             applyMaxNewConnectionsButton.IsEnabled = canWriteCoreSettings && _applyMaxNewConnectionsPerTurnAsync is not null;
+
+        Button? applyAutoConnectButton = this.FindControl<Button>("ApplyAutoConnectButton");
+        if (applyAutoConnectButton is not null)
+            applyAutoConnectButton.IsEnabled = canWriteCoreSettings && _applyAutoConnectAsync is not null;
     }
 
     private void SetCoreValue(string controlName, string? value)
@@ -245,6 +257,44 @@ public sealed partial class SettingsDialog : Window
             _coreSettingsWriteRunning = false;
             if (applyButton is not null)
                 applyButton.IsEnabled = _applyMaxNewConnectionsPerTurnAsync is not null;
+        }
+    }
+
+
+    private async void ApplyAutoConnectButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyAutoConnectAsync is null)
+            return;
+
+        CheckBox? input = this.FindControl<CheckBox>("CoreAutoConnectCheckBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyAutoConnectButton");
+        bool autoConnect = input?.IsChecked == true;
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage an den Core …";
+
+        try
+        {
+            bool effective = await _applyAutoConnectAsync(autoConnect);
+            if (input is not null)
+                input.IsChecked = effective;
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: Automatisch verbinden {(effective ? "ein" : "aus")}.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyAutoConnectAsync is not null;
         }
     }
 

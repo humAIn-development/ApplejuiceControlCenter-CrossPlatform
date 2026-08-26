@@ -285,6 +285,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public int CoreMaxNewConnectionsPerTurn => (_state?.Settings.MaxNewConnectionsPerTurn ?? 0) > 0
         ? _state!.Settings.MaxNewConnectionsPerTurn
         : 50;
+    public bool CoreAutoConnect => _state?.Settings.AutoConnect ?? false;
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
@@ -493,6 +494,48 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Maximale neue Verbindungen pro 10 Sekunden konnten nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+
+    public async Task<bool> ApplyAutoConnectAsync(bool autoConnect)
+    {
+        ThrowIfDisposed();
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { AutoConnect = autoConnect });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreAutoConnect));
+
+            bool effective = state.Settings.AutoConnect;
+            if (effective != autoConnect)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung AutoConnect={effective} statt AutoConnect={autoConnect}.");
+
+            StatusText = $"Automatisch verbinden vom Core bestätigt: {(effective ? "ein" : "aus")}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Automatisch verbinden konnte nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally
