@@ -38,31 +38,32 @@
 
             <TextBlock Grid.Row="2"
                        Margin="0,0,12,0"
-                       Text="Benutzername"
+                       Text="Core-Adresse"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CoreNickText"
+            <TextBlock x:Name="MappingEndpointText"
                        Grid.Row="2"
                        Grid.Column="1"
                        Grid.ColumnSpan="3"
-                       Text="-" />
+                       Classes="muted"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Row="3"
                        Margin="0,8,12,0"
-                       Text="Core-Incoming"
+                       Text="Benutzername"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CoreIncomingText"
+            <TextBlock x:Name="CoreNickText"
                        Grid.Row="3"
                        Grid.Column="1"
                        Grid.ColumnSpan="3"
                        Margin="0,8,0,0"
-                       Text="-"
-                       TextTrimming="CharacterEllipsis" />
+                       Text="-" />
 
             <TextBlock Grid.Row="4"
                        Margin="0,8,12,0"
-                       Text="Core-Temp"
+                       Text="Core-Incoming"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CoreTemporaryText"
+            <TextBlock x:Name="CoreIncomingText"
                        Grid.Row="4"
                        Grid.Column="1"
                        Grid.ColumnSpan="3"
@@ -72,20 +73,21 @@
 
             <TextBlock Grid.Row="5"
                        Margin="0,8,12,0"
-                       Text="Core-Port"
+                       Text="Core-Temp"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CorePortText"
+            <TextBlock x:Name="CoreTemporaryText"
                        Grid.Row="5"
                        Grid.Column="1"
                        Grid.ColumnSpan="3"
                        Margin="0,8,0,0"
-                       Text="-" />
+                       Text="-"
+                       TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Row="6"
                        Margin="0,8,12,0"
-                       Text="XML-Port"
+                       Text="Core-Port"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CoreXmlPortText"
+            <TextBlock x:Name="CorePortText"
                        Grid.Row="6"
                        Grid.Column="1"
                        Grid.ColumnSpan="3"
@@ -93,28 +95,27 @@
                        Text="-" />
 
             <TextBlock Grid.Row="7"
+                       Margin="0,8,12,0"
+                       Text="XML-Port"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="CoreXmlPortText"
+                       Grid.Row="7"
+                       Grid.Column="1"
+                       Grid.ColumnSpan="3"
+                       Margin="0,8,0,0"
+                       Text="-" />
+
+            <TextBlock Grid.Row="8"
                        Grid.ColumnSpan="4"
                        Margin="0,18,0,0"
                        Text="Lokales Incoming-Mapping"
                        FontWeight="SemiBold" />
-            <TextBlock Grid.Row="8"
+            <TextBlock Grid.Row="9"
                        Grid.ColumnSpan="4"
                        Classes="muted"
                        Margin="0,6,0,10"
                        Text="Lokaler oder gemounteter Ordner, der aus Sicht dieses Rechners dem Core-Incoming entspricht. Die Zuordnung wird pro Core-Endpunkt gespeichert."
                        TextWrapping="Wrap" />
-
-            <TextBlock Grid.Row="9"
-                       Margin="0,0,12,0"
-                       Text="Core"
-                       VerticalAlignment="Center" />
-            <TextBlock x:Name="MappingEndpointText"
-                       Grid.Row="9"
-                       Grid.Column="1"
-                       Grid.ColumnSpan="3"
-                       Classes="muted"
-                       VerticalAlignment="Center"
-                       TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Row="10"
                        Margin="0,12,12,0"
