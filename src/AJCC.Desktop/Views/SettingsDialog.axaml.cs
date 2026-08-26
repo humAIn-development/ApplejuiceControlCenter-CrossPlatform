@@ -15,6 +15,7 @@ public sealed partial class SettingsDialog : Window
     private Action<string>? _mappingChanged;
     private Func<int, Task<int>>? _applyMaxConnectionsAsync;
     private Func<int, Task<int>>? _applyMaxSourcesPerFileAsync;
+    private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
     private bool _coreSettingsWriteRunning;
 
     public SettingsDialog()
@@ -48,9 +49,11 @@ public sealed partial class SettingsDialog : Window
         string xmlPort,
         int maxConnections,
         int maxSourcesPerFile,
+        int maxNewConnectionsPerTurn,
         bool canWriteCoreSettings,
         Func<int, Task<int>>? applyMaxConnectionsAsync,
-        Func<int, Task<int>>? applyMaxSourcesPerFileAsync)
+        Func<int, Task<int>>? applyMaxSourcesPerFileAsync,
+        Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync)
     {
         SetCoreValue("CoreNickText", nick);
         SetCoreValue("CoreIncomingText", incomingDirectory);
@@ -60,6 +63,7 @@ public sealed partial class SettingsDialog : Window
 
         _applyMaxConnectionsAsync = applyMaxConnectionsAsync;
         _applyMaxSourcesPerFileAsync = applyMaxSourcesPerFileAsync;
+        _applyMaxNewConnectionsPerTurnAsync = applyMaxNewConnectionsPerTurnAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -69,6 +73,10 @@ public sealed partial class SettingsDialog : Window
         if (maxSourcesInput is not null)
             maxSourcesInput.Text = Math.Max(0, maxSourcesPerFile).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
+        TextBox? maxNewConnectionsInput = this.FindControl<TextBox>("CoreMaxNewConnectionsPerTurnTextBox");
+        if (maxNewConnectionsInput is not null)
+            maxNewConnectionsInput.Text = maxNewConnectionsPerTurn.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
         if (applyButton is not null)
             applyButton.IsEnabled = canWriteCoreSettings && _applyMaxConnectionsAsync is not null;
@@ -76,6 +84,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyMaxSourcesButton = this.FindControl<Button>("ApplyMaxSourcesPerFileButton");
         if (applyMaxSourcesButton is not null)
             applyMaxSourcesButton.IsEnabled = canWriteCoreSettings && _applyMaxSourcesPerFileAsync is not null;
+
+        Button? applyMaxNewConnectionsButton = this.FindControl<Button>("ApplyMaxNewConnectionsPerTurnButton");
+        if (applyMaxNewConnectionsButton is not null)
+            applyMaxNewConnectionsButton.IsEnabled = canWriteCoreSettings && _applyMaxNewConnectionsPerTurnAsync is not null;
     }
 
     private void SetCoreValue(string controlName, string? value)
@@ -183,6 +195,56 @@ public sealed partial class SettingsDialog : Window
             _coreSettingsWriteRunning = false;
             if (applyButton is not null)
                 applyButton.IsEnabled = _applyMaxSourcesPerFileAsync is not null;
+        }
+    }
+
+
+    private async void ApplyMaxNewConnectionsPerTurnButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyMaxNewConnectionsPerTurnAsync is null)
+            return;
+
+        TextBox? input = this.FindControl<TextBox>("CoreMaxNewConnectionsPerTurnTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyMaxNewConnectionsPerTurnButton");
+        string raw = (input?.Text ?? string.Empty).Trim();
+
+        if (!int.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out int maxNewConnectionsPerTurn)
+            || maxNewConnectionsPerTurn is < 1 or > 200)
+        {
+            if (status is not null)
+                status.Text = "Bitte eine ganze Zahl zwischen 1 und 200 eingeben.";
+            return;
+        }
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage an den Core …";
+
+        try
+        {
+            int effective = await _applyMaxNewConnectionsPerTurnAsync(maxNewConnectionsPerTurn);
+            if (input is not null)
+                input.Text = effective.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: {effective:N0} maximale neue Verbindungen pro 10 Sekunden.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyMaxNewConnectionsPerTurnAsync is not null;
         }
     }
 

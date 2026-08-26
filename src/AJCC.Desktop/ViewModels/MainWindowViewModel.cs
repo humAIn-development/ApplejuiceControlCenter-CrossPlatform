@@ -282,6 +282,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string CoreXmlPortText => _state is null || _state.Settings.XmlPort <= 0 ? "-" : _state.Settings.XmlPort.ToString();
     public int CoreMaxConnections => Math.Max(0, _state?.Settings.MaxConnections ?? 0);
     public int CoreMaxSourcesPerFile => Math.Max(0, _state?.Settings.MaxSourcesPerFile ?? 0);
+    public int CoreMaxNewConnectionsPerTurn => (_state?.Settings.MaxNewConnectionsPerTurn ?? 0) > 0
+        ? _state!.Settings.MaxNewConnectionsPerTurn
+        : 50;
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
@@ -446,6 +449,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Maximale Quellen pro Datei konnten nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+
+    public async Task<int> ApplyMaxNewConnectionsPerTurnAsync(int maxNewConnectionsPerTurn)
+    {
+        ThrowIfDisposed();
+        if (maxNewConnectionsPerTurn is < 1 or > 200)
+            throw new ArgumentOutOfRangeException(nameof(maxNewConnectionsPerTurn), "Maximale neue Verbindungen pro 10 Sekunden müssen zwischen 1 und 200 liegen.");
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { MaxNewConnectionsPerTurn = maxNewConnectionsPerTurn });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreMaxNewConnectionsPerTurn));
+
+            int effective = state.Settings.MaxNewConnectionsPerTurn;
+            if (effective != maxNewConnectionsPerTurn)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung {effective:N0} statt {maxNewConnectionsPerTurn:N0} maximale neue Verbindungen pro 10 Sekunden.");
+
+            StatusText = $"Maximale neue Verbindungen pro 10 Sekunden vom Core bestätigt: {effective:N0}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Maximale neue Verbindungen pro 10 Sekunden konnten nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally

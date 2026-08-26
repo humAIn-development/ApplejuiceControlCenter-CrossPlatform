@@ -78,9 +78,11 @@ public sealed partial class MainWindow : Window
             _viewModel.CoreXmlPortText,
             _viewModel.CoreMaxConnections,
             _viewModel.CoreMaxSourcesPerFile,
+            _viewModel.CoreMaxNewConnectionsPerTurn,
             _viewModel.IsConnected && !_viewModel.IsBusy,
             _viewModel.ApplyMaxConnectionsAsync,
-            _viewModel.ApplyMaxSourcesPerFileAsync);
+            _viewModel.ApplyMaxSourcesPerFileAsync,
+            _viewModel.ApplyMaxNewConnectionsPerTurnAsync);
         await dialog.ShowDialog<bool>(this);
     }
 

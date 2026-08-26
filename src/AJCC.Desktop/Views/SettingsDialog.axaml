@@ -24,7 +24,7 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
         <Border Classes="panel" Padding="14" Margin="0,8,0,0">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                 ColumnDefinitions="Auto,*,Auto,Auto">
             <TextBlock Grid.ColumnSpan="4"
                        Text="Core-Werte (nur Anzeige)"
@@ -152,43 +152,61 @@
                     Content="An Core übertragen"
                     Click="ApplyMaxSourcesPerFileButton_OnClick" />
 
+            <TextBlock Grid.Row="12"
+                       Margin="0,12,12,0"
+                       Text="Max. neue Verbindungen / 10 Sek."
+                       VerticalAlignment="Center" />
+            <TextBox x:Name="CoreMaxNewConnectionsPerTurnTextBox"
+                     Grid.Row="12"
+                     Grid.Column="1"
+                     Margin="0,8,8,0"
+                     MinWidth="120" />
+            <Button x:Name="ApplyMaxNewConnectionsPerTurnButton"
+                    Grid.Row="12"
+                    Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    MinWidth="150"
+                    Margin="0,8,0,0"
+                    Content="An Core übertragen"
+                    Click="ApplyMaxNewConnectionsPerTurnButton_OnClick" />
+
             <TextBlock x:Name="CoreSettingsStatusText"
-                       Grid.Row="12"
+                       Grid.Row="13"
                        Grid.Column="1"
                        Grid.ColumnSpan="3"
                        Classes="muted"
                        Margin="0,6,0,0"
                        TextWrapping="Wrap" />
 
-            <TextBlock Grid.Row="13"
+            <TextBlock Grid.Row="14"
                        Grid.ColumnSpan="4"
                        Margin="0,18,0,0"
                        Text="Lokales Incoming-Mapping"
                        FontWeight="SemiBold" />
-            <TextBlock Grid.Row="14"
+            <TextBlock Grid.Row="15"
                        Grid.ColumnSpan="4"
                        Classes="muted"
                        Margin="0,6,0,10"
                        Text="Lokaler oder gemounteter Ordner, der aus Sicht dieses Rechners dem Core-Incoming entspricht. Die Zuordnung wird pro Core-Endpunkt gespeichert."
                        TextWrapping="Wrap" />
 
-            <TextBlock Grid.Row="15"
+            <TextBlock Grid.Row="16"
                        Margin="0,12,12,0"
                        Text="Lokales Mapping"
                        VerticalAlignment="Center" />
             <TextBox x:Name="LocalIncomingMappingTextBox"
-                     Grid.Row="15"
+                     Grid.Row="16"
                      Grid.Column="1"
                      Margin="0,8,8,0"
                      IsReadOnly="True"
                      PlaceholderText="Kein lokales Incoming-Mapping gesetzt" />
-            <Button Grid.Row="15"
+            <Button Grid.Row="16"
                     Grid.Column="2"
                     MinWidth="110"
                     Margin="0,8,8,0"
                     Content="Auswählen…"
                     Click="BrowseLocalIncomingMappingButton_OnClick" />
-            <Button Grid.Row="15"
+            <Button Grid.Row="16"
                     Grid.Column="3"
                     MinWidth="100"
                     Margin="0,8,0,0"
