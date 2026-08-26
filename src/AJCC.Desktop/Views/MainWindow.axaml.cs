@@ -25,14 +25,12 @@ public sealed partial class MainWindow : Window
     private AjShareFile? _selectedShareForContext;
     private int _embeddedPartListRequestVersion;
     private long _embeddedPartListDownloadId;
-    private bool _loadingExternalVlcConfiguration;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _viewModel;
         ConfigureLocalIncomingMappingControls();
-        LoadExternalVlcConfiguration();
         AddHandler(
             InputElement.PointerPressedEvent,
             MainWindow_OnPointerPressed,
@@ -63,6 +61,12 @@ public sealed partial class MainWindow : Window
             if (passwordInput is not null)
                 passwordInput.Text = string.Empty;
         }
+    }
+
+    private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        SettingsDialog dialog = new();
+        await dialog.ShowDialog<bool>(this);
     }
 
     private void ConfigureLocalIncomingMappingControls()
@@ -114,96 +118,6 @@ public sealed partial class MainWindow : Window
         _localIncomingMappingStore.TrySave(_viewModel.EndpointText, path.LocalPath, out _);
     }
 
-    private async void BrowseExternalVlcButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(
-            new FilePickerOpenOptions
-            {
-                Title = "VLC-Programm auswählen",
-                AllowMultiple = false
-            });
-
-        if (files.Count == 0)
-            return;
-
-        Uri path = files[0].Path;
-        if (!path.IsFile)
-            return;
-
-        TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
-        if (pathInput is not null)
-            pathInput.Text = path.LocalPath;
-
-        SaveExternalVlcConfiguration();
-    }
-
-    private void ExternalVlcEnabledCheckBox_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (!_loadingExternalVlcConfiguration)
-            SaveExternalVlcConfiguration();
-    }
-
-    private void LoadExternalVlcConfiguration()
-    {
-        ExternalVlcConfiguration configuration = _externalVlcConfigurationStore.Load();
-
-        _loadingExternalVlcConfiguration = true;
-        try
-        {
-            TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
-            CheckBox? enabledInput = this.FindControl<CheckBox>("ExternalVlcEnabledCheckBox");
-            if (pathInput is not null)
-                pathInput.Text = configuration.ExecutablePath;
-            if (enabledInput is not null)
-                enabledInput.IsChecked = configuration.Enabled;
-        }
-        finally
-        {
-            _loadingExternalVlcConfiguration = false;
-        }
-
-        UpdateExternalVlcStatus();
-    }
-
-    private void SaveExternalVlcConfiguration()
-    {
-        TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
-        CheckBox? enabledInput = this.FindControl<CheckBox>("ExternalVlcEnabledCheckBox");
-        TextBlock? status = this.FindControl<TextBlock>("ExternalVlcStatusText");
-
-        ExternalVlcConfiguration configuration = new(
-            enabledInput?.IsChecked == true,
-            pathInput?.Text ?? string.Empty);
-
-        if (!_externalVlcConfigurationStore.TrySave(configuration, out string errorMessage))
-        {
-            if (status is not null)
-                status.Text = "Speichern fehlgeschlagen: " + errorMessage;
-            return;
-        }
-
-        UpdateExternalVlcStatus();
-    }
-
-    private void UpdateExternalVlcStatus()
-    {
-        TextBox? pathInput = this.FindControl<TextBox>("ExternalVlcPathTextBox");
-        CheckBox? enabledInput = this.FindControl<CheckBox>("ExternalVlcEnabledCheckBox");
-        TextBlock? status = this.FindControl<TextBlock>("ExternalVlcStatusText");
-        if (status is null)
-            return;
-
-        string path = (pathInput?.Text ?? string.Empty).Trim();
-        if (enabledInput?.IsChecked != true)
-            status.Text = "deaktiviert";
-        else if (path.Length == 0)
-            status.Text = "kein VLC-Programm ausgewählt";
-        else if (!File.Exists(path))
-            status.Text = "VLC-Programm nicht erreichbar";
-        else
-            status.Text = "bereit";
-    }
-
     private void ShareContextOpenWithVlc_OnClick(object? sender, RoutedEventArgs e)
     {
         List<AjShareFile> shares = GetSelectedShareFilesForContext();
@@ -218,7 +132,7 @@ public sealed partial class MainWindow : Window
             || string.IsNullOrWhiteSpace(configuration.ExecutablePath)
             || !File.Exists(configuration.ExecutablePath))
         {
-            UpdateExternalVlcStatus();
+            SetExternalVlcRuntimeStatus("VLC ist deaktiviert oder nicht erreichbar");
             return;
         }
 
@@ -300,11 +214,7 @@ public sealed partial class MainWindow : Window
     }
 
     private void SetExternalVlcRuntimeStatus(string text)
-    {
-        TextBlock? status = this.FindControl<TextBlock>("ExternalVlcStatusText");
-        if (status is not null)
-            status.Text = text;
-    }
+        => _viewModel.SetStatusMessage(text);
 
     private async void PauseDownloadButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.PauseSelectedDownloadAsync();

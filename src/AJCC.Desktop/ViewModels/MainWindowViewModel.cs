@@ -94,6 +94,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         private set => SetField(ref _statusText, value);
     }
 
+    public void SetStatusMessage(string message)
+        => StatusText = message ?? string.Empty;
+
     public string CoreVersion
     {
         get => _coreVersion;
