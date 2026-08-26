@@ -281,6 +281,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string CorePortText => _state is null || _state.Settings.Port <= 0 ? "-" : _state.Settings.Port.ToString();
     public string CoreXmlPortText => _state is null || _state.Settings.XmlPort <= 0 ? "-" : _state.Settings.XmlPort.ToString();
     public int CoreMaxConnections => Math.Max(0, _state?.Settings.MaxConnections ?? 0);
+    public int CoreMaxSourcesPerFile => Math.Max(0, _state?.Settings.MaxSourcesPerFile ?? 0);
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
@@ -389,6 +390,62 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Maximale Verbindungen konnten nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task<int> ApplyMaxSourcesPerFileAsync(int maxSourcesPerFile)
+    {
+        ThrowIfDisposed();
+        if (maxSourcesPerFile < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxSourcesPerFile), "Maximale Quellen pro Datei dürfen nicht negativ sein.");
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        StatusText = $"Übertrage maximale Quellen pro Datei ({maxSourcesPerFile:N0}) an den Core ...";
+
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { MaxSourcesPerFile = maxSourcesPerFile });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+
+            OnPropertyChanged(nameof(CoreNick));
+            OnPropertyChanged(nameof(CoreIncomingDirectory));
+            OnPropertyChanged(nameof(CoreTemporaryDirectory));
+            OnPropertyChanged(nameof(CorePortText));
+            OnPropertyChanged(nameof(CoreXmlPortText));
+            OnPropertyChanged(nameof(CoreMaxConnections));
+            OnPropertyChanged(nameof(CoreMaxSourcesPerFile));
+            OnPropertyChanged(nameof(ConfiguredShareDirectories));
+
+            int effective = Math.Max(0, state.Settings.MaxSourcesPerFile);
+            if (effective != maxSourcesPerFile)
+            {
+                StatusText = $"Core meldet nach der Übertragung {effective:N0} statt {maxSourcesPerFile:N0} maximale Quellen pro Datei.";
+                throw new InvalidOperationException(StatusText);
+            }
+
+            StatusText = $"Maximale Quellen pro Datei vom Core bestätigt: {effective:N0}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Maximale Quellen pro Datei konnten nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally
