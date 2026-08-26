@@ -13,6 +13,8 @@ public sealed partial class SettingsDialog : Window
     private bool _loadingExternalVlcConfiguration;
     private string _mappingEndpoint = string.Empty;
     private Action<string>? _mappingChanged;
+    private Func<int, Task<int>>? _applyMaxConnectionsAsync;
+    private bool _coreSettingsWriteRunning;
 
     public SettingsDialog()
     {
@@ -42,13 +44,26 @@ public sealed partial class SettingsDialog : Window
         string incomingDirectory,
         string temporaryDirectory,
         string corePort,
-        string xmlPort)
+        string xmlPort,
+        int maxConnections,
+        bool canWriteCoreSettings,
+        Func<int, Task<int>>? applyMaxConnectionsAsync)
     {
         SetCoreValue("CoreNickText", nick);
         SetCoreValue("CoreIncomingText", incomingDirectory);
         SetCoreValue("CoreTemporaryText", temporaryDirectory);
         SetCoreValue("CorePortText", corePort);
         SetCoreValue("CoreXmlPortText", xmlPort);
+
+        _applyMaxConnectionsAsync = applyMaxConnectionsAsync;
+
+        TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
+        if (maxConnectionsInput is not null)
+            maxConnectionsInput.Text = Math.Max(0, maxConnections).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
+        if (applyButton is not null)
+            applyButton.IsEnabled = canWriteCoreSettings && _applyMaxConnectionsAsync is not null;
     }
 
     private void SetCoreValue(string controlName, string? value)
@@ -60,6 +75,55 @@ public sealed partial class SettingsDialog : Window
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+    private async void ApplyCoreSettingsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyMaxConnectionsAsync is null)
+            return;
+
+        TextBox? input = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
+        string raw = (input?.Text ?? string.Empty).Trim();
+
+        if (!int.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out int maxConnections)
+            || maxConnections < 0)
+        {
+            if (status is not null)
+                status.Text = "Bitte eine ganze Zahl ab 0 eingeben.";
+            return;
+        }
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage an den Core …";
+
+        try
+        {
+            int effective = await _applyMaxConnectionsAsync(maxConnections);
+            if (input is not null)
+                input.Text = effective.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: {effective:N0} maximale Verbindungen.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyMaxConnectionsAsync is not null;
+        }
+    }
 
     private async void BrowseLocalIncomingMappingButton_OnClick(object? sender, RoutedEventArgs e)
     {

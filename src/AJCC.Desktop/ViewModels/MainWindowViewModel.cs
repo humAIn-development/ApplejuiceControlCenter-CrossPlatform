@@ -280,6 +280,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string CoreTemporaryDirectory => string.IsNullOrWhiteSpace(_state?.Settings.TemporaryDirectory) ? "-" : _state.Settings.TemporaryDirectory;
     public string CorePortText => _state is null || _state.Settings.Port <= 0 ? "-" : _state.Settings.Port.ToString();
     public string CoreXmlPortText => _state is null || _state.Settings.XmlPort <= 0 ? "-" : _state.Settings.XmlPort.ToString();
+    public int CoreMaxConnections => Math.Max(0, _state?.Settings.MaxConnections ?? 0);
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
@@ -339,6 +340,61 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         string xml = await client.GetDirectoryXmlAsync(directory).ConfigureAwait(true);
         return AjXmlParser.ParseDirectoryList(xml);
+    }
+
+    public async Task<int> ApplyMaxConnectionsAsync(int maxConnections)
+    {
+        ThrowIfDisposed();
+        if (maxConnections < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxConnections), "Maximale Verbindungen dürfen nicht negativ sein.");
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        StatusText = $"Übertrage maximale Verbindungen ({maxConnections:N0}) an den Core ...";
+
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { MaxConnections = maxConnections });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+
+            OnPropertyChanged(nameof(CoreNick));
+            OnPropertyChanged(nameof(CoreIncomingDirectory));
+            OnPropertyChanged(nameof(CoreTemporaryDirectory));
+            OnPropertyChanged(nameof(CorePortText));
+            OnPropertyChanged(nameof(CoreXmlPortText));
+            OnPropertyChanged(nameof(CoreMaxConnections));
+            OnPropertyChanged(nameof(ConfiguredShareDirectories));
+
+            int effective = Math.Max(0, state.Settings.MaxConnections);
+            if (effective != maxConnections)
+            {
+                StatusText = $"Core meldet nach der Übertragung {effective:N0} statt {maxConnections:N0} maximale Verbindungen.";
+                throw new InvalidOperationException(StatusText);
+            }
+
+            StatusText = $"Maximale Verbindungen vom Core bestätigt: {effective:N0}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Maximale Verbindungen konnten nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     public async Task<IReadOnlyList<AjShareDirectory>> TransferShareDirectoriesAsync(

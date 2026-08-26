@@ -75,7 +75,10 @@ public sealed partial class MainWindow : Window
             _viewModel.CoreIncomingDirectory,
             _viewModel.CoreTemporaryDirectory,
             _viewModel.CorePortText,
-            _viewModel.CoreXmlPortText);
+            _viewModel.CoreXmlPortText,
+            _viewModel.CoreMaxConnections,
+            _viewModel.IsConnected && !_viewModel.IsBusy,
+            _viewModel.ApplyMaxConnectionsAsync);
         await dialog.ShowDialog<bool>(this);
     }
 
