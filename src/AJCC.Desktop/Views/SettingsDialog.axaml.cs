@@ -37,6 +37,27 @@ public sealed partial class SettingsDialog : Window
             mapping.Text = currentMapping ?? string.Empty;
     }
 
+    public void ConfigureCoreSettings(
+        string nick,
+        string incomingDirectory,
+        string temporaryDirectory,
+        string corePort,
+        string xmlPort)
+    {
+        SetCoreValue("CoreNickText", nick);
+        SetCoreValue("CoreIncomingText", incomingDirectory);
+        SetCoreValue("CoreTemporaryText", temporaryDirectory);
+        SetCoreValue("CorePortText", corePort);
+        SetCoreValue("CoreXmlPortText", xmlPort);
+    }
+
+    private void SetCoreValue(string controlName, string? value)
+    {
+        TextBlock? text = this.FindControl<TextBlock>(controlName);
+        if (text is not null)
+            text.Text = string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
 

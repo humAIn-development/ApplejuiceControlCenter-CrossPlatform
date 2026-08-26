@@ -70,6 +70,12 @@ public sealed partial class MainWindow : Window
             _viewModel.EndpointText,
             _viewModel.LocalIncomingMappingText,
             mapping => _viewModel.LocalIncomingMappingText = mapping);
+        dialog.ConfigureCoreSettings(
+            _viewModel.CoreNick,
+            _viewModel.CoreIncomingDirectory,
+            _viewModel.CoreTemporaryDirectory,
+            _viewModel.CorePortText,
+            _viewModel.CoreXmlPortText);
         await dialog.ShowDialog<bool>(this);
     }
 

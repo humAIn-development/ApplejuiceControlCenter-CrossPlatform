@@ -277,6 +277,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     public string CoreNick => string.IsNullOrWhiteSpace(_state?.Settings.Nick) ? "-" : _state.Settings.Nick;
     public string CoreIncomingDirectory => string.IsNullOrWhiteSpace(_state?.Settings.IncomingDirectory) ? "-" : _state.Settings.IncomingDirectory;
+    public string CoreTemporaryDirectory => string.IsNullOrWhiteSpace(_state?.Settings.TemporaryDirectory) ? "-" : _state.Settings.TemporaryDirectory;
+    public string CorePortText => _state is null || _state.Settings.Port <= 0 ? "-" : _state.Settings.Port.ToString();
+    public string CoreXmlPortText => _state is null || _state.Settings.XmlPort <= 0 ? "-" : _state.Settings.XmlPort.ToString();
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
