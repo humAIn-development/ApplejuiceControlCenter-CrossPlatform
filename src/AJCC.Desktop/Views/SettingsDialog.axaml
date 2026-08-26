@@ -21,6 +21,8 @@
 
     <TabControl Grid.Row="1" Margin="0,14,0,14">
       <TabItem Header="Core- und lokale Pfade">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
         <Border Classes="panel" Padding="14" Margin="0,8,0,0">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                 ColumnDefinitions="Auto,*,Auto,Auto">
@@ -138,6 +140,7 @@
                     Click="RemoveLocalIncomingMappingButton_OnClick" />
           </Grid>
         </Border>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem Header="Ansicht / Oberfläche">
