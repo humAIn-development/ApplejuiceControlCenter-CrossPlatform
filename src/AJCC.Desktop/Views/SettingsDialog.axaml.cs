@@ -9,7 +9,10 @@ namespace AJCC.Desktop.Views;
 public sealed partial class SettingsDialog : Window
 {
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
+    private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private bool _loadingExternalVlcConfiguration;
+    private string _mappingEndpoint = string.Empty;
+    private Action<string>? _mappingChanged;
 
     public SettingsDialog()
     {
@@ -17,8 +20,64 @@ public sealed partial class SettingsDialog : Window
         LoadExternalVlcConfiguration();
     }
 
+    public void ConfigureLocalIncomingMapping(
+        string endpointText,
+        string currentMapping,
+        Action<string>? mappingChanged)
+    {
+        _mappingEndpoint = endpointText ?? string.Empty;
+        _mappingChanged = mappingChanged;
+
+        TextBlock? endpoint = this.FindControl<TextBlock>("MappingEndpointText");
+        if (endpoint is not null)
+            endpoint.Text = _mappingEndpoint;
+
+        TextBox? mapping = this.FindControl<TextBox>("LocalIncomingMappingTextBox");
+        if (mapping is not null)
+            mapping.Text = currentMapping ?? string.Empty;
+    }
+
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+    private async void BrowseLocalIncomingMappingButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions
+            {
+                Title = "Lokales Incoming-Mapping auswählen",
+                AllowMultiple = false
+            });
+
+        if (folders.Count == 0)
+            return;
+
+        Uri path = folders[0].Path;
+        if (!path.IsFile)
+            return;
+
+        SaveLocalIncomingMapping(path.LocalPath);
+    }
+
+    private void RemoveLocalIncomingMappingButton_OnClick(object? sender, RoutedEventArgs e)
+        => SaveLocalIncomingMapping(string.Empty);
+
+    private void SaveLocalIncomingMapping(string mapping)
+    {
+        TextBox? input = this.FindControl<TextBox>("LocalIncomingMappingTextBox");
+
+        if (!_localIncomingMappingStore.TrySave(_mappingEndpoint, mapping, out string errorMessage))
+        {
+            if (input is not null)
+                input.Text = "Speichern fehlgeschlagen: " + errorMessage;
+            return;
+        }
+
+        if (input is not null)
+            input.Text = mapping;
+
+        _mappingChanged?.Invoke(mapping);
+    }
 
     private async void BrowseVlcButton_OnClick(object? sender, RoutedEventArgs e)
     {

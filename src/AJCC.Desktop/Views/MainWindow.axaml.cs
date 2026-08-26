@@ -66,6 +66,10 @@ public sealed partial class MainWindow : Window
     private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         SettingsDialog dialog = new();
+        dialog.ConfigureLocalIncomingMapping(
+            _viewModel.EndpointText,
+            _viewModel.LocalIncomingMappingText,
+            mapping => _viewModel.LocalIncomingMappingText = mapping);
         await dialog.ShowDialog<bool>(this);
     }
 
