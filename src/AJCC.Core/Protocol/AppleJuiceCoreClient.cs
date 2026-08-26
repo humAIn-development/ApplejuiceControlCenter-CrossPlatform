@@ -141,6 +141,19 @@ public sealed class AppleJuiceCoreClient
             },
             cancellationToken);
 
+    public Task<string> SetSettingsAsync(
+        IReadOnlyDictionary<string, string> parameters,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        Dictionary<string, string> copiedParameters = new(parameters.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, string> parameter in parameters)
+            copiedParameters[parameter.Key] = parameter.Value;
+
+        return GetXmlAsync(AjEndpoints.SetSettings, copiedParameters, cancellationToken);
+    }
+
     public Task<string> SetShareDirectoriesAsync(
         IEnumerable<AjShareDirectory> directories,
         CancellationToken cancellationToken = default)
