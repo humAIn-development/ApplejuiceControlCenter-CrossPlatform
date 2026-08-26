@@ -71,7 +71,7 @@ public sealed partial class MainWindow : Window
             _viewModel.LocalIncomingMappingText,
             mapping => _viewModel.LocalIncomingMappingText = mapping);
         dialog.ConfigureCoreSettings(
-            _viewModel.CoreNick,
+            _viewModel.CoreNickValue,
             _viewModel.CoreIncomingDirectory,
             _viewModel.CoreTemporaryDirectory,
             _viewModel.CorePortText,
@@ -84,7 +84,8 @@ public sealed partial class MainWindow : Window
             _viewModel.ApplyMaxConnectionsAsync,
             _viewModel.ApplyMaxSourcesPerFileAsync,
             _viewModel.ApplyMaxNewConnectionsPerTurnAsync,
-            _viewModel.ApplyAutoConnectAsync);
+            _viewModel.ApplyAutoConnectAsync,
+            _viewModel.ApplyCoreNicknameAsync);
         await dialog.ShowDialog<bool>(this);
     }
 

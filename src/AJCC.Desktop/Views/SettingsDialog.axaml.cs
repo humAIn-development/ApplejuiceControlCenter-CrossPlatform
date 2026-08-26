@@ -17,6 +17,8 @@ public sealed partial class SettingsDialog : Window
     private Func<int, Task<int>>? _applyMaxSourcesPerFileAsync;
     private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
     private Func<bool, Task<bool>>? _applyAutoConnectAsync;
+    private Func<string, Task<string>>? _applyCoreNicknameAsync;
+    private string _coreNickname = string.Empty;
     private bool _coreSettingsWriteRunning;
 
     public SettingsDialog()
@@ -56,9 +58,13 @@ public sealed partial class SettingsDialog : Window
         Func<int, Task<int>>? applyMaxConnectionsAsync,
         Func<int, Task<int>>? applyMaxSourcesPerFileAsync,
         Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync,
-        Func<bool, Task<bool>>? applyAutoConnectAsync)
+        Func<bool, Task<bool>>? applyAutoConnectAsync,
+        Func<string, Task<string>>? applyCoreNicknameAsync)
     {
-        SetCoreValue("CoreNickText", nick);
+        _coreNickname = (nick ?? string.Empty).Trim();
+        TextBox? coreNickInput = this.FindControl<TextBox>("CoreNickTextBox");
+        if (coreNickInput is not null)
+            coreNickInput.Text = _coreNickname;
         SetCoreValue("CoreIncomingText", incomingDirectory);
         SetCoreValue("CoreTemporaryText", temporaryDirectory);
         SetCoreValue("CorePortText", corePort);
@@ -68,6 +74,7 @@ public sealed partial class SettingsDialog : Window
         _applyMaxSourcesPerFileAsync = applyMaxSourcesPerFileAsync;
         _applyMaxNewConnectionsPerTurnAsync = applyMaxNewConnectionsPerTurnAsync;
         _applyAutoConnectAsync = applyAutoConnectAsync;
+        _applyCoreNicknameAsync = applyCoreNicknameAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -84,6 +91,10 @@ public sealed partial class SettingsDialog : Window
         CheckBox? autoConnectInput = this.FindControl<CheckBox>("CoreAutoConnectCheckBox");
         if (autoConnectInput is not null)
             autoConnectInput.IsChecked = autoConnect;
+
+        Button? applyCoreNickButton = this.FindControl<Button>("ApplyCoreNickButton");
+        if (applyCoreNickButton is not null)
+            applyCoreNickButton.IsEnabled = canWriteCoreSettings && _applyCoreNicknameAsync is not null;
 
         Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
         if (applyButton is not null)
@@ -111,6 +122,73 @@ public sealed partial class SettingsDialog : Window
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+
+    private async void ApplyCoreNickButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyCoreNicknameAsync is null)
+            return;
+
+        TextBox? input = this.FindControl<TextBox>("CoreNickTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyCoreNickButton");
+        string requested = (input?.Text ?? string.Empty).Trim();
+
+        if (string.Equals(requested, _coreNickname, StringComparison.Ordinal))
+        {
+            if (status is not null)
+                status.Text = "Der Benutzername entspricht bereits dem vom Core gemeldeten Wert.";
+            return;
+        }
+
+        string currentDisplay = string.IsNullOrEmpty(_coreNickname) ? "(leer)" : _coreNickname;
+        string requestedDisplay = string.IsNullOrEmpty(requested) ? "(leer)" : requested;
+
+        ConfirmDialog firstConfirm = new(
+            "Kritische Core-Werte übernehmen",
+            $"Benutzername wirklich ändern?\n\nAktuell: {currentDisplay}\nNeu: {requestedDisplay}\n\nFortfahren?",
+            "Fortfahren",
+            "Abbrechen");
+        if (!await firstConfirm.ShowDialog<bool>(this))
+            return;
+
+        ConfirmDialog secondConfirm = new(
+            "Core-Wert wirklich übernehmen?",
+            "Letzte Bestätigung: Benutzername jetzt wirklich an den Core schreiben?\n\nDiese Aktion sollte nicht beiläufig getestet werden.",
+            "Jetzt schreiben",
+            "Zurück");
+        if (!await secondConfirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage Benutzername an den Core …";
+
+        try
+        {
+            string effective = await _applyCoreNicknameAsync(requested);
+            _coreNickname = effective;
+            if (input is not null)
+                input.Text = effective;
+            if (status is not null)
+                status.Text = string.IsNullOrEmpty(effective)
+                    ? "Vom Core bestätigt: Benutzername ist leer."
+                    : $"Vom Core bestätigt: Benutzername {effective}.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyCoreNicknameAsync is not null;
+        }
+    }
 
     private async void ApplyCoreSettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {

@@ -276,6 +276,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         : DisplayFormatHelper.Bytes(_state.Shares.Sum(share => Math.Max(0L, share.Size)));
 
     public string CoreNick => string.IsNullOrWhiteSpace(_state?.Settings.Nick) ? "-" : _state.Settings.Nick;
+    public string CoreNickValue => _state?.Settings.Nick?.Trim() ?? string.Empty;
     public string CoreIncomingDirectory => string.IsNullOrWhiteSpace(_state?.Settings.IncomingDirectory) ? "-" : _state.Settings.IncomingDirectory;
     public string CoreTemporaryDirectory => string.IsNullOrWhiteSpace(_state?.Settings.TemporaryDirectory) ? "-" : _state.Settings.TemporaryDirectory;
     public string CorePortText => _state is null || _state.Settings.Port <= 0 ? "-" : _state.Settings.Port.ToString();
@@ -536,6 +537,52 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Automatisch verbinden konnte nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+
+    public async Task<string> ApplyCoreNicknameAsync(string nickname)
+    {
+        ThrowIfDisposed();
+
+        string requested = (nickname ?? string.Empty).Trim();
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { Nick = requested });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreNick));
+            OnPropertyChanged(nameof(CoreNickValue));
+
+            string effective = state.Settings.Nick?.Trim() ?? string.Empty;
+            if (!string.Equals(effective, requested, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Core meldet nach der Übertragung den Benutzernamen '{effective}' statt '{requested}'.");
+
+            StatusText = string.IsNullOrEmpty(effective)
+                ? "Leerer Benutzername vom Core bestätigt."
+                : $"Benutzername vom Core bestätigt: {effective}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Benutzername konnte nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally

@@ -52,12 +52,19 @@
                        Margin="0,8,12,0"
                        Text="Benutzername"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CoreNickText"
-                       Grid.Row="3"
-                       Grid.Column="1"
-                       Grid.ColumnSpan="3"
-                       Margin="0,8,0,0"
-                       Text="-" />
+            <TextBox x:Name="CoreNickTextBox"
+                     Grid.Row="3"
+                     Grid.Column="1"
+                     Margin="0,8,8,0"
+                     MinWidth="160" />
+            <Button x:Name="ApplyCoreNickButton"
+                    Grid.Row="3"
+                    Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    MinWidth="150"
+                    Margin="0,8,0,0"
+                    Content="An Core übertragen"
+                    Click="ApplyCoreNickButton_OnClick" />
 
             <TextBlock Grid.Row="4"
                        Margin="0,8,12,0"
