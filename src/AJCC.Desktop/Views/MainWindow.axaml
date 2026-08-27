@@ -356,8 +356,15 @@
       </TabItem>
 
       <TabItem Header="Server">
-        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
-          <Border Grid.Row="0" Classes="tableHeader">
+        <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+            <Button Classes="primary"
+                    MinWidth="128"
+                    Content="Mehr Server"
+                    IsEnabled="{Binding IsConnected}"
+                    Click="MoreServersButton_OnClick" />
+          </StackPanel>
+          <Border Grid.Row="1" Classes="tableHeader">
             <Grid ColumnDefinitions="2.1*,2.1*,0.8*,1.2*,1.3*,1.2*">
               <TextBlock Text="Name" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Host" FontWeight="SemiBold" />
@@ -367,7 +374,7 @@
               <TextBlock Grid.Column="5" Text="Letzter Kontakt" FontWeight="SemiBold" />
             </Grid>
           </Border>
-          <ListBox Grid.Row="1" ItemsSource="{Binding Servers}">
+          <ListBox Grid.Row="2" ItemsSource="{Binding Servers}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjServer">
                 <Grid ColumnDefinitions="2.1*,2.1*,0.8*,1.2*,1.3*,1.2*"

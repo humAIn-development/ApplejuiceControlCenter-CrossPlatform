@@ -1434,6 +1434,70 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task ImportMoreServersAsync()
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || IsBusy || client is null || state is null)
+            return;
+
+        IsBusy = true;
+        StatusText = "Mehr Server: öffentliche Serverliste wird geladen ...";
+
+        try
+        {
+            using HttpClient listClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+            string xml = await listClient.GetStringAsync(
+                "http://www.applejuicenet.cc/serverlist/xmllist.php").ConfigureAwait(true);
+            IReadOnlyList<string> links = AjServerListParser.ParseLinks(xml);
+            if (links.Count == 0)
+            {
+                StatusText = "Mehr Server: öffentliche Serverliste enthält keine gültigen Serverlinks.";
+                return;
+            }
+
+            AjCoreCompatibilityProfile profile = AjCoreCompatibilityProfile.FromCoreVersion(CoreVersion);
+            int accepted = 0;
+            int alreadyKnown = 0;
+            int rejected = 0;
+
+            foreach (string link in links)
+            {
+                AjProcessLinkResult result = await client
+                    .ProcessLinkDetailedAsync(link, profile, string.Empty)
+                    .ConfigureAwait(true);
+
+                if (result.IsAccepted)
+                    accepted++;
+                else if (result.IsAlreadyDownloaded)
+                    alreadyKnown++;
+                else
+                    rejected++;
+            }
+
+            string modifiedXml = await client.GetModifiedXmlAsync(
+                timestamp: 0,
+                sessionId: state.SessionId,
+                filter: "server;informations").ConfigureAwait(true);
+            ModifiedParseResult refresh = AjXmlParser.ParseModified(modifiedXml);
+            AjStateUpdater.Apply(state, refresh);
+            if (refresh.CoreTimestamp > 0)
+                state.LastTimestamp = refresh.CoreTimestamp;
+            RaiseStateProperties();
+
+            StatusText = $"Mehr Server: {links.Count:N0} Link(s) verarbeitet · {accepted:N0} akzeptiert · {alreadyKnown:N0} bereits bekannt · {rejected:N0} abgewiesen.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Mehr Server fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task PauseSelectedDownloadAsync()
     {
         ThrowIfDisposed();

@@ -587,6 +587,9 @@ public sealed partial class MainWindow : Window
             _selectedServerForContext = server;
     }
 
+    private async void MoreServersButton_OnClick(object? sender, RoutedEventArgs e)
+        => await _viewModel.ImportMoreServersAsync();
+
     private async void ServerContextLogin_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_selectedServerForContext is not { } server || !_viewModel.IsConnected || _viewModel.IsBusy)
