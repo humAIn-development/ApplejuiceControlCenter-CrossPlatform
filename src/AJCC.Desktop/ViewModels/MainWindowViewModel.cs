@@ -282,6 +282,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string CorePortText => _state is null || _state.Settings.Port <= 0 ? "-" : _state.Settings.Port.ToString();
     public int CorePortValue => (_state?.Settings.Port ?? 0) > 0 ? _state!.Settings.Port : 8000;
     public string CoreXmlPortText => _state is null || _state.Settings.XmlPort <= 0 ? "-" : _state.Settings.XmlPort.ToString();
+    public int CoreXmlPortValue
+    {
+        get
+        {
+            int configured = _state?.Settings.XmlPort ?? 0;
+            if (configured > 0)
+                return configured;
+
+            return Uri.TryCreate(EndpointText, UriKind.Absolute, out Uri? endpoint)
+                && endpoint.Port is >= 1 and <= 65535
+                ? endpoint.Port
+                : 9851;
+        }
+    }
     public int CoreMaxConnections => Math.Max(0, _state?.Settings.MaxConnections ?? 0);
     public int CoreMaxSourcesPerFile => Math.Max(0, _state?.Settings.MaxSourcesPerFile ?? 0);
     public int CoreMaxNewConnectionsPerTurn => (_state?.Settings.MaxNewConnectionsPerTurn ?? 0) > 0
@@ -629,6 +643,52 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Core-Port konnte nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+
+
+    public async Task<int> ApplyCoreXmlPortAsync(int xmlPort)
+    {
+        ThrowIfDisposed();
+        if (xmlPort is < 1 or > 65535)
+            throw new ArgumentOutOfRangeException(nameof(xmlPort), "XML-Port muss zwischen 1 und 65535 liegen.");
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { XmlPort = xmlPort });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreXmlPortText));
+            OnPropertyChanged(nameof(CoreXmlPortValue));
+
+            int effective = state.Settings.XmlPort;
+            if (effective != xmlPort)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung XMLPort={effective} statt XMLPort={xmlPort}.");
+
+            StatusText = $"XML-Port vom Core bestätigt: {effective}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "XML-Port konnte nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally

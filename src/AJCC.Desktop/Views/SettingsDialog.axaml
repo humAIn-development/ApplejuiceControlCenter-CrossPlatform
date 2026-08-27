@@ -112,12 +112,19 @@
                        Margin="0,8,12,0"
                        Text="XML-Port"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CoreXmlPortText"
-                       Grid.Row="7"
-                       Grid.Column="1"
-                       Grid.ColumnSpan="3"
-                       Margin="0,8,0,0"
-                       Text="-" />
+            <TextBox x:Name="CoreXmlPortTextBox"
+                     Grid.Row="7"
+                     Grid.Column="1"
+                     Margin="0,8,8,0"
+                     MinWidth="120" />
+            <Button x:Name="ApplyCoreXmlPortButton"
+                    Grid.Row="7"
+                    Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    MinWidth="150"
+                    Margin="0,8,0,0"
+                    Content="An Core übertragen"
+                    Click="ApplyCoreXmlPortButton_OnClick" />
 
             <TextBlock Grid.Row="8"
                        Grid.ColumnSpan="4"

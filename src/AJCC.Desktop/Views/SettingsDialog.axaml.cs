@@ -19,8 +19,10 @@ public sealed partial class SettingsDialog : Window
     private Func<bool, Task<bool>>? _applyAutoConnectAsync;
     private Func<string, Task<string>>? _applyCoreNicknameAsync;
     private Func<int, Task<int>>? _applyCorePortAsync;
+    private Func<int, Task<int>>? _applyCoreXmlPortAsync;
     private string _coreNickname = string.Empty;
     private int _corePort = 8000;
+    private int _coreXmlPort = 9851;
     private bool _coreSettingsWriteRunning;
 
     public SettingsDialog()
@@ -51,7 +53,7 @@ public sealed partial class SettingsDialog : Window
         string incomingDirectory,
         string temporaryDirectory,
         int corePort,
-        string xmlPort,
+        int xmlPort,
         int maxConnections,
         int maxSourcesPerFile,
         int maxNewConnectionsPerTurn,
@@ -62,7 +64,8 @@ public sealed partial class SettingsDialog : Window
         Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync,
         Func<bool, Task<bool>>? applyAutoConnectAsync,
         Func<string, Task<string>>? applyCoreNicknameAsync,
-        Func<int, Task<int>>? applyCorePortAsync)
+        Func<int, Task<int>>? applyCorePortAsync,
+        Func<int, Task<int>>? applyCoreXmlPortAsync)
     {
         _coreNickname = (nick ?? string.Empty).Trim();
         TextBox? coreNickInput = this.FindControl<TextBox>("CoreNickTextBox");
@@ -74,7 +77,10 @@ public sealed partial class SettingsDialog : Window
         TextBox? corePortInput = this.FindControl<TextBox>("CorePortTextBox");
         if (corePortInput is not null)
             corePortInput.Text = _corePort.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        SetCoreValue("CoreXmlPortText", xmlPort);
+        _coreXmlPort = xmlPort;
+        TextBox? coreXmlPortInput = this.FindControl<TextBox>("CoreXmlPortTextBox");
+        if (coreXmlPortInput is not null)
+            coreXmlPortInput.Text = _coreXmlPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         _applyMaxConnectionsAsync = applyMaxConnectionsAsync;
         _applyMaxSourcesPerFileAsync = applyMaxSourcesPerFileAsync;
@@ -82,6 +88,7 @@ public sealed partial class SettingsDialog : Window
         _applyAutoConnectAsync = applyAutoConnectAsync;
         _applyCoreNicknameAsync = applyCoreNicknameAsync;
         _applyCorePortAsync = applyCorePortAsync;
+        _applyCoreXmlPortAsync = applyCoreXmlPortAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -106,6 +113,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyCorePortButton = this.FindControl<Button>("ApplyCorePortButton");
         if (applyCorePortButton is not null)
             applyCorePortButton.IsEnabled = canWriteCoreSettings && _applyCorePortAsync is not null;
+
+        Button? applyCoreXmlPortButton = this.FindControl<Button>("ApplyCoreXmlPortButton");
+        if (applyCoreXmlPortButton is not null)
+            applyCoreXmlPortButton.IsEnabled = canWriteCoreSettings && _applyCoreXmlPortAsync is not null;
 
         Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
         if (applyButton is not null)
@@ -272,6 +283,81 @@ public sealed partial class SettingsDialog : Window
             _coreSettingsWriteRunning = false;
             if (applyButton is not null)
                 applyButton.IsEnabled = _applyCorePortAsync is not null;
+        }
+    }
+
+
+
+    private async void ApplyCoreXmlPortButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyCoreXmlPortAsync is null)
+            return;
+
+        TextBox? input = this.FindControl<TextBox>("CoreXmlPortTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyCoreXmlPortButton");
+        string raw = (input?.Text ?? string.Empty).Trim();
+
+        if (!int.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out int requested)
+            || requested is < 1 or > 65535)
+        {
+            if (status is not null)
+                status.Text = "Bitte einen XML-Port zwischen 1 und 65535 eingeben.";
+            return;
+        }
+
+        if (requested == _coreXmlPort)
+        {
+            if (status is not null)
+                status.Text = "Der XML-Port entspricht bereits dem vom Core gemeldeten bzw. aktuell verbundenen Wert.";
+            return;
+        }
+
+        ConfirmDialog firstConfirm = new(
+            "Kritische Core-Werte übernehmen",
+            $"XML-Port wirklich ändern?\n\nAktuell: {_coreXmlPort}\nNeu: {requested}\n\nFortfahren?",
+            "Fortfahren",
+            "Abbrechen");
+        if (!await firstConfirm.ShowDialog<bool>(this))
+            return;
+
+        ConfirmDialog secondConfirm = new(
+            "Core-Wert wirklich übernehmen?",
+            "Letzte Bestätigung: XML-Port jetzt wirklich an den Core schreiben?\n\nDer neue XML-Port gilt für die AJCC-Core-Verbindung.",
+            "Jetzt schreiben",
+            "Zurück");
+        if (!await secondConfirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage XML-Port an den Core …";
+
+        try
+        {
+            int effective = await _applyCoreXmlPortAsync(requested);
+            _coreXmlPort = effective;
+            if (input is not null)
+                input.Text = effective.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: XML-Port {effective}.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyCoreXmlPortAsync is not null;
         }
     }
 

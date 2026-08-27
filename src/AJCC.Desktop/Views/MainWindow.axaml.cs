@@ -75,7 +75,7 @@ public sealed partial class MainWindow : Window
             _viewModel.CoreIncomingDirectory,
             _viewModel.CoreTemporaryDirectory,
             _viewModel.CorePortValue,
-            _viewModel.CoreXmlPortText,
+            _viewModel.CoreXmlPortValue,
             _viewModel.CoreMaxConnections,
             _viewModel.CoreMaxSourcesPerFile,
             _viewModel.CoreMaxNewConnectionsPerTurn,
@@ -86,7 +86,8 @@ public sealed partial class MainWindow : Window
             _viewModel.ApplyMaxNewConnectionsPerTurnAsync,
             _viewModel.ApplyAutoConnectAsync,
             _viewModel.ApplyCoreNicknameAsync,
-            _viewModel.ApplyCorePortAsync);
+            _viewModel.ApplyCorePortAsync,
+            _viewModel.ApplyCoreXmlPortAsync);
         await dialog.ShowDialog<bool>(this);
     }
 
