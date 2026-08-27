@@ -5,11 +5,13 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 using AJCC.Core.Helpers;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
+using AJCC.Core.Protocol;
 using AJCC.Desktop.Services;
 using AJCC.Desktop.ViewModels;
 
@@ -20,6 +22,10 @@ public sealed partial class MainWindow : Window
     private readonly MainWindowViewModel _viewModel = new();
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
+    private readonly CoreProfileStore _coreProfileStore = new();
+    private readonly ObservableCollection<CoreProfileEntry> _coreProfiles = new();
+    private string _defaultCoreProfileId = string.Empty;
+    private bool _loadingCoreProfiles;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
     private AjShareFile? _selectedShareForContext;
@@ -30,6 +36,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        LoadCoreProfiles();
         ConfigureLocalIncomingMappingControls();
         AddHandler(
             InputElement.PointerPressedEvent,
@@ -46,6 +53,144 @@ public sealed partial class MainWindow : Window
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+    private void LoadCoreProfiles()
+    {
+        ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+        if (comboBox is null)
+            return;
+
+        _loadingCoreProfiles = true;
+        try
+        {
+            CoreProfileStoreSnapshot snapshot = _coreProfileStore.Load();
+            if (snapshot.Profiles.Count == 0)
+            {
+                string endpoint = CoreProfileStore.NormalizeEndpoint(_viewModel.EndpointText);
+                CoreProfileEntry standard = new()
+                {
+                    Name = "Standard-Core",
+                    Endpoint = endpoint
+                };
+                snapshot.Profiles.Add(standard);
+                snapshot.DefaultProfileId = standard.Id;
+                _coreProfileStore.TrySave(snapshot.Profiles, snapshot.DefaultProfileId, out _);
+            }
+
+            _coreProfiles.Clear();
+            foreach (CoreProfileEntry profile in snapshot.Profiles)
+                _coreProfiles.Add(profile);
+
+            _defaultCoreProfileId = snapshot.DefaultProfileId;
+            comboBox.ItemsSource = _coreProfiles;
+
+            CoreProfileEntry? selected = _coreProfiles.FirstOrDefault(profile =>
+                    string.Equals(profile.Id, _defaultCoreProfileId, StringComparison.OrdinalIgnoreCase))
+                ?? _coreProfiles.FirstOrDefault(profile =>
+                    string.Equals(
+                        profile.Endpoint,
+                        CoreProfileStore.TryNormalizeEndpoint(_viewModel.EndpointText),
+                        StringComparison.OrdinalIgnoreCase))
+                ?? _coreProfiles.FirstOrDefault();
+
+            if (selected is not null)
+            {
+                _defaultCoreProfileId = selected.Id;
+                comboBox.SelectedItem = selected;
+                _viewModel.EndpointText = selected.Endpoint;
+            }
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage("Core-Profile konnten nicht geladen werden: " + ex.Message);
+        }
+        finally
+        {
+            _loadingCoreProfiles = false;
+        }
+    }
+
+    private void CoreProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_loadingCoreProfiles || !_viewModel.CanEditConnectionSettings)
+            return;
+
+        if (sender is not ComboBox comboBox || comboBox.SelectedItem is not CoreProfileEntry profile)
+            return;
+
+        _defaultCoreProfileId = profile.Id;
+        _viewModel.EndpointText = profile.Endpoint;
+
+        TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
+        if (passwordInput is not null)
+            passwordInput.Text = string.Empty;
+
+        if (_coreProfileStore.TrySave(_coreProfiles, _defaultCoreProfileId, out string errorMessage))
+        {
+            _viewModel.SetStatusMessage(
+                $"Core-Profil ausgewählt: {profile.Name} · Passwort bleibt Laufzeiteingabe.");
+        }
+        else
+        {
+            _viewModel.SetStatusMessage(
+                $"Core-Profil ausgewählt, Standardauswahl aber nicht gespeichert: {errorMessage}");
+        }
+    }
+
+    private async void SaveCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanEditConnectionSettings)
+            return;
+
+        string endpoint;
+        CoreEndpoint parsedEndpoint;
+        try
+        {
+            endpoint = CoreProfileStore.NormalizeEndpoint(_viewModel.EndpointText);
+            parsedEndpoint = CoreEndpoint.Parse(endpoint);
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage("Core-Profil kann nicht gespeichert werden: " + ex.Message);
+            return;
+        }
+
+        CoreProfileEntry? existing = _coreProfiles.FirstOrDefault(profile =>
+            string.Equals(profile.Endpoint, endpoint, StringComparison.OrdinalIgnoreCase));
+        string initialName = existing?.Name ?? parsedEndpoint.Host;
+
+        CoreProfileSaveDialog dialog = new(initialName);
+        if (!await dialog.ShowDialog<bool>(this))
+            return;
+
+        string name = dialog.ProfileName.Trim();
+        if (existing is null)
+        {
+            existing = new CoreProfileEntry
+            {
+                Name = name,
+                Endpoint = endpoint
+            };
+            _coreProfiles.Add(existing);
+        }
+        else
+        {
+            existing.Name = name;
+            existing.Endpoint = endpoint;
+        }
+
+        _defaultCoreProfileId = existing.Id;
+        if (!_coreProfileStore.TrySave(_coreProfiles, _defaultCoreProfileId, out string errorMessage))
+        {
+            LoadCoreProfiles();
+            _viewModel.SetStatusMessage("Core-Profil konnte nicht gespeichert werden: " + errorMessage);
+            return;
+        }
+
+        LoadCoreProfiles();
+        _viewModel.SetStatusMessage(
+            $"Core-Profil gespeichert: {name} · Passwort wird nicht gespeichert.");
+    }
 
     private async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {

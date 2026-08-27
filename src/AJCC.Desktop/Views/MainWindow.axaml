@@ -27,7 +27,7 @@
     <Border Grid.Row="0"
             Classes="panel"
             Padding="10">
-      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,2.3*,1.2*,Auto,Auto">
+      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,1.2*,2.0*,1.1*,Auto,Auto">
         <Border Grid.Column="0"
                 Classes="connectionBadge"
                 Classes.online="{Binding IsConnected}"
@@ -49,26 +49,40 @@
           </StackPanel>
         </Border>
 
-        <TextBox Grid.Column="1"
+        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,0,10,0">
+          <ComboBox x:Name="CoreProfileComboBox"
+                    IsEnabled="{Binding CanEditConnectionSettings}"
+                    SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
+                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Passwörter werden in diesem FirstLight-Slice nicht gespeichert." />
+          <Button Grid.Column="1"
+                  Width="34"
+                  Margin="6,0,0,0"
+                  IsEnabled="{Binding CanEditConnectionSettings}"
+                  Content="+"
+                  ToolTip.Tip="Aktuellen Core-Endpunkt als Profil speichern"
+                  Click="SaveCoreProfileButton_OnClick" />
+        </Grid>
+
+        <TextBox Grid.Column="2"
                  Margin="0,0,10,0"
                  IsEnabled="{Binding CanEditConnectionSettings}"
                  PlaceholderText="Core-Endpunkt, z. B. http://127.0.0.1:8851/"
                  Text="{Binding EndpointText}" />
 
         <TextBox x:Name="PasswordInput"
-                 Grid.Column="2"
+                 Grid.Column="3"
                  Margin="0,0,10,0"
                  IsEnabled="{Binding CanEditConnectionSettings}"
                  PlaceholderText="Core-Passwort"
                  PasswordChar="●" />
 
-        <Button Grid.Column="3"
+        <Button Grid.Column="4"
                 MinWidth="120"
                 Margin="0,0,10,0"
                 Content="Einstellungen…"
                 Click="SettingsButton_OnClick" />
 
-        <Button Grid.Column="4"
+        <Button Grid.Column="5"
                 Classes="primary"
                 MinWidth="120"
                 IsEnabled="{Binding CanToggleConnection}"
