@@ -92,10 +92,18 @@
             <TextBlock x:Name="CoreTemporaryText"
                        Grid.Row="5"
                        Grid.Column="1"
-                       Grid.ColumnSpan="3"
-                       Margin="0,8,0,0"
+                       Margin="0,8,8,0"
                        Text="-"
                        TextTrimming="CharacterEllipsis" />
+            <Button x:Name="ChangeCoreTemporaryButton"
+                    Grid.Row="5"
+                    Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    MinWidth="150"
+                    Margin="0,8,0,0"
+                    Content="Auswählen…"
+                    ToolTip.Tip="Nur änderbar, wenn die Core-Downloadliste vollständig leer ist."
+                    Click="ChangeCoreTemporaryButton_OnClick" />
 
             <TextBlock Grid.Row="6"
                        Margin="0,8,12,0"

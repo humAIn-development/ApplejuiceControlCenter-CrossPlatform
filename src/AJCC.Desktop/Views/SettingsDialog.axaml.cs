@@ -23,10 +23,13 @@ public sealed partial class SettingsDialog : Window
     private Func<int, Task<int>>? _applyCoreXmlPortAsync;
     private Func<string?, Task<AjDirectoryListResult>>? _loadCoreDirectoryAsync;
     private Func<string, Task<string>>? _applyCoreIncomingDirectoryAsync;
+    private Func<bool>? _hasCoreDownloads;
+    private Func<string, Task<string>>? _applyCoreTemporaryDirectoryAsync;
     private Func<long, Task<long>>? _applyMaxDownloadAsync;
     private Func<long, int, Task<(long MaxUploadKb, int SpeedPerSlot)>>? _applyUploadLimitsAsync;
     private string _coreNickname = string.Empty;
     private string _coreIncomingDirectory = string.Empty;
+    private string _coreTemporaryDirectory = string.Empty;
     private int _corePort = 8000;
     private int _coreXmlPort = 9851;
     private bool _coreSettingsWriteRunning;
@@ -78,17 +81,22 @@ public sealed partial class SettingsDialog : Window
         Func<int, Task<int>>? applyCorePortAsync,
         Func<int, Task<int>>? applyCoreXmlPortAsync,
         Func<string?, Task<AjDirectoryListResult>>? loadCoreDirectoryAsync,
-        Func<string, Task<string>>? applyCoreIncomingDirectoryAsync)
+        Func<string, Task<string>>? applyCoreIncomingDirectoryAsync,
+        Func<bool>? hasCoreDownloads,
+        Func<string, Task<string>>? applyCoreTemporaryDirectoryAsync)
     {
         _coreNickname = (nick ?? string.Empty).Trim();
         _coreIncomingDirectory = string.IsNullOrWhiteSpace(incomingDirectory)
             ? string.Empty
             : incomingDirectory.Trim();
+        _coreTemporaryDirectory = string.IsNullOrWhiteSpace(temporaryDirectory)
+            ? string.Empty
+            : temporaryDirectory.Trim();
         TextBox? coreNickInput = this.FindControl<TextBox>("CoreNickTextBox");
         if (coreNickInput is not null)
             coreNickInput.Text = _coreNickname;
         SetCoreValue("CoreIncomingText", _coreIncomingDirectory);
-        SetCoreValue("CoreTemporaryText", temporaryDirectory);
+        SetCoreValue("CoreTemporaryText", _coreTemporaryDirectory);
         _corePort = corePort is >= 1 and <= 65535 ? corePort : 8000;
         TextBox? corePortInput = this.FindControl<TextBox>("CorePortTextBox");
         if (corePortInput is not null)
@@ -107,6 +115,8 @@ public sealed partial class SettingsDialog : Window
         _applyCoreXmlPortAsync = applyCoreXmlPortAsync;
         _loadCoreDirectoryAsync = loadCoreDirectoryAsync;
         _applyCoreIncomingDirectoryAsync = applyCoreIncomingDirectoryAsync;
+        _hasCoreDownloads = hasCoreDownloads;
+        _applyCoreTemporaryDirectoryAsync = applyCoreTemporaryDirectoryAsync;
         _applyMaxDownloadAsync = applyMaxDownloadAsync;
         _applyUploadLimitsAsync = applyUploadLimitsAsync;
 
@@ -145,6 +155,15 @@ public sealed partial class SettingsDialog : Window
             changeCoreIncomingButton.IsEnabled = canWriteCoreSettings
                 && _loadCoreDirectoryAsync is not null
                 && _applyCoreIncomingDirectoryAsync is not null;
+        }
+
+        Button? changeCoreTemporaryButton = this.FindControl<Button>("ChangeCoreTemporaryButton");
+        if (changeCoreTemporaryButton is not null)
+        {
+            changeCoreTemporaryButton.IsEnabled = canWriteCoreSettings
+                && _loadCoreDirectoryAsync is not null
+                && _hasCoreDownloads is not null
+                && _applyCoreTemporaryDirectoryAsync is not null;
         }
 
         Button? applyCorePortButton = this.FindControl<Button>("ApplyCorePortButton");
@@ -310,6 +329,104 @@ public sealed partial class SettingsDialog : Window
             {
                 changeButton.IsEnabled = _loadCoreDirectoryAsync is not null
                     && _applyCoreIncomingDirectoryAsync is not null;
+            }
+        }
+    }
+
+    private async void ChangeCoreTemporaryButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning
+            || _loadCoreDirectoryAsync is null
+            || _hasCoreDownloads is null
+            || _applyCoreTemporaryDirectoryAsync is null)
+        {
+            return;
+        }
+
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? changeButton = this.FindControl<Button>("ChangeCoreTemporaryButton");
+
+        if (_hasCoreDownloads())
+        {
+            if (status is not null)
+                status.Text = "Core-Temp kann nur geändert werden, wenn die Downloadliste komplett leer ist.";
+            return;
+        }
+
+        CoreDirectoryPickerDialog picker = new(_loadCoreDirectoryAsync);
+        bool selected = await picker.ShowDialog<bool>(this);
+        if (!selected)
+            return;
+
+        string requested = picker.SelectedDirectory.Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(requested) || requested.Any(char.IsControl))
+        {
+            if (status is not null)
+                status.Text = "Der ausgewählte Core-Temp-Pfad ist ungültig.";
+            return;
+        }
+
+        if (string.Equals(requested, _coreTemporaryDirectory, StringComparison.Ordinal))
+        {
+            if (status is not null)
+                status.Text = "Core-Temp entspricht bereits dem vom Core gemeldeten Wert.";
+            return;
+        }
+
+        string currentDisplay = string.IsNullOrWhiteSpace(_coreTemporaryDirectory)
+            ? "(leer)"
+            : _coreTemporaryDirectory;
+
+        ConfirmDialog firstConfirm = new(
+            "Kritische Core-Werte übernehmen",
+            $"Core-Temp wirklich ändern?\n\nAktuell: {currentDisplay}\nNeu: {requested}\n\nFortfahren?",
+            "Fortfahren",
+            "Abbrechen");
+        if (!await firstConfirm.ShowDialog<bool>(this))
+            return;
+
+        if (_hasCoreDownloads())
+        {
+            if (status is not null)
+                status.Text = "Core-Temp wurde nicht geändert: Die Downloadliste ist nicht mehr leer.";
+            return;
+        }
+
+        ConfirmDialog secondConfirm = new(
+            "Core-Wert wirklich übernehmen?",
+            "Letzte Bestätigung: Core-Temp jetzt wirklich an den Core schreiben?\n\nDie Änderung ist nur bei vollständig leerer Downloadliste zulässig; alle anderen Legacy-Settings bleiben erhalten.",
+            "Jetzt schreiben",
+            "Zurück");
+        if (!await secondConfirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (changeButton is not null)
+            changeButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Uebertrage Core-Temp an den Core ...";
+
+        try
+        {
+            string effective = await _applyCoreTemporaryDirectoryAsync(requested);
+            _coreTemporaryDirectory = effective;
+            SetCoreValue("CoreTemporaryText", effective);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: Core-Temp {effective}.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (changeButton is not null)
+            {
+                changeButton.IsEnabled = _loadCoreDirectoryAsync is not null
+                    && _hasCoreDownloads is not null
+                    && _applyCoreTemporaryDirectoryAsync is not null;
             }
         }
     }

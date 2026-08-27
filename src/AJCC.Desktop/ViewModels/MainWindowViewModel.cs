@@ -423,6 +423,54 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task<string> ApplyCoreTemporaryDirectoryAsync(string temporaryDirectory)
+    {
+        ThrowIfDisposed();
+
+        string requested = (temporaryDirectory ?? string.Empty).Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(requested) || requested.Any(char.IsControl))
+            throw new ArgumentException("Core-Temp muss ein nichtleerer, strukturell gültiger Core-Pfad sein.", nameof(temporaryDirectory));
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+        if (state.Downloads.Count > 0)
+            throw new InvalidOperationException("Core-Temp darf nur geändert werden, wenn die Downloadliste komplett leer ist.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { TemporaryDirectory = requested });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreTemporaryDirectory));
+
+            string effective = state.Settings.TemporaryDirectory?.Trim() ?? string.Empty;
+            if (!string.Equals(effective, requested, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"Core meldet nach der Übertragung TemporaryDirectory='{effective}' statt '{requested}'.");
+
+            StatusText = $"Core-Temp vom Core bestätigt: {effective}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Core-Temp konnte nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task<int> ApplyMaxConnectionsAsync(int maxConnections)
     {
         ThrowIfDisposed();
