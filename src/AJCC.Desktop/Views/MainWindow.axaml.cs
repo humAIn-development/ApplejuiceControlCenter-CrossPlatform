@@ -192,6 +192,57 @@ public sealed partial class MainWindow : Window
             $"Core-Profil gespeichert: {name} · Passwort wird nicht gespeichert.");
     }
 
+    private async void EditCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanEditConnectionSettings)
+            return;
+
+        ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+        if (comboBox?.SelectedItem is not CoreProfileEntry profile)
+        {
+            _viewModel.SetStatusMessage("Kein Core-Profil zum Bearbeiten ausgewählt.");
+            return;
+        }
+
+        CoreProfileEditDialog dialog = new(profile.Name, profile.Endpoint);
+        if (!await dialog.ShowDialog<bool>(this))
+            return;
+
+        string name = dialog.ProfileName.Trim();
+        string endpoint = dialog.Endpoint;
+        bool duplicateEndpoint = _coreProfiles.Any(other =>
+            !ReferenceEquals(other, profile)
+            && string.Equals(other.Endpoint, endpoint, StringComparison.OrdinalIgnoreCase));
+        if (duplicateEndpoint)
+        {
+            _viewModel.SetStatusMessage("Für diesen Core-Endpunkt existiert bereits ein anderes Profil.");
+            return;
+        }
+
+        string previousName = profile.Name;
+        string previousEndpoint = profile.Endpoint;
+        profile.Name = name;
+        profile.Endpoint = endpoint;
+
+        if (!_coreProfileStore.TrySave(_coreProfiles, _defaultCoreProfileId, out string errorMessage))
+        {
+            profile.Name = previousName;
+            profile.Endpoint = previousEndpoint;
+            LoadCoreProfiles();
+            _viewModel.SetStatusMessage("Core-Profil konnte nicht geändert werden: " + errorMessage);
+            return;
+        }
+
+        LoadCoreProfiles();
+
+        TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
+        if (passwordInput is not null)
+            passwordInput.Text = string.Empty;
+
+        _viewModel.SetStatusMessage(
+            $"Core-Profil geändert: {name} · Passwort bleibt Laufzeiteingabe.");
+    }
+
     private void DeleteCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (!_viewModel.CanEditConnectionSettings)
