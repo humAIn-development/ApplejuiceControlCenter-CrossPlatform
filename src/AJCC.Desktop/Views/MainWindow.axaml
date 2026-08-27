@@ -49,7 +49,7 @@
           </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,10,0">
+        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,10,0">
           <ComboBox x:Name="CoreProfileComboBox"
                     IsEnabled="{Binding CanEditConnectionSettings}"
                     SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
@@ -69,6 +69,13 @@
                   ToolTip.Tip="Ausgewähltes Core-Profil bearbeiten"
                   Click="EditCoreProfileButton_OnClick" />
           <Button Grid.Column="3"
+                  Width="34"
+                  Margin="6,0,0,0"
+                  IsEnabled="{Binding CanEditConnectionSettings}"
+                  Content="★"
+                  ToolTip.Tip="Ausgewähltes Core-Profil als Standard beim Start speichern"
+                  Click="SetDefaultCoreProfileButton_OnClick" />
+          <Button Grid.Column="4"
                   Width="34"
                   Margin="6,0,0,0"
                   IsEnabled="{Binding CanEditConnectionSettings}"

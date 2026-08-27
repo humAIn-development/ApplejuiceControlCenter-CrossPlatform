@@ -118,23 +118,38 @@ public sealed partial class MainWindow : Window
         if (sender is not ComboBox comboBox || comboBox.SelectedItem is not CoreProfileEntry profile)
             return;
 
-        _defaultCoreProfileId = profile.Id;
         _viewModel.EndpointText = profile.Endpoint;
 
         TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
         if (passwordInput is not null)
             passwordInput.Text = string.Empty;
 
-        if (_coreProfileStore.TrySave(_coreProfiles, _defaultCoreProfileId, out string errorMessage))
+        _viewModel.SetStatusMessage(
+            $"Core-Profil ausgewählt: {profile.Name} · Standard bleibt unverändert · Passwort bleibt Laufzeiteingabe.");
+    }
+
+    private void SetDefaultCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanEditConnectionSettings)
+            return;
+
+        ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+        if (comboBox?.SelectedItem is not CoreProfileEntry profile)
         {
-            _viewModel.SetStatusMessage(
-                $"Core-Profil ausgewählt: {profile.Name} · Passwort bleibt Laufzeiteingabe.");
+            _viewModel.SetStatusMessage("Kein Core-Profil als Standard ausgewählt.");
+            return;
         }
-        else
+
+        string previousDefaultProfileId = _defaultCoreProfileId;
+        _defaultCoreProfileId = profile.Id;
+        if (!_coreProfileStore.TrySave(_coreProfiles, _defaultCoreProfileId, out string errorMessage))
         {
-            _viewModel.SetStatusMessage(
-                $"Core-Profil ausgewählt, Standardauswahl aber nicht gespeichert: {errorMessage}");
+            _defaultCoreProfileId = previousDefaultProfileId;
+            _viewModel.SetStatusMessage("Standard-Core-Profil konnte nicht gespeichert werden: " + errorMessage);
+            return;
         }
+
+        _viewModel.SetStatusMessage($"Standard-Core-Profil gesetzt: {profile.Name}.");
     }
 
     private async void SaveCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
@@ -179,7 +194,6 @@ public sealed partial class MainWindow : Window
             existing.Endpoint = endpoint;
         }
 
-        _defaultCoreProfileId = existing.Id;
         if (!_coreProfileStore.TrySave(_coreProfiles, _defaultCoreProfileId, out string errorMessage))
         {
             LoadCoreProfiles();
@@ -262,6 +276,10 @@ public sealed partial class MainWindow : Window
         }
 
         string deletedName = profile.Name;
+        bool deletedWasDefault = string.Equals(
+            profile.Id,
+            _defaultCoreProfileId,
+            StringComparison.OrdinalIgnoreCase);
         int removedIndex = Math.Max(0, comboBox.SelectedIndex);
         bool saveSucceeded;
         string saveError;
@@ -271,9 +289,11 @@ public sealed partial class MainWindow : Window
         {
             _coreProfiles.Remove(profile);
 
+            if (deletedWasDefault)
+                _defaultCoreProfileId = _coreProfiles[0].Id;
+
             int fallbackIndex = Math.Min(removedIndex, _coreProfiles.Count - 1);
             CoreProfileEntry fallback = _coreProfiles[fallbackIndex];
-            _defaultCoreProfileId = fallback.Id;
             comboBox.SelectedItem = fallback;
             _viewModel.EndpointText = fallback.Endpoint;
 
