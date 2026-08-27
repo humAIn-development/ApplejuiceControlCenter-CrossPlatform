@@ -1,13 +1,55 @@
+using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AJCC.Core.Protocol;
 
 namespace AJCC.Desktop.Services;
 
-public sealed class CoreProfileEntry
+public enum CoreProfileReachabilityStatus
 {
+    Unknown,
+    Checking,
+    Reachable,
+    Unreachable
+}
+
+public sealed class CoreProfileEntry : INotifyPropertyChanged
+{
+    private CoreProfileReachabilityStatus _reachabilityStatus;
+
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "Core";
     public string Endpoint { get; set; } = "http://127.0.0.1:9851/";
+
+    [JsonIgnore]
+    public string ReachabilityLabel => _reachabilityStatus switch
+    {
+        CoreProfileReachabilityStatus.Checking => "…",
+        CoreProfileReachabilityStatus.Reachable => "✓",
+        CoreProfileReachabilityStatus.Unreachable => "×",
+        _ => "?"
+    };
+
+    [JsonIgnore]
+    public string ReachabilityText => _reachabilityStatus switch
+    {
+        CoreProfileReachabilityStatus.Checking => "TCP-Erreichbarkeit wird geprüft",
+        CoreProfileReachabilityStatus.Reachable => "TCP-Endpunkt erreichbar",
+        CoreProfileReachabilityStatus.Unreachable => "TCP-Endpunkt nicht erreichbar",
+        _ => "TCP-Erreichbarkeit noch nicht geprüft"
+    };
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void SetReachabilityStatus(CoreProfileReachabilityStatus status)
+    {
+        if (_reachabilityStatus == status)
+            return;
+
+        _reachabilityStatus = status;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ReachabilityLabel)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ReachabilityText)));
+    }
 
     public override string ToString() => Name;
 }

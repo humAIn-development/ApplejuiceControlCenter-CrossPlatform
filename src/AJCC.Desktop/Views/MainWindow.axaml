@@ -3,6 +3,7 @@
         xmlns:vm="using:AJCC.Desktop.ViewModels"
         xmlns:models="using:AJCC.Core.Models"
         xmlns:controls="using:AJCC.Desktop.Controls"
+        xmlns:services="using:AJCC.Desktop.Services"
         x:Class="AJCC.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Applejuice-Control-Center X — FirstLight"
@@ -53,7 +54,22 @@
           <ComboBox x:Name="CoreProfileComboBox"
                     IsEnabled="{Binding CanEditConnectionSettings}"
                     SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
-                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Passwörter werden in diesem FirstLight-Slice nicht gespeichert." />
+                    DropDownOpened="CoreProfileComboBox_OnDropDownOpened"
+                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Der Laufzeitstatus prüft nur die TCP-Erreichbarkeit des Endpunkts.">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="services:CoreProfileEntry">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Width="14"
+                             TextAlignment="Center"
+                             Text="{Binding ReachabilityLabel}"
+                             ToolTip.Tip="{Binding ReachabilityText}" />
+                  <TextBlock Text="{Binding Name}"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding ReachabilityText}" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
           <Button Grid.Column="1"
                   Width="34"
                   Margin="6,0,0,0"

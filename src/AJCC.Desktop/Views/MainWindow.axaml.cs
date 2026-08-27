@@ -4,6 +4,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,6 +13,7 @@ using AJCC.Core.Helpers;
 using AJCC.Core.Links;
 using AJCC.Core.Models;
 using AJCC.Core.Protocol;
+using AJCC.Core.Services;
 using AJCC.Desktop.Services;
 using AJCC.Desktop.ViewModels;
 
@@ -24,8 +26,11 @@ public sealed partial class MainWindow : Window
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private readonly CoreProfileStore _coreProfileStore = new();
     private readonly ObservableCollection<CoreProfileEntry> _coreProfiles = new();
+    private readonly DispatcherTimer _coreProfileReachabilityTimer = new();
+    private static readonly TimeSpan CoreProfileReachabilityTimeout = TimeSpan.FromMilliseconds(2500);
     private string _defaultCoreProfileId = string.Empty;
     private bool _loadingCoreProfiles;
+    private bool _coreProfileReachabilityRunning;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
     private AjShareFile? _selectedShareForContext;
@@ -37,6 +42,9 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         DataContext = _viewModel;
         LoadCoreProfiles();
+        _coreProfileReachabilityTimer.Interval = TimeSpan.FromSeconds(10);
+        _coreProfileReachabilityTimer.Tick += CoreProfileReachabilityTimer_OnTick;
+        _coreProfileReachabilityTimer.Start();
         ConfigureLocalIncomingMappingControls();
         AddHandler(
             InputElement.PointerPressedEvent,
@@ -48,6 +56,8 @@ public sealed partial class MainWindow : Window
             MainWindow_OnContextRequested,
             RoutingStrategies.Tunnel,
             handledEventsToo: true);
+        Opened += async (_, _) => await RefreshCoreProfileReachabilityAsync();
+        Closed += (_, _) => _coreProfileReachabilityTimer.Stop();
         Closed += MainWindow_OnClosed;
     }
 
@@ -126,6 +136,56 @@ public sealed partial class MainWindow : Window
 
         _viewModel.SetStatusMessage(
             $"Core-Profil ausgewählt: {profile.Name} · Standard bleibt unverändert · Passwort bleibt Laufzeiteingabe.");
+    }
+
+    private async void CoreProfileComboBox_OnDropDownOpened(object? sender, EventArgs e)
+        => await RefreshCoreProfileReachabilityAsync();
+
+    private async void CoreProfileReachabilityTimer_OnTick(object? sender, EventArgs e)
+        => await RefreshCoreProfileReachabilityAsync();
+
+    private async Task RefreshCoreProfileReachabilityAsync()
+    {
+        if (_coreProfileReachabilityRunning || _coreProfiles.Count == 0)
+            return;
+
+        _coreProfileReachabilityRunning = true;
+        try
+        {
+            foreach (CoreProfileEntry profile in _coreProfiles.ToList())
+            {
+                if (!_coreProfiles.Contains(profile))
+                    continue;
+
+                profile.SetReachabilityStatus(CoreProfileReachabilityStatus.Checking);
+
+                bool reachable;
+                try
+                {
+                    CoreEndpoint endpoint = CoreEndpoint.Parse(profile.Endpoint);
+                    reachable = await TcpReachabilityProbe.TestAsync(
+                        endpoint.Host,
+                        endpoint.BaseUri.Port,
+                        CoreProfileReachabilityTimeout);
+                }
+                catch
+                {
+                    reachable = false;
+                }
+
+                if (_coreProfiles.Contains(profile))
+                {
+                    profile.SetReachabilityStatus(
+                        reachable
+                            ? CoreProfileReachabilityStatus.Reachable
+                            : CoreProfileReachabilityStatus.Unreachable);
+                }
+            }
+        }
+        finally
+        {
+            _coreProfileReachabilityRunning = false;
+        }
     }
 
     private void SetDefaultCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
