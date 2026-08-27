@@ -96,7 +96,8 @@ public sealed partial class MainWindow : Window
             _viewModel.LoadCoreDirectoryAsync,
             _viewModel.ApplyCoreIncomingDirectoryAsync,
             () => _viewModel.Downloads.Any(),
-            _viewModel.ApplyCoreTemporaryDirectoryAsync);
+            _viewModel.ApplyCoreTemporaryDirectoryAsync,
+            _viewModel.CheckCorePortReachabilityAsync);
         await dialog.ShowDialog<bool>(this);
     }
 

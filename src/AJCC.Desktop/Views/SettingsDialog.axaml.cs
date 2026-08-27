@@ -20,6 +20,7 @@ public sealed partial class SettingsDialog : Window
     private Func<bool, Task<bool>>? _applyAutoConnectAsync;
     private Func<string, Task<string>>? _applyCoreNicknameAsync;
     private Func<int, Task<int>>? _applyCorePortAsync;
+    private Func<Task<string>>? _checkCorePortReachabilityAsync;
     private Func<int, Task<int>>? _applyCoreXmlPortAsync;
     private Func<string?, Task<AjDirectoryListResult>>? _loadCoreDirectoryAsync;
     private Func<string, Task<string>>? _applyCoreIncomingDirectoryAsync;
@@ -33,6 +34,7 @@ public sealed partial class SettingsDialog : Window
     private int _corePort = 8000;
     private int _coreXmlPort = 9851;
     private bool _coreSettingsWriteRunning;
+    private bool _corePortReachabilityRunning;
 
     public SettingsDialog()
     {
@@ -83,7 +85,8 @@ public sealed partial class SettingsDialog : Window
         Func<string?, Task<AjDirectoryListResult>>? loadCoreDirectoryAsync,
         Func<string, Task<string>>? applyCoreIncomingDirectoryAsync,
         Func<bool>? hasCoreDownloads,
-        Func<string, Task<string>>? applyCoreTemporaryDirectoryAsync)
+        Func<string, Task<string>>? applyCoreTemporaryDirectoryAsync,
+        Func<Task<string>>? checkCorePortReachabilityAsync)
     {
         _coreNickname = (nick ?? string.Empty).Trim();
         _coreIncomingDirectory = string.IsNullOrWhiteSpace(incomingDirectory)
@@ -112,6 +115,7 @@ public sealed partial class SettingsDialog : Window
         _applyAutoConnectAsync = applyAutoConnectAsync;
         _applyCoreNicknameAsync = applyCoreNicknameAsync;
         _applyCorePortAsync = applyCorePortAsync;
+        _checkCorePortReachabilityAsync = checkCorePortReachabilityAsync;
         _applyCoreXmlPortAsync = applyCoreXmlPortAsync;
         _loadCoreDirectoryAsync = loadCoreDirectoryAsync;
         _applyCoreIncomingDirectoryAsync = applyCoreIncomingDirectoryAsync;
@@ -169,6 +173,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyCorePortButton = this.FindControl<Button>("ApplyCorePortButton");
         if (applyCorePortButton is not null)
             applyCorePortButton.IsEnabled = canWriteCoreSettings && _applyCorePortAsync is not null;
+
+        Button? checkCorePortButton = this.FindControl<Button>("CheckCorePortReachabilityButton");
+        if (checkCorePortButton is not null)
+            checkCorePortButton.IsEnabled = canWriteCoreSettings && _checkCorePortReachabilityAsync is not null;
 
         Button? applyCoreXmlPortButton = this.FindControl<Button>("ApplyCoreXmlPortButton");
         if (applyCoreXmlPortButton is not null)
@@ -575,6 +583,40 @@ public sealed partial class SettingsDialog : Window
         }
     }
 
+
+
+    private async void CheckCorePortReachabilityButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_corePortReachabilityRunning || _checkCorePortReachabilityAsync is null)
+            return;
+
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? checkButton = this.FindControl<Button>("CheckCorePortReachabilityButton");
+
+        _corePortReachabilityRunning = true;
+        if (checkButton is not null)
+            checkButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Porttest: läuft …";
+
+        try
+        {
+            string result = await _checkCorePortReachabilityAsync();
+            if (status is not null)
+                status.Text = result;
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Porttest fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _corePortReachabilityRunning = false;
+            if (checkButton is not null)
+                checkButton.IsEnabled = _checkCorePortReachabilityAsync is not null;
+        }
+    }
 
 
     private async void ApplyCoreXmlPortButton_OnClick(object? sender, RoutedEventArgs e)

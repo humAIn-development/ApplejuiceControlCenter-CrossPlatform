@@ -25,6 +25,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan ServerReachabilityProbeInterval = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan ServerReachabilityProbeTimeout = TimeSpan.FromMilliseconds(1500);
     private static readonly TimeSpan ServerReachabilityProbeFreshness = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan ExternalCorePortTestTimeout = TimeSpan.FromMilliseconds(2500);
     private const int UploadSpeedHistoryLength = 48;
     private static readonly TimeSpan UploadSpeedHistoryMinimumSampleDistance = TimeSpan.FromMilliseconds(1500);
     private readonly Dictionary<long, Queue<long>> _uploadSpeedHistory = new();
@@ -1496,6 +1497,42 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    public async Task<string> CheckCorePortReachabilityAsync()
+    {
+        ThrowIfDisposed();
+        AjState? state = _state;
+
+        string result;
+        if (!IsConnected || state is null)
+        {
+            result = "Porttest: offline.";
+        }
+        else
+        {
+            string host = (state.NetworkInfo.Ip ?? string.Empty).Trim();
+            int port = state.Settings.Port;
+
+            if (string.IsNullOrWhiteSpace(host) || port is < 1 or > 65535)
+            {
+                result = "Porttest: nicht prüfbar — externe IP oder Core-Port sind noch nicht bekannt.";
+            }
+            else
+            {
+                bool reachable = await TcpReachabilityProbe.TestAsync(
+                    host,
+                    port,
+                    ExternalCorePortTestTimeout).ConfigureAwait(true);
+
+                result = reachable
+                    ? "Porttest: erreichbar."
+                    : "Porttest: nicht erreichbar — Portweiterleitung, Firewall oder Router prüfen.";
+            }
+        }
+
+        StatusText = result;
+        return result;
     }
 
     public async Task PauseSelectedDownloadAsync()
