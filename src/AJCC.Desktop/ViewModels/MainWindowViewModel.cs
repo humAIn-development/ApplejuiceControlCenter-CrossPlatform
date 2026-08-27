@@ -302,6 +302,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ? _state!.Settings.MaxNewConnectionsPerTurn
         : 50;
     public long CoreMaxDownloadKb => Math.Max(0L, (_state?.Settings.MaxDownload ?? 0L) / 1024L);
+    public long CoreMaxUploadKb => (_state?.Settings.MaxUpload ?? 0L) > 0
+        ? _state!.Settings.MaxUpload / 1024L
+        : 5000L;
+    public int CoreSpeedPerSlot
+    {
+        get
+        {
+            (int minimum, int maximum) = CalculateLegacySpeedPerSlotRange(CoreMaxUploadKb);
+            int configured = _state?.Settings.SpeedPerSlot ?? 0;
+            int requested = configured > 0 ? configured : 165;
+            return Math.Max(minimum, Math.Min(maximum, requested));
+        }
+    }
     public bool CoreAutoConnect => _state?.Settings.AutoConnect ?? false;
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
@@ -741,6 +754,79 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             IsBusy = false;
         }
+    }
+
+    public async Task<(long MaxUploadKb, int SpeedPerSlot)> ApplyUploadLimitsAsync(
+        long maxUploadKb,
+        int requestedSpeedPerSlot)
+    {
+        ThrowIfDisposed();
+        if (maxUploadKb is < 0 or > 100_000_000)
+            throw new ArgumentOutOfRangeException(nameof(maxUploadKb), "Max. Uploadgeschwindigkeit muss zwischen 0 und 100000000 kb/s liegen.");
+
+        (int minimum, int maximum) = CalculateLegacySpeedPerSlotRange(maxUploadKb);
+        int speedPerSlot = Math.Max(minimum, Math.Min(maximum, requestedSpeedPerSlot));
+        long coreValue = checked(maxUploadKb * 1024L);
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides
+                {
+                    MaxUpload = coreValue,
+                    SpeedPerSlot = speedPerSlot
+                });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreMaxUploadKb));
+            OnPropertyChanged(nameof(CoreSpeedPerSlot));
+
+            long effectiveCoreValue = Math.Max(0L, state.Settings.MaxUpload);
+            if (effectiveCoreValue != coreValue)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung MaxUpload={effectiveCoreValue} statt MaxUpload={coreValue}.");
+
+            int effectiveSpeedPerSlot = state.Settings.SpeedPerSlot;
+            if (effectiveSpeedPerSlot != speedPerSlot)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung SpeedPerSlot={effectiveSpeedPerSlot} statt SpeedPerSlot={speedPerSlot}.");
+
+            long displayMaxUploadKb = effectiveCoreValue > 0
+                ? effectiveCoreValue / 1024L
+                : 5000L;
+            StatusText = effectiveCoreValue > 0
+                ? $"Upload-Limits vom Core bestätigt: Max. Upload {displayMaxUploadKb} kb/s, {effectiveSpeedPerSlot} kb/s pro Slot."
+                : $"Upload-Limits vom Core bestätigt: MaxUpload=0, Anzeige-Fallback 5000 kb/s, {effectiveSpeedPerSlot} kb/s pro Slot.";
+            return (displayMaxUploadKb, effectiveSpeedPerSlot);
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Upload-Limits konnten nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private static (int Minimum, int Maximum) CalculateLegacySpeedPerSlotRange(long maxUploadKb)
+    {
+        if (maxUploadKb <= 0)
+            return (1, 500);
+
+        int minimum = Math.Max(1, (int)Math.Pow(maxUploadKb, 0.2));
+        int maximum = Math.Max(minimum, (int)Math.Pow(maxUploadKb, 0.6));
+        return (minimum, maximum);
     }
 
     public async Task<IReadOnlyList<AjShareDirectory>> TransferShareDirectoriesAsync(

@@ -21,6 +21,7 @@ public sealed partial class SettingsDialog : Window
     private Func<int, Task<int>>? _applyCorePortAsync;
     private Func<int, Task<int>>? _applyCoreXmlPortAsync;
     private Func<long, Task<long>>? _applyMaxDownloadAsync;
+    private Func<long, int, Task<(long MaxUploadKb, int SpeedPerSlot)>>? _applyUploadLimitsAsync;
     private string _coreNickname = string.Empty;
     private int _corePort = 8000;
     private int _coreXmlPort = 9851;
@@ -57,12 +58,15 @@ public sealed partial class SettingsDialog : Window
         int xmlPort,
         int maxConnections,
         long maxDownloadKb,
+        long maxUploadKb,
+        int speedPerSlot,
         int maxSourcesPerFile,
         int maxNewConnectionsPerTurn,
         bool autoConnect,
         bool canWriteCoreSettings,
         Func<int, Task<int>>? applyMaxConnectionsAsync,
         Func<long, Task<long>>? applyMaxDownloadAsync,
+        Func<long, int, Task<(long MaxUploadKb, int SpeedPerSlot)>>? applyUploadLimitsAsync,
         Func<int, Task<int>>? applyMaxSourcesPerFileAsync,
         Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync,
         Func<bool, Task<bool>>? applyAutoConnectAsync,
@@ -93,6 +97,7 @@ public sealed partial class SettingsDialog : Window
         _applyCorePortAsync = applyCorePortAsync;
         _applyCoreXmlPortAsync = applyCoreXmlPortAsync;
         _applyMaxDownloadAsync = applyMaxDownloadAsync;
+        _applyUploadLimitsAsync = applyUploadLimitsAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -101,6 +106,11 @@ public sealed partial class SettingsDialog : Window
         TextBox? maxDownloadInput = this.FindControl<TextBox>("CoreMaxDownloadTextBox");
         if (maxDownloadInput is not null)
             maxDownloadInput.Text = Math.Max(0L, maxDownloadKb).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        TextBox? maxUploadInput = this.FindControl<TextBox>("CoreMaxUploadTextBox");
+        if (maxUploadInput is not null)
+            maxUploadInput.Text = Math.Max(0L, maxUploadKb).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        UpdateUploadSpeedPerSlotRange(speedPerSlot);
 
         TextBox? maxSourcesInput = this.FindControl<TextBox>("CoreMaxSourcesPerFileTextBox");
         if (maxSourcesInput is not null)
@@ -134,6 +144,10 @@ public sealed partial class SettingsDialog : Window
         if (applyMaxDownloadButton is not null)
             applyMaxDownloadButton.IsEnabled = canWriteCoreSettings && _applyMaxDownloadAsync is not null;
 
+        Button? applyUploadLimitsButton = this.FindControl<Button>("ApplyUploadLimitsButton");
+        if (applyUploadLimitsButton is not null)
+            applyUploadLimitsButton.IsEnabled = canWriteCoreSettings && _applyUploadLimitsAsync is not null;
+
         Button? applyMaxSourcesButton = this.FindControl<Button>("ApplyMaxSourcesPerFileButton");
         if (applyMaxSourcesButton is not null)
             applyMaxSourcesButton.IsEnabled = canWriteCoreSettings && _applyMaxSourcesPerFileAsync is not null;
@@ -145,6 +159,51 @@ public sealed partial class SettingsDialog : Window
         Button? applyAutoConnectButton = this.FindControl<Button>("ApplyAutoConnectButton");
         if (applyAutoConnectButton is not null)
             applyAutoConnectButton.IsEnabled = canWriteCoreSettings && _applyAutoConnectAsync is not null;
+    }
+
+    private static (int Minimum, int Maximum) CalculateLegacySpeedPerSlotRange(long maxUploadKb)
+    {
+        if (maxUploadKb <= 0)
+            return (1, 500);
+
+        int minimum = Math.Max(1, (int)Math.Pow(maxUploadKb, 0.2));
+        int maximum = Math.Max(minimum, (int)Math.Pow(maxUploadKb, 0.6));
+        return (minimum, maximum);
+    }
+
+    private void UpdateUploadSpeedPerSlotRange(int? preferredValue = null)
+    {
+        TextBox? maxUploadInput = this.FindControl<TextBox>("CoreMaxUploadTextBox");
+        Slider? slider = this.FindControl<Slider>("CoreSpeedPerSlotSlider");
+        if (slider is null)
+            return;
+
+        string raw = (maxUploadInput?.Text ?? string.Empty).Trim();
+        long maxUploadKb = long.TryParse(
+            raw,
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out long parsed)
+            ? parsed
+            : 0L;
+        (int minimum, int maximum) = CalculateLegacySpeedPerSlotRange(maxUploadKb);
+
+        slider.Minimum = minimum;
+        slider.Maximum = maximum;
+        int current = preferredValue ?? (int)Math.Round(slider.Value);
+        slider.Value = Math.Max(minimum, Math.Min(maximum, current));
+    }
+
+    private void CoreMaxUploadTextBox_OnTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        try
+        {
+            UpdateUploadSpeedPerSlotRange();
+        }
+        catch
+        {
+            // Range feedback must never break text editing.
+        }
     }
 
     private void SetCoreValue(string controlName, string? value)
@@ -419,6 +478,75 @@ public sealed partial class SettingsDialog : Window
             _coreSettingsWriteRunning = false;
             if (applyButton is not null)
                 applyButton.IsEnabled = _applyMaxDownloadAsync is not null;
+        }
+    }
+
+    private async void ApplyUploadLimitsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyUploadLimitsAsync is null)
+            return;
+
+        TextBox? maxUploadInput = this.FindControl<TextBox>("CoreMaxUploadTextBox");
+        Slider? speedSlider = this.FindControl<Slider>("CoreSpeedPerSlotSlider");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyUploadLimitsButton");
+        string raw = (maxUploadInput?.Text ?? string.Empty).Trim();
+
+        if (!long.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out long maxUploadKb)
+            || maxUploadKb is < 0 or > 100_000_000)
+        {
+            if (status is not null)
+                status.Text = "Bitte eine ganze Zahl zwischen 0 und 100000000 kb/s für Max. Upload eingeben.";
+            return;
+        }
+
+        if (speedSlider is null)
+            return;
+
+        (int minimum, int maximum) = CalculateLegacySpeedPerSlotRange(maxUploadKb);
+        int requestedSpeedPerSlot = Math.Max(
+            minimum,
+            Math.Min(maximum, (int)Math.Round(speedSlider.Value)));
+        speedSlider.Value = requestedSpeedPerSlot;
+
+        ConfirmDialog confirm = new(
+            "Upload-Limits an Core übertragen",
+            $"Max. Upload: {maxUploadKb} kb/s\nkb/s pro Uploadslot: {requestedSpeedPerSlot} (zulässiger Bereich {minimum}-{maximum})\n\nFortfahren?",
+            "Übertragen",
+            "Abbrechen");
+        if (!await confirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage Upload-Limits an den Core …";
+
+        try
+        {
+            (long MaxUploadKb, int SpeedPerSlot) effective =
+                await _applyUploadLimitsAsync(maxUploadKb, requestedSpeedPerSlot);
+            if (maxUploadInput is not null)
+                maxUploadInput.Text = effective.MaxUploadKb.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            UpdateUploadSpeedPerSlotRange(effective.SpeedPerSlot);
+            if (status is not null)
+                status.Text = $"Vom Core zurückgelesen: Max. Upload {effective.MaxUploadKb} kb/s, {effective.SpeedPerSlot} kb/s pro Slot.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyUploadLimitsAsync is not null;
         }
     }
 
