@@ -28,6 +28,7 @@ public sealed partial class SettingsDialog : Window
     private Func<string, Task<string>>? _applyCoreTemporaryDirectoryAsync;
     private Func<long, Task<long>>? _applyMaxDownloadAsync;
     private Func<long, int, Task<(long MaxUploadKb, int SpeedPerSlot)>>? _applyUploadLimitsAsync;
+    private Func<string, Task<string>>? _changeCorePasswordAsync;
     private string _coreNickname = string.Empty;
     private string _coreIncomingDirectory = string.Empty;
     private string _coreTemporaryDirectory = string.Empty;
@@ -86,7 +87,8 @@ public sealed partial class SettingsDialog : Window
         Func<string, Task<string>>? applyCoreIncomingDirectoryAsync,
         Func<bool>? hasCoreDownloads,
         Func<string, Task<string>>? applyCoreTemporaryDirectoryAsync,
-        Func<Task<string>>? checkCorePortReachabilityAsync)
+        Func<Task<string>>? checkCorePortReachabilityAsync,
+        Func<string, Task<string>>? changeCorePasswordAsync)
     {
         _coreNickname = (nick ?? string.Empty).Trim();
         _coreIncomingDirectory = string.IsNullOrWhiteSpace(incomingDirectory)
@@ -123,6 +125,7 @@ public sealed partial class SettingsDialog : Window
         _applyCoreTemporaryDirectoryAsync = applyCoreTemporaryDirectoryAsync;
         _applyMaxDownloadAsync = applyMaxDownloadAsync;
         _applyUploadLimitsAsync = applyUploadLimitsAsync;
+        _changeCorePasswordAsync = changeCorePasswordAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -205,6 +208,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyAutoConnectButton = this.FindControl<Button>("ApplyAutoConnectButton");
         if (applyAutoConnectButton is not null)
             applyAutoConnectButton.IsEnabled = canWriteCoreSettings && _applyAutoConnectAsync is not null;
+
+        Button? changeCorePasswordButton = this.FindControl<Button>("ChangeCorePasswordButton");
+        if (changeCorePasswordButton is not null)
+            changeCorePasswordButton.IsEnabled = canWriteCoreSettings && _changeCorePasswordAsync is not null;
     }
 
     private static (int Minimum, int Maximum) CalculateLegacySpeedPerSlotRange(long maxUploadKb)
@@ -257,6 +264,81 @@ public sealed partial class SettingsDialog : Window
         TextBlock? text = this.FindControl<TextBlock>(controlName);
         if (text is not null)
             text.Text = string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private async void ChangeCorePasswordButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _changeCorePasswordAsync is null)
+            return;
+
+        TextBox? newPasswordInput = this.FindControl<TextBox>("NewCorePasswordTextBox");
+        TextBox? confirmPasswordInput = this.FindControl<TextBox>("ConfirmCorePasswordTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? changeButton = this.FindControl<Button>("ChangeCorePasswordButton");
+
+        string requested = newPasswordInput?.Text ?? string.Empty;
+        string confirmation = confirmPasswordInput?.Text ?? string.Empty;
+        if (!string.Equals(requested, confirmation, StringComparison.Ordinal))
+        {
+            if (status is not null)
+                status.Text = "Die beiden neuen Passwörter stimmen nicht überein.";
+            return;
+        }
+
+        if (requested.Any(char.IsControl))
+        {
+            if (status is not null)
+                status.Text = "Das neue Core-Passwort enthält unzulässige Steuerzeichen.";
+            return;
+        }
+
+        string firstMessage = requested.Length == 0
+            ? "Core-Passwortschutz wirklich entfernen?\n\nDas neue Passwort ist leer. Der Core wird danach ohne Passwort geschützt sein.\n\nFortfahren?"
+            : "Core-Passwort wirklich ändern?\n\nDas neue Passwort wird nicht gespeichert und muss nach einem Neustart erneut eingegeben werden.\n\nFortfahren?";
+
+        ConfirmDialog firstConfirm = new(
+            "Core-Passwort ändern",
+            firstMessage,
+            "Fortfahren",
+            "Abbrechen");
+        if (!await firstConfirm.ShowDialog<bool>(this))
+            return;
+
+        ConfirmDialog secondConfirm = new(
+            "Core-Passwort wirklich übernehmen?",
+            "Letzte Bestätigung: neues Core-Passwort jetzt an den verbundenen Core übertragen?",
+            "Jetzt ändern",
+            "Zurück");
+        if (!await secondConfirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (changeButton is not null)
+            changeButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage neues Core-Passwort an den Core …";
+
+        try
+        {
+            string result = await _changeCorePasswordAsync(requested);
+            if (newPasswordInput is not null)
+                newPasswordInput.Text = string.Empty;
+            if (confirmPasswordInput is not null)
+                confirmPasswordInput.Text = string.Empty;
+            if (status is not null)
+                status.Text = result;
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Passwortänderung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (changeButton is not null)
+                changeButton.IsEnabled = _changeCorePasswordAsync is not null;
+        }
     }
 
     private async void ChangeCoreIncomingButton_OnClick(object? sender, RoutedEventArgs e)

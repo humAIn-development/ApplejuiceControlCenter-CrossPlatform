@@ -24,7 +24,7 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
         <Border Classes="panel" Padding="14" Margin="0,8,0,0">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                 ColumnDefinitions="Auto,*,Auto,Auto">
             <TextBlock Grid.ColumnSpan="4"
                        Text="Core-Werte (nur Anzeige)"
@@ -332,6 +332,43 @@
                     Margin="0,8,0,0"
                     Content="Entfernen"
                     Click="RemoveLocalIncomingMappingButton_OnClick" />
+
+            <TextBlock Grid.Row="21"
+                       Grid.ColumnSpan="4"
+                       Margin="0,18,0,0"
+                       Text="Core-Passwort"
+                       FontWeight="SemiBold" />
+            <TextBlock Grid.Row="22"
+                       Margin="0,12,12,0"
+                       Text="Neues Passwort"
+                       VerticalAlignment="Center" />
+            <Grid Grid.Row="22"
+                  Grid.Column="1"
+                  Grid.ColumnSpan="3"
+                  Margin="0,8,0,0"
+                  ColumnDefinitions="*,*,Auto">
+              <TextBox x:Name="NewCorePasswordTextBox"
+                       Margin="0,0,8,0"
+                       PlaceholderText="Neues Passwort"
+                       PasswordChar="●" />
+              <TextBox x:Name="ConfirmCorePasswordTextBox"
+                       Grid.Column="1"
+                       Margin="0,0,8,0"
+                       PlaceholderText="Passwort wiederholen"
+                       PasswordChar="●" />
+              <Button x:Name="ChangeCorePasswordButton"
+                      Grid.Column="2"
+                      MinWidth="130"
+                      Content="Passwort ändern"
+                      Click="ChangeCorePasswordButton_OnClick" />
+            </Grid>
+            <TextBlock Grid.Row="23"
+                       Grid.Column="1"
+                       Grid.ColumnSpan="3"
+                       Classes="muted"
+                       Margin="0,6,0,0"
+                       Text="Das Passwort wird nur an den Core übertragen und nicht in AJCC-X gespeichert."
+                       TextWrapping="Wrap" />
           </Grid>
         </Border>
         </ScrollViewer>

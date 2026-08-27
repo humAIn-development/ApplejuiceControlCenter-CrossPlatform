@@ -141,6 +141,12 @@ public sealed class AppleJuiceCoreClient
             },
             cancellationToken);
 
+    public Task<string> SetPasswordHashAsync(string newPasswordOrMd5, CancellationToken cancellationToken = default)
+        => GetXmlAsync(
+            AjEndpoints.SetPassword,
+            new Dictionary<string, string> { ["newpassword"] = SecurityHelper.ToMd5IfNeeded(newPasswordOrMd5) },
+            cancellationToken);
+
     public Task<string> SetSettingsAsync(
         IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default)

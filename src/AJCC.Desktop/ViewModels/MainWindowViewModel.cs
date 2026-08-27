@@ -1540,6 +1540,46 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return result;
     }
 
+    public async Task<string> ChangeCorePasswordAsync(string newPassword)
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        if (!IsConnected || IsBusy || client is null)
+            throw new InvalidOperationException("Core ist nicht verbunden.");
+
+        string requested = newPassword ?? string.Empty;
+        IsBusy = true;
+        StatusText = "Ändere Core-Passwort ...";
+
+        try
+        {
+            await client.SetPasswordHashAsync(requested).ConfigureAwait(true);
+            client.Password = requested;
+
+            try
+            {
+                await client.GetSettingsXmlAsync().ConfigureAwait(true);
+                StatusText = "Core-Passwort geändert und Verbindung verifiziert. Passwort wurde nicht gespeichert.";
+            }
+            catch (Exception verifyException)
+            {
+                StatusText = "Core-Passwort wurde übertragen, aber die Verbindung mit dem neuen Passwort konnte nicht verifiziert werden: "
+                    + verifyException.Message;
+            }
+
+            return StatusText;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Core-Passwort konnte nicht geändert werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task PauseSelectedDownloadAsync()
     {
         ThrowIfDisposed();

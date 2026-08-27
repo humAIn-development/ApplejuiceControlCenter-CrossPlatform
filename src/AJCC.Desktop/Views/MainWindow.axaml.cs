@@ -353,7 +353,8 @@ public sealed partial class MainWindow : Window
             _viewModel.ApplyCoreIncomingDirectoryAsync,
             () => _viewModel.Downloads.Any(),
             _viewModel.ApplyCoreTemporaryDirectoryAsync,
-            _viewModel.CheckCorePortReachabilityAsync);
+            _viewModel.CheckCorePortReachabilityAsync,
+            _viewModel.ChangeCorePasswordAsync);
         await dialog.ShowDialog<bool>(this);
     }
 
