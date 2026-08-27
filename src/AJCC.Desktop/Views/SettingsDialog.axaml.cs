@@ -18,7 +18,9 @@ public sealed partial class SettingsDialog : Window
     private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
     private Func<bool, Task<bool>>? _applyAutoConnectAsync;
     private Func<string, Task<string>>? _applyCoreNicknameAsync;
+    private Func<int, Task<int>>? _applyCorePortAsync;
     private string _coreNickname = string.Empty;
+    private int _corePort = 8000;
     private bool _coreSettingsWriteRunning;
 
     public SettingsDialog()
@@ -48,7 +50,7 @@ public sealed partial class SettingsDialog : Window
         string nick,
         string incomingDirectory,
         string temporaryDirectory,
-        string corePort,
+        int corePort,
         string xmlPort,
         int maxConnections,
         int maxSourcesPerFile,
@@ -59,7 +61,8 @@ public sealed partial class SettingsDialog : Window
         Func<int, Task<int>>? applyMaxSourcesPerFileAsync,
         Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync,
         Func<bool, Task<bool>>? applyAutoConnectAsync,
-        Func<string, Task<string>>? applyCoreNicknameAsync)
+        Func<string, Task<string>>? applyCoreNicknameAsync,
+        Func<int, Task<int>>? applyCorePortAsync)
     {
         _coreNickname = (nick ?? string.Empty).Trim();
         TextBox? coreNickInput = this.FindControl<TextBox>("CoreNickTextBox");
@@ -67,7 +70,10 @@ public sealed partial class SettingsDialog : Window
             coreNickInput.Text = _coreNickname;
         SetCoreValue("CoreIncomingText", incomingDirectory);
         SetCoreValue("CoreTemporaryText", temporaryDirectory);
-        SetCoreValue("CorePortText", corePort);
+        _corePort = corePort is >= 1 and <= 65535 ? corePort : 8000;
+        TextBox? corePortInput = this.FindControl<TextBox>("CorePortTextBox");
+        if (corePortInput is not null)
+            corePortInput.Text = _corePort.ToString(System.Globalization.CultureInfo.InvariantCulture);
         SetCoreValue("CoreXmlPortText", xmlPort);
 
         _applyMaxConnectionsAsync = applyMaxConnectionsAsync;
@@ -75,6 +81,7 @@ public sealed partial class SettingsDialog : Window
         _applyMaxNewConnectionsPerTurnAsync = applyMaxNewConnectionsPerTurnAsync;
         _applyAutoConnectAsync = applyAutoConnectAsync;
         _applyCoreNicknameAsync = applyCoreNicknameAsync;
+        _applyCorePortAsync = applyCorePortAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
@@ -95,6 +102,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyCoreNickButton = this.FindControl<Button>("ApplyCoreNickButton");
         if (applyCoreNickButton is not null)
             applyCoreNickButton.IsEnabled = canWriteCoreSettings && _applyCoreNicknameAsync is not null;
+
+        Button? applyCorePortButton = this.FindControl<Button>("ApplyCorePortButton");
+        if (applyCorePortButton is not null)
+            applyCorePortButton.IsEnabled = canWriteCoreSettings && _applyCorePortAsync is not null;
 
         Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
         if (applyButton is not null)
@@ -187,6 +198,80 @@ public sealed partial class SettingsDialog : Window
             _coreSettingsWriteRunning = false;
             if (applyButton is not null)
                 applyButton.IsEnabled = _applyCoreNicknameAsync is not null;
+        }
+    }
+
+
+    private async void ApplyCorePortButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyCorePortAsync is null)
+            return;
+
+        TextBox? input = this.FindControl<TextBox>("CorePortTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyCorePortButton");
+        string raw = (input?.Text ?? string.Empty).Trim();
+
+        if (!int.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out int requested)
+            || requested is < 1 or > 65535)
+        {
+            if (status is not null)
+                status.Text = "Bitte einen Core-Port zwischen 1 und 65535 eingeben.";
+            return;
+        }
+
+        if (requested == _corePort)
+        {
+            if (status is not null)
+                status.Text = "Der Core-Port entspricht bereits dem vom Core gemeldeten Wert.";
+            return;
+        }
+
+        ConfirmDialog firstConfirm = new(
+            "Kritische Core-Werte übernehmen",
+            $"Core-Port wirklich ändern?\n\nAktuell: {_corePort}\nNeu: {requested}\n\nFortfahren?",
+            "Fortfahren",
+            "Abbrechen");
+        if (!await firstConfirm.ShowDialog<bool>(this))
+            return;
+
+        ConfirmDialog secondConfirm = new(
+            "Core-Wert wirklich übernehmen?",
+            "Letzte Bestätigung: Core-Port jetzt wirklich an den Core schreiben?\n\nDiese Aktion sollte nicht beiläufig getestet werden.",
+            "Jetzt schreiben",
+            "Zurück");
+        if (!await secondConfirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage Core-Port an den Core …";
+
+        try
+        {
+            int effective = await _applyCorePortAsync(requested);
+            _corePort = effective;
+            if (input is not null)
+                input.Text = effective.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: Core-Port {effective}.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyCorePortAsync is not null;
         }
     }
 

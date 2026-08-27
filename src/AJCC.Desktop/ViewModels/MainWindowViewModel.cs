@@ -280,6 +280,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string CoreIncomingDirectory => string.IsNullOrWhiteSpace(_state?.Settings.IncomingDirectory) ? "-" : _state.Settings.IncomingDirectory;
     public string CoreTemporaryDirectory => string.IsNullOrWhiteSpace(_state?.Settings.TemporaryDirectory) ? "-" : _state.Settings.TemporaryDirectory;
     public string CorePortText => _state is null || _state.Settings.Port <= 0 ? "-" : _state.Settings.Port.ToString();
+    public int CorePortValue => (_state?.Settings.Port ?? 0) > 0 ? _state!.Settings.Port : 8000;
     public string CoreXmlPortText => _state is null || _state.Settings.XmlPort <= 0 ? "-" : _state.Settings.XmlPort.ToString();
     public int CoreMaxConnections => Math.Max(0, _state?.Settings.MaxConnections ?? 0);
     public int CoreMaxSourcesPerFile => Math.Max(0, _state?.Settings.MaxSourcesPerFile ?? 0);
@@ -583,6 +584,51 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "Benutzername konnte nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+
+    public async Task<int> ApplyCorePortAsync(int corePort)
+    {
+        ThrowIfDisposed();
+        if (corePort is < 1 or > 65535)
+            throw new ArgumentOutOfRangeException(nameof(corePort), "Core-Port muss zwischen 1 und 65535 liegen.");
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { Port = corePort });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CorePortText));
+            OnPropertyChanged(nameof(CorePortValue));
+
+            int effective = state.Settings.Port;
+            if (effective != corePort)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung Port={effective} statt Port={corePort}.");
+
+            StatusText = $"Core-Port vom Core bestätigt: {effective}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Core-Port konnte nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally

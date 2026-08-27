@@ -94,12 +94,19 @@
                        Margin="0,8,12,0"
                        Text="Core-Port"
                        VerticalAlignment="Center" />
-            <TextBlock x:Name="CorePortText"
-                       Grid.Row="6"
-                       Grid.Column="1"
-                       Grid.ColumnSpan="3"
-                       Margin="0,8,0,0"
-                       Text="-" />
+            <TextBox x:Name="CorePortTextBox"
+                     Grid.Row="6"
+                     Grid.Column="1"
+                     Margin="0,8,8,0"
+                     MinWidth="120" />
+            <Button x:Name="ApplyCorePortButton"
+                    Grid.Row="6"
+                    Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    MinWidth="150"
+                    Margin="0,8,0,0"
+                    Content="An Core übertragen"
+                    Click="ApplyCorePortButton_OnClick" />
 
             <TextBlock Grid.Row="7"
                        Margin="0,8,12,0"
