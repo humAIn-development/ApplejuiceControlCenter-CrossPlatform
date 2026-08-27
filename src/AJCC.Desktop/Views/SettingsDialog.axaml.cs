@@ -1,3 +1,4 @@
+using AJCC.Core.Models;
 using AJCC.Desktop.Services;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -20,9 +21,12 @@ public sealed partial class SettingsDialog : Window
     private Func<string, Task<string>>? _applyCoreNicknameAsync;
     private Func<int, Task<int>>? _applyCorePortAsync;
     private Func<int, Task<int>>? _applyCoreXmlPortAsync;
+    private Func<string?, Task<AjDirectoryListResult>>? _loadCoreDirectoryAsync;
+    private Func<string, Task<string>>? _applyCoreIncomingDirectoryAsync;
     private Func<long, Task<long>>? _applyMaxDownloadAsync;
     private Func<long, int, Task<(long MaxUploadKb, int SpeedPerSlot)>>? _applyUploadLimitsAsync;
     private string _coreNickname = string.Empty;
+    private string _coreIncomingDirectory = string.Empty;
     private int _corePort = 8000;
     private int _coreXmlPort = 9851;
     private bool _coreSettingsWriteRunning;
@@ -72,13 +76,18 @@ public sealed partial class SettingsDialog : Window
         Func<bool, Task<bool>>? applyAutoConnectAsync,
         Func<string, Task<string>>? applyCoreNicknameAsync,
         Func<int, Task<int>>? applyCorePortAsync,
-        Func<int, Task<int>>? applyCoreXmlPortAsync)
+        Func<int, Task<int>>? applyCoreXmlPortAsync,
+        Func<string?, Task<AjDirectoryListResult>>? loadCoreDirectoryAsync,
+        Func<string, Task<string>>? applyCoreIncomingDirectoryAsync)
     {
         _coreNickname = (nick ?? string.Empty).Trim();
+        _coreIncomingDirectory = string.IsNullOrWhiteSpace(incomingDirectory)
+            ? string.Empty
+            : incomingDirectory.Trim();
         TextBox? coreNickInput = this.FindControl<TextBox>("CoreNickTextBox");
         if (coreNickInput is not null)
             coreNickInput.Text = _coreNickname;
-        SetCoreValue("CoreIncomingText", incomingDirectory);
+        SetCoreValue("CoreIncomingText", _coreIncomingDirectory);
         SetCoreValue("CoreTemporaryText", temporaryDirectory);
         _corePort = corePort is >= 1 and <= 65535 ? corePort : 8000;
         TextBox? corePortInput = this.FindControl<TextBox>("CorePortTextBox");
@@ -96,6 +105,8 @@ public sealed partial class SettingsDialog : Window
         _applyCoreNicknameAsync = applyCoreNicknameAsync;
         _applyCorePortAsync = applyCorePortAsync;
         _applyCoreXmlPortAsync = applyCoreXmlPortAsync;
+        _loadCoreDirectoryAsync = loadCoreDirectoryAsync;
+        _applyCoreIncomingDirectoryAsync = applyCoreIncomingDirectoryAsync;
         _applyMaxDownloadAsync = applyMaxDownloadAsync;
         _applyUploadLimitsAsync = applyUploadLimitsAsync;
 
@@ -127,6 +138,14 @@ public sealed partial class SettingsDialog : Window
         Button? applyCoreNickButton = this.FindControl<Button>("ApplyCoreNickButton");
         if (applyCoreNickButton is not null)
             applyCoreNickButton.IsEnabled = canWriteCoreSettings && _applyCoreNicknameAsync is not null;
+
+        Button? changeCoreIncomingButton = this.FindControl<Button>("ChangeCoreIncomingButton");
+        if (changeCoreIncomingButton is not null)
+        {
+            changeCoreIncomingButton.IsEnabled = canWriteCoreSettings
+                && _loadCoreDirectoryAsync is not null
+                && _applyCoreIncomingDirectoryAsync is not null;
+        }
 
         Button? applyCorePortButton = this.FindControl<Button>("ApplyCorePortButton");
         if (applyCorePortButton is not null)
@@ -211,6 +230,88 @@ public sealed partial class SettingsDialog : Window
         TextBlock? text = this.FindControl<TextBlock>(controlName);
         if (text is not null)
             text.Text = string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private async void ChangeCoreIncomingButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning
+            || _loadCoreDirectoryAsync is null
+            || _applyCoreIncomingDirectoryAsync is null)
+        {
+            return;
+        }
+
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? changeButton = this.FindControl<Button>("ChangeCoreIncomingButton");
+
+        CoreDirectoryPickerDialog picker = new(_loadCoreDirectoryAsync);
+        bool selected = await picker.ShowDialog<bool>(this);
+        if (!selected)
+            return;
+
+        string requested = picker.SelectedDirectory.Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(requested) || requested.Any(char.IsControl))
+        {
+            if (status is not null)
+                status.Text = "Der ausgewählte Core-Incoming-Pfad ist ungültig.";
+            return;
+        }
+
+        if (string.Equals(requested, _coreIncomingDirectory, StringComparison.Ordinal))
+        {
+            if (status is not null)
+                status.Text = "Core-Incoming entspricht bereits dem vom Core gemeldeten Wert.";
+            return;
+        }
+
+        string currentDisplay = string.IsNullOrWhiteSpace(_coreIncomingDirectory)
+            ? "(leer)"
+            : _coreIncomingDirectory;
+
+        ConfirmDialog firstConfirm = new(
+            "Kritische Core-Werte übernehmen",
+            $"Core-Incoming wirklich ändern?\n\nAktuell: {currentDisplay}\nNeu: {requested}\n\nFortfahren?",
+            "Fortfahren",
+            "Abbrechen");
+        if (!await firstConfirm.ShowDialog<bool>(this))
+            return;
+
+        ConfirmDialog secondConfirm = new(
+            "Core-Wert wirklich übernehmen?",
+            "Letzte Bestätigung: Core-Incoming jetzt wirklich an den Core schreiben?\n\nNur der ausgewählte Core-Pfad wird als Override gesetzt; alle anderen Legacy-Settings bleiben erhalten.",
+            "Jetzt schreiben",
+            "Zurück");
+        if (!await secondConfirm.ShowDialog<bool>(this))
+            return;
+
+        _coreSettingsWriteRunning = true;
+        if (changeButton is not null)
+            changeButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Uebertrage Core-Incoming an den Core ...";
+
+        try
+        {
+            string effective = await _applyCoreIncomingDirectoryAsync(requested);
+            _coreIncomingDirectory = effective;
+            SetCoreValue("CoreIncomingText", effective);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: Core-Incoming {effective}.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (changeButton is not null)
+            {
+                changeButton.IsEnabled = _loadCoreDirectoryAsync is not null
+                    && _applyCoreIncomingDirectoryAsync is not null;
+            }
+        }
     }
 
     private void InitializeComponent()

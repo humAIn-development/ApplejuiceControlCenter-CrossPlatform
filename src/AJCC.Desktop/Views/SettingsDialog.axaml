@@ -73,10 +73,17 @@
             <TextBlock x:Name="CoreIncomingText"
                        Grid.Row="4"
                        Grid.Column="1"
-                       Grid.ColumnSpan="3"
-                       Margin="0,8,0,0"
+                       Margin="0,8,8,0"
                        Text="-"
                        TextTrimming="CharacterEllipsis" />
+            <Button x:Name="ChangeCoreIncomingButton"
+                    Grid.Row="4"
+                    Grid.Column="2"
+                    Grid.ColumnSpan="2"
+                    MinWidth="150"
+                    Margin="0,8,0,0"
+                    Content="Auswählen…"
+                    Click="ChangeCoreIncomingButton_OnClick" />
 
             <TextBlock Grid.Row="5"
                        Margin="0,8,12,0"

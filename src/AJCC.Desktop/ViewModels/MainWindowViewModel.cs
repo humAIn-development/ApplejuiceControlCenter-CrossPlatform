@@ -377,6 +377,52 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         return AjXmlParser.ParseDirectoryList(xml);
     }
 
+    public async Task<string> ApplyCoreIncomingDirectoryAsync(string incomingDirectory)
+    {
+        ThrowIfDisposed();
+
+        string requested = (incomingDirectory ?? string.Empty).Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(requested) || requested.Any(char.IsControl))
+            throw new ArgumentException("Core-Incoming muss ein nichtleerer, strukturell gültiger Core-Pfad sein.", nameof(incomingDirectory));
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { IncomingDirectory = requested });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreIncomingDirectory));
+
+            string effective = state.Settings.IncomingDirectory?.Trim() ?? string.Empty;
+            if (!string.Equals(effective, requested, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"Core meldet nach der Übertragung IncomingDirectory='{effective}' statt '{requested}'.");
+
+            StatusText = $"Core-Incoming vom Core bestätigt: {effective}.";
+            return effective;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Core-Incoming konnte nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task<int> ApplyMaxConnectionsAsync(int maxConnections)
     {
         ThrowIfDisposed();

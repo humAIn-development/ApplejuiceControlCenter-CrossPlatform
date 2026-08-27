@@ -92,7 +92,9 @@ public sealed partial class MainWindow : Window
             _viewModel.ApplyAutoConnectAsync,
             _viewModel.ApplyCoreNicknameAsync,
             _viewModel.ApplyCorePortAsync,
-            _viewModel.ApplyCoreXmlPortAsync);
+            _viewModel.ApplyCoreXmlPortAsync,
+            _viewModel.LoadCoreDirectoryAsync,
+            _viewModel.ApplyCoreIncomingDirectoryAsync);
         await dialog.ShowDialog<bool>(this);
     }
 
