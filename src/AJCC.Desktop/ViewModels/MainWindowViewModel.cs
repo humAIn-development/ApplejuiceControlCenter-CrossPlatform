@@ -22,9 +22,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly ServerReconnectRestrictionState _serverReconnectRestriction = new();
     private readonly DispatcherTimer _serverReconnectRestrictionTimer = new();
     private readonly DispatcherTimer _serverReachabilityTimer = new();
+    private readonly DispatcherTimer _externalCorePortTestTimer = new();
     private static readonly TimeSpan ServerReachabilityProbeInterval = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan ServerReachabilityProbeTimeout = TimeSpan.FromMilliseconds(1500);
     private static readonly TimeSpan ServerReachabilityProbeFreshness = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan ExternalCorePortTestInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan ExternalCorePortTestTimeout = TimeSpan.FromMilliseconds(2500);
     private const int UploadSpeedHistoryLength = 48;
     private static readonly TimeSpan UploadSpeedHistoryMinimumSampleDistance = TimeSpan.FromMilliseconds(1500);
@@ -49,6 +51,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _serverReconnectAutoReconnectAttemptRunning;
     private bool _isServerReachabilityProbeRunning;
     private int _serverReachabilityNextIndex;
+    private bool _externalCorePortTestRunning;
     private bool _disposed;
 
     private readonly record struct UploadSpeedSampleSignature(
@@ -68,6 +71,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _serverReconnectRestrictionTimer.Start();
         _serverReachabilityTimer.Interval = ServerReachabilityProbeInterval;
         _serverReachabilityTimer.Tick += ServerReachabilityTimerOnTick;
+        _externalCorePortTestTimer.Interval = ExternalCorePortTestInterval;
+        _externalCorePortTestTimer.Tick += ExternalCorePortTestTimerOnTick;
     }
 
     public string EndpointText
@@ -2309,6 +2314,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _ = ProbeNextServerReachabilityAsync();
     }
 
+    private void ExternalCorePortTestTimerOnTick(object? sender, EventArgs e)
+    {
+        if (_disposed || !IsConnected || _externalCorePortTestRunning)
+            return;
+
+        _ = RunAutomaticCorePortReachabilityAsync();
+    }
+
     private void StartServerReachabilityTimer()
     {
         if (_disposed || !IsConnected)
@@ -2316,12 +2329,31 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         _serverReachabilityTimer.Start();
         _ = ProbeNextServerReachabilityAsync();
+        _externalCorePortTestTimer.Start();
+        _ = RunAutomaticCorePortReachabilityAsync();
     }
 
     private void StopServerReachabilityTimer()
     {
         _serverReachabilityTimer.Stop();
+        _externalCorePortTestTimer.Stop();
         _serverReachabilityNextIndex = 0;
+    }
+
+    private async Task RunAutomaticCorePortReachabilityAsync()
+    {
+        if (_externalCorePortTestRunning || _disposed || !IsConnected)
+            return;
+
+        _externalCorePortTestRunning = true;
+        try
+        {
+            await CheckCorePortReachabilityAsync().ConfigureAwait(true);
+        }
+        finally
+        {
+            _externalCorePortTestRunning = false;
+        }
     }
 
     private async Task ProbeNextServerReachabilityAsync()
