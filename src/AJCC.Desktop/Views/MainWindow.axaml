@@ -49,7 +49,7 @@
           </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" Margin="0,0,10,0">
+        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,10,0">
           <ComboBox x:Name="CoreProfileComboBox"
                     IsEnabled="{Binding CanEditConnectionSettings}"
                     SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
@@ -61,6 +61,13 @@
                   Content="+"
                   ToolTip.Tip="Aktuellen Core-Endpunkt als Profil speichern"
                   Click="SaveCoreProfileButton_OnClick" />
+          <Button Grid.Column="2"
+                  Width="34"
+                  Margin="6,0,0,0"
+                  IsEnabled="{Binding CanEditConnectionSettings}"
+                  Content="-"
+                  ToolTip.Tip="Ausgewähltes Core-Profil löschen"
+                  Click="DeleteCoreProfileButton_OnClick" />
         </Grid>
 
         <TextBox Grid.Column="2"

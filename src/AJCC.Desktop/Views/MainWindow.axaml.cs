@@ -192,6 +192,66 @@ public sealed partial class MainWindow : Window
             $"Core-Profil gespeichert: {name} · Passwort wird nicht gespeichert.");
     }
 
+    private void DeleteCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanEditConnectionSettings)
+            return;
+
+        ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+        if (comboBox?.SelectedItem is not CoreProfileEntry profile)
+        {
+            _viewModel.SetStatusMessage("Kein Core-Profil zum Löschen ausgewählt.");
+            return;
+        }
+
+        if (_coreProfiles.Count <= 1)
+        {
+            _viewModel.SetStatusMessage("Mindestens ein Core-Profil muss erhalten bleiben.");
+            return;
+        }
+
+        string deletedName = profile.Name;
+        int removedIndex = Math.Max(0, comboBox.SelectedIndex);
+        bool saveSucceeded;
+        string saveError;
+
+        _loadingCoreProfiles = true;
+        try
+        {
+            _coreProfiles.Remove(profile);
+
+            int fallbackIndex = Math.Min(removedIndex, _coreProfiles.Count - 1);
+            CoreProfileEntry fallback = _coreProfiles[fallbackIndex];
+            _defaultCoreProfileId = fallback.Id;
+            comboBox.SelectedItem = fallback;
+            _viewModel.EndpointText = fallback.Endpoint;
+
+            TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
+            if (passwordInput is not null)
+                passwordInput.Text = string.Empty;
+
+            saveSucceeded = _coreProfileStore.TrySave(
+                _coreProfiles,
+                _defaultCoreProfileId,
+                out saveError);
+        }
+        finally
+        {
+            _loadingCoreProfiles = false;
+        }
+
+        if (!saveSucceeded)
+        {
+            LoadCoreProfiles();
+            _viewModel.SetStatusMessage(
+                $"Core-Profil konnte nicht gelöscht werden: {saveError}");
+            return;
+        }
+
+        _viewModel.SetStatusMessage(
+            $"Core-Profil gelöscht: {deletedName}.");
+    }
+
     private async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {
         TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
