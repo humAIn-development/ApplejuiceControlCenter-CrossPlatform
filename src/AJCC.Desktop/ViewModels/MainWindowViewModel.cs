@@ -301,6 +301,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public int CoreMaxNewConnectionsPerTurn => (_state?.Settings.MaxNewConnectionsPerTurn ?? 0) > 0
         ? _state!.Settings.MaxNewConnectionsPerTurn
         : 50;
+    public long CoreMaxDownloadKb => Math.Max(0L, (_state?.Settings.MaxDownload ?? 0L) / 1024L);
     public bool CoreAutoConnect => _state?.Settings.AutoConnect ?? false;
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
@@ -689,6 +690,51 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             StatusText = "XML-Port konnte nicht übertragen werden: " + ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task<long> ApplyMaxDownloadAsync(long maxDownloadKb)
+    {
+        ThrowIfDisposed();
+        if (maxDownloadKb is < 0 or > 100_000_000)
+            throw new ArgumentOutOfRangeException(nameof(maxDownloadKb), "Max. Downloadgeschwindigkeit muss zwischen 0 und 100000000 kb/s liegen.");
+
+        long coreValue = checked(maxDownloadKb * 1024L);
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || client is null || state is null)
+            throw new InvalidOperationException("Keine aktive Core-Verbindung.");
+        if (IsBusy)
+            throw new InvalidOperationException("AJCC verarbeitet gerade eine andere Core-Aktion.");
+
+        IsBusy = true;
+        try
+        {
+            IReadOnlyDictionary<string, string> parameters = AjSettingsParameters.BuildComplete(
+                state.Settings,
+                new AjSettingsOverrides { MaxDownload = coreValue });
+            await client.SetSettingsAsync(parameters).ConfigureAwait(true);
+
+            string settingsXml = await client.GetSettingsXmlAsync().ConfigureAwait(true);
+            state.Settings = AjXmlParser.ParseSettings(settingsXml);
+            OnPropertyChanged(nameof(CoreMaxDownloadKb));
+
+            long effectiveCoreValue = Math.Max(0L, state.Settings.MaxDownload);
+            if (effectiveCoreValue != coreValue)
+                throw new InvalidOperationException($"Core meldet nach der Übertragung MaxDownload={effectiveCoreValue} statt MaxDownload={coreValue}.");
+
+            long effectiveKb = effectiveCoreValue / 1024L;
+            StatusText = $"Max. Download vom Core bestätigt: {effectiveKb} kb/s.";
+            return effectiveKb;
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Max. Download konnte nicht übertragen werden: " + ex.Message;
             throw;
         }
         finally

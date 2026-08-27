@@ -20,6 +20,7 @@ public sealed partial class SettingsDialog : Window
     private Func<string, Task<string>>? _applyCoreNicknameAsync;
     private Func<int, Task<int>>? _applyCorePortAsync;
     private Func<int, Task<int>>? _applyCoreXmlPortAsync;
+    private Func<long, Task<long>>? _applyMaxDownloadAsync;
     private string _coreNickname = string.Empty;
     private int _corePort = 8000;
     private int _coreXmlPort = 9851;
@@ -55,11 +56,13 @@ public sealed partial class SettingsDialog : Window
         int corePort,
         int xmlPort,
         int maxConnections,
+        long maxDownloadKb,
         int maxSourcesPerFile,
         int maxNewConnectionsPerTurn,
         bool autoConnect,
         bool canWriteCoreSettings,
         Func<int, Task<int>>? applyMaxConnectionsAsync,
+        Func<long, Task<long>>? applyMaxDownloadAsync,
         Func<int, Task<int>>? applyMaxSourcesPerFileAsync,
         Func<int, Task<int>>? applyMaxNewConnectionsPerTurnAsync,
         Func<bool, Task<bool>>? applyAutoConnectAsync,
@@ -89,10 +92,15 @@ public sealed partial class SettingsDialog : Window
         _applyCoreNicknameAsync = applyCoreNicknameAsync;
         _applyCorePortAsync = applyCorePortAsync;
         _applyCoreXmlPortAsync = applyCoreXmlPortAsync;
+        _applyMaxDownloadAsync = applyMaxDownloadAsync;
 
         TextBox? maxConnectionsInput = this.FindControl<TextBox>("CoreMaxConnectionsTextBox");
         if (maxConnectionsInput is not null)
             maxConnectionsInput.Text = Math.Max(0, maxConnections).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        TextBox? maxDownloadInput = this.FindControl<TextBox>("CoreMaxDownloadTextBox");
+        if (maxDownloadInput is not null)
+            maxDownloadInput.Text = Math.Max(0L, maxDownloadKb).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         TextBox? maxSourcesInput = this.FindControl<TextBox>("CoreMaxSourcesPerFileTextBox");
         if (maxSourcesInput is not null)
@@ -121,6 +129,10 @@ public sealed partial class SettingsDialog : Window
         Button? applyButton = this.FindControl<Button>("ApplyCoreSettingsButton");
         if (applyButton is not null)
             applyButton.IsEnabled = canWriteCoreSettings && _applyMaxConnectionsAsync is not null;
+
+        Button? applyMaxDownloadButton = this.FindControl<Button>("ApplyMaxDownloadButton");
+        if (applyMaxDownloadButton is not null)
+            applyMaxDownloadButton.IsEnabled = canWriteCoreSettings && _applyMaxDownloadAsync is not null;
 
         Button? applyMaxSourcesButton = this.FindControl<Button>("ApplyMaxSourcesPerFileButton");
         if (applyMaxSourcesButton is not null)
@@ -358,6 +370,55 @@ public sealed partial class SettingsDialog : Window
             _coreSettingsWriteRunning = false;
             if (applyButton is not null)
                 applyButton.IsEnabled = _applyCoreXmlPortAsync is not null;
+        }
+    }
+
+    private async void ApplyMaxDownloadButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_coreSettingsWriteRunning || _applyMaxDownloadAsync is null)
+            return;
+
+        TextBox? input = this.FindControl<TextBox>("CoreMaxDownloadTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("CoreSettingsStatusText");
+        Button? applyButton = this.FindControl<Button>("ApplyMaxDownloadButton");
+        string raw = (input?.Text ?? string.Empty).Trim();
+
+        if (!long.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out long requested)
+            || requested is < 0 or > 100_000_000)
+        {
+            if (status is not null)
+                status.Text = "Bitte eine ganze Zahl zwischen 0 und 100000000 kb/s eingeben.";
+            return;
+        }
+
+        _coreSettingsWriteRunning = true;
+        if (applyButton is not null)
+            applyButton.IsEnabled = false;
+        if (status is not null)
+            status.Text = "Übertrage Max. Download an den Core …";
+
+        try
+        {
+            long effective = await _applyMaxDownloadAsync(requested);
+            if (input is not null)
+                input.Text = effective.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (status is not null)
+                status.Text = $"Vom Core bestätigt: Max. Download {effective} kb/s.";
+        }
+        catch (Exception ex)
+        {
+            if (status is not null)
+                status.Text = "Übertragung fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _coreSettingsWriteRunning = false;
+            if (applyButton is not null)
+                applyButton.IsEnabled = _applyMaxDownloadAsync is not null;
         }
     }
 
