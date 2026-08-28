@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private readonly CoreProfileStore _coreProfileStore = new();
     private readonly ObservableCollection<CoreProfileEntry> _coreProfiles = new();
+    private readonly Dictionary<string, string> _coreProfileSessionPasswords = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _coreProfileReachabilityTimer = new();
     private static readonly TimeSpan CoreProfileReachabilityTimeout = TimeSpan.FromMilliseconds(2500);
     private string _defaultCoreProfileId = string.Empty;
@@ -132,10 +133,14 @@ public sealed partial class MainWindow : Window
 
         TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
         if (passwordInput is not null)
-            passwordInput.Text = string.Empty;
+        {
+            passwordInput.Text = _coreProfileSessionPasswords.TryGetValue(profile.Id, out string? sessionPassword)
+                ? sessionPassword
+                : string.Empty;
+        }
 
         _viewModel.SetStatusMessage(
-            $"Core-Profil ausgewählt: {profile.Name} · Standard bleibt unverändert · Passwort bleibt Laufzeiteingabe.");
+            $"Core-Profil ausgewählt: {profile.Name} · Standard bleibt unverändert · Passwort wird höchstens für diese Sitzung gehalten.");
     }
 
     private async void CoreProfileComboBox_OnDropDownOpened(object? sender, EventArgs e)
@@ -336,6 +341,7 @@ public sealed partial class MainWindow : Window
         }
 
         string deletedName = profile.Name;
+        _coreProfileSessionPasswords.Remove(profile.Id);
         bool deletedWasDefault = string.Equals(
             profile.Id,
             _defaultCoreProfileId,
@@ -386,16 +392,28 @@ public sealed partial class MainWindow : Window
     private async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {
         TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
+        ComboBox? profileComboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+        CoreProfileEntry? selectedProfile = profileComboBox?.SelectedItem as CoreProfileEntry;
         string password = passwordInput?.Text ?? string.Empty;
+        bool wasConnected = _viewModel.IsConnected;
 
         try
         {
             await _viewModel.ToggleConnectionAsync(password);
+
+            if (!wasConnected && _viewModel.IsConnected && selectedProfile is not null)
+                _coreProfileSessionPasswords[selectedProfile.Id] = password;
         }
         finally
         {
             if (passwordInput is not null)
-                passwordInput.Text = string.Empty;
+            {
+                passwordInput.Text = !_viewModel.IsConnected
+                    && selectedProfile is not null
+                    && _coreProfileSessionPasswords.TryGetValue(selectedProfile.Id, out string? sessionPassword)
+                        ? sessionPassword
+                        : string.Empty;
+            }
         }
     }
 
