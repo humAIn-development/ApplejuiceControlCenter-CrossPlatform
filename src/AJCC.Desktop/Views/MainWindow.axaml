@@ -50,9 +50,9 @@
           </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,10,0">
+        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="0,0,10,0">
           <ComboBox x:Name="CoreProfileComboBox"
-                    IsEnabled="{Binding CanEditConnectionSettings}"
+                    IsEnabled="{Binding CanToggleConnection}"
                     SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
                     DropDownOpened="CoreProfileComboBox_OnDropDownOpened"
                     ToolTip.Tip="Gespeichertes Core-Profil auswählen. Der Laufzeitstatus prüft nur die TCP-Erreichbarkeit des Endpunkts.">
@@ -98,6 +98,13 @@
                   Content="-"
                   ToolTip.Tip="Ausgewähltes Core-Profil löschen"
                   Click="DeleteCoreProfileButton_OnClick" />
+          <Button Grid.Column="5"
+                  Width="34"
+                  Margin="6,0,0,0"
+                  IsEnabled="{Binding IsConnected}"
+                  Content="⇄"
+                  ToolTip.Tip="Zum ausgewählten Core-Profil wechseln"
+                  Click="SwitchCoreProfileButton_OnClick" />
         </Grid>
 
         <TextBox Grid.Column="2"

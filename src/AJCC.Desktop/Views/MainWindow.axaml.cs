@@ -123,10 +123,20 @@ public sealed partial class MainWindow : Window
 
     private void CoreProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_loadingCoreProfiles || !_viewModel.CanEditConnectionSettings)
+        if (_loadingCoreProfiles)
             return;
 
         if (sender is not ComboBox comboBox || comboBox.SelectedItem is not CoreProfileEntry profile)
+            return;
+
+        if (_viewModel.IsConnected)
+        {
+            _viewModel.SetStatusMessage(
+                $"Core-Zielprofil ausgewählt: {profile.Name} · Wechsel über ⇄. Aktive Verbindung bleibt bis dahin unverändert.");
+            return;
+        }
+
+        if (!_viewModel.CanEditConnectionSettings)
             return;
 
         _viewModel.EndpointText = profile.Endpoint;
@@ -389,6 +399,106 @@ public sealed partial class MainWindow : Window
             $"Core-Profil gelöscht: {deletedName}.");
     }
 
+    private async void SwitchCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsConnected || !_viewModel.CanToggleConnection)
+            return;
+
+        ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+        if (comboBox?.SelectedItem is not CoreProfileEntry profile)
+        {
+            _viewModel.SetStatusMessage("Kein Core-Zielprofil ausgewählt.");
+            return;
+        }
+
+        string activeEndpoint = CoreProfileStore.TryNormalizeEndpoint(_viewModel.EndpointText);
+        string targetEndpoint = CoreProfileStore.TryNormalizeEndpoint(profile.Endpoint);
+        if (string.Equals(activeEndpoint, targetEndpoint, StringComparison.OrdinalIgnoreCase))
+        {
+            _viewModel.SetStatusMessage($"Core-Profil ist bereits aktiv: {profile.Name}.");
+            return;
+        }
+
+        string password;
+        if (_coreProfileSessionPasswords.TryGetValue(profile.Id, out string? cachedPassword))
+        {
+            password = cachedPassword;
+        }
+        else
+        {
+            CoreProfilePasswordDialog passwordDialog = new(profile.Name, profile.Endpoint);
+            if (!await passwordDialog.ShowDialog<bool>(this))
+                return;
+
+            password = passwordDialog.Password;
+        }
+
+        CoreEndpoint parsedTarget;
+        try
+        {
+            parsedTarget = CoreEndpoint.Parse(profile.Endpoint);
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage("Core-Zielprofil ist ungültig: " + ex.Message);
+            return;
+        }
+
+        _viewModel.SetStatusMessage($"Prüfe Ziel-Core vor dem Wechsel: {profile.Name} ...");
+
+        ConnectionTestResult connection;
+        try
+        {
+            using HttpClient testHttpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+            AppleJuiceCoreClient testClient = new(parsedTarget, password, testHttpClient);
+            connection = await testClient.TestConnectionAsync();
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage("Core-Zielprofil konnte nicht geprüft werden: " + ex.Message);
+            return;
+        }
+
+        if (!connection.Success)
+        {
+            _viewModel.SetStatusMessage(
+                $"Core-Zielprofil nicht erreichbar oder Anmeldung abgewiesen: {connection.Message}");
+            return;
+        }
+
+        ConfirmDialog confirm = new(
+            "Core-Profil wechseln",
+            $"Aktiven Core wechseln?\n\nVon: {activeEndpoint}\nZu: {profile.Name} · {parsedTarget.BaseUri}\n\nDie sichtbaren Core-Daten werden vollständig geleert und vom Ziel-Core neu geladen.",
+            "Wechseln",
+            "Abbrechen");
+        if (!await confirm.ShowDialog<bool>(this))
+            return;
+
+        await _viewModel.ToggleConnectionAsync(string.Empty);
+        if (_viewModel.IsConnected)
+        {
+            _viewModel.SetStatusMessage("Core-Profilwechsel abgebrochen: aktive Verbindung konnte nicht getrennt werden.");
+            return;
+        }
+
+        _viewModel.EndpointText = parsedTarget.BaseUri.ToString();
+        await _viewModel.ToggleConnectionAsync(password);
+
+        TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
+        if (_viewModel.IsConnected)
+        {
+            _coreProfileSessionPasswords[profile.Id] = password;
+            if (passwordInput is not null)
+                passwordInput.Text = string.Empty;
+
+            _viewModel.SetStatusMessage($"Core-Profil gewechselt: {profile.Name} · vollständiger State wurde neu geladen.");
+        }
+        else if (passwordInput is not null)
+        {
+            passwordInput.Text = password;
+        }
+    }
+
     private async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {
         TextBox? passwordInput = this.FindControl<TextBox>("PasswordInput");
@@ -406,6 +516,9 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            if (wasConnected && !_viewModel.IsConnected && selectedProfile is not null)
+                _viewModel.EndpointText = selectedProfile.Endpoint;
+
             if (passwordInput is not null)
             {
                 passwordInput.Text = !_viewModel.IsConnected
