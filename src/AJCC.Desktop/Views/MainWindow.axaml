@@ -28,11 +28,11 @@
     <Border Grid.Row="0"
             Classes="panel"
             Padding="10">
-      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,1.2*,2.0*,1.1*,Auto,Auto">
+      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,*,Auto,Auto">
         <Border Grid.Column="0"
                 Classes="connectionBadge"
                 Classes.online="{Binding IsConnected}"
-                Margin="0,0,10,0">
+                Margin="0,0,14,0">
           <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
             <TextBlock Text="●"
                        Classes="connectionDot"
@@ -50,12 +50,19 @@
           </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="0,0,10,0">
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Spacing="8">
+          <TextBlock Text="Core:"
+                     Classes="muted"
+                     VerticalAlignment="Center" />
           <ComboBox x:Name="CoreProfileComboBox"
+                    Width="250"
                     IsEnabled="{Binding CanToggleConnection}"
                     SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
                     DropDownOpened="CoreProfileComboBox_OnDropDownOpened"
-                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Der Laufzeitstatus prüft nur die TCP-Erreichbarkeit des Endpunkts.">
+                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Der Wechsel erfolgt erst über 'Wechseln'.">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="services:CoreProfileEntry">
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -70,68 +77,25 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Grid.Column="1"
-                  Width="34"
-                  Margin="6,0,0,0"
-                  IsEnabled="{Binding CanEditConnectionSettings}"
-                  IsVisible="{Binding IsDisconnected}"
-                  Content="+"
-                  ToolTip.Tip="Aktuellen Core-Endpunkt als Profil speichern"
-                  Click="SaveCoreProfileButton_OnClick" />
-          <Button Grid.Column="2"
-                  Width="34"
-                  Margin="6,0,0,0"
-                  IsEnabled="{Binding CanEditConnectionSettings}"
-                  IsVisible="{Binding IsDisconnected}"
-                  Content="✎"
-                  ToolTip.Tip="Ausgewähltes Core-Profil bearbeiten"
-                  Click="EditCoreProfileButton_OnClick" />
-          <Button Grid.Column="3"
-                  Width="34"
-                  Margin="6,0,0,0"
-                  IsEnabled="{Binding CanEditConnectionSettings}"
-                  IsVisible="{Binding IsDisconnected}"
-                  Content="★"
-                  ToolTip.Tip="Ausgewähltes Core-Profil als Standard beim Start speichern"
-                  Click="SetDefaultCoreProfileButton_OnClick" />
-          <Button Grid.Column="4"
-                  Width="34"
-                  Margin="6,0,0,0"
-                  IsEnabled="{Binding CanEditConnectionSettings}"
-                  IsVisible="{Binding IsDisconnected}"
-                  Content="-"
-                  ToolTip.Tip="Ausgewähltes Core-Profil löschen"
-                  Click="DeleteCoreProfileButton_OnClick" />
-          <Button Grid.Column="5"
-                  Width="34"
-                  Margin="6,0,0,0"
+          <Button Content="Wechseln"
+                  MinWidth="96"
                   IsEnabled="{Binding IsConnected}"
-                  IsVisible="{Binding IsConnected}"
-                  Content="⇄"
-                  ToolTip.Tip="Zum ausgewählten Core-Profil wechseln"
-                  Click="SwitchCoreProfileButton_OnClick" />
-        </Grid>
+                  Click="SwitchCoreProfileButton_OnClick"
+                  ToolTip.Tip="Verbindung kontrolliert auf das ausgewählte Core-Profil umschalten." />
+          <Button Content="Profile..."
+                  MinWidth="96"
+                  IsEnabled="{Binding CanToggleConnection}"
+                  Click="ManageCoreProfilesButton_OnClick"
+                  ToolTip.Tip="Core-Profile anlegen, bearbeiten, löschen und das Standardprofil festlegen." />
+        </StackPanel>
 
-        <TextBox Grid.Column="2"
-                 Margin="0,0,10,0"
-                 IsEnabled="{Binding CanEditConnectionSettings}"
-                 PlaceholderText="Core-Endpunkt, z. B. http://127.0.0.1:8851/"
-                 Text="{Binding EndpointText}" />
-
-        <TextBox x:Name="PasswordInput"
-                 Grid.Column="3"
-                 Margin="0,0,10,0"
-                 IsEnabled="{Binding CanEditConnectionSettings}"
-                 PlaceholderText="Core-Passwort"
-                 PasswordChar="●" />
-
-        <Button Grid.Column="4"
+        <Button Grid.Column="2"
                 MinWidth="120"
-                Margin="0,0,10,0"
+                Margin="10,0,10,0"
                 Content="Einstellungen…"
                 Click="SettingsButton_OnClick" />
 
-        <Button Grid.Column="5"
+        <Button Grid.Column="3"
                 Classes="primary"
                 MinWidth="120"
                 IsEnabled="{Binding CanToggleConnection}"
