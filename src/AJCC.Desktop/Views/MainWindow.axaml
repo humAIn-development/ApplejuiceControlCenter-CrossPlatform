@@ -74,6 +74,7 @@
                   Width="34"
                   Margin="6,0,0,0"
                   IsEnabled="{Binding CanEditConnectionSettings}"
+                  IsVisible="{Binding IsDisconnected}"
                   Content="+"
                   ToolTip.Tip="Aktuellen Core-Endpunkt als Profil speichern"
                   Click="SaveCoreProfileButton_OnClick" />
@@ -81,6 +82,7 @@
                   Width="34"
                   Margin="6,0,0,0"
                   IsEnabled="{Binding CanEditConnectionSettings}"
+                  IsVisible="{Binding IsDisconnected}"
                   Content="✎"
                   ToolTip.Tip="Ausgewähltes Core-Profil bearbeiten"
                   Click="EditCoreProfileButton_OnClick" />
@@ -88,6 +90,7 @@
                   Width="34"
                   Margin="6,0,0,0"
                   IsEnabled="{Binding CanEditConnectionSettings}"
+                  IsVisible="{Binding IsDisconnected}"
                   Content="★"
                   ToolTip.Tip="Ausgewähltes Core-Profil als Standard beim Start speichern"
                   Click="SetDefaultCoreProfileButton_OnClick" />
@@ -95,6 +98,7 @@
                   Width="34"
                   Margin="6,0,0,0"
                   IsEnabled="{Binding CanEditConnectionSettings}"
+                  IsVisible="{Binding IsDisconnected}"
                   Content="-"
                   ToolTip.Tip="Ausgewähltes Core-Profil löschen"
                   Click="DeleteCoreProfileButton_OnClick" />
@@ -102,6 +106,7 @@
                   Width="34"
                   Margin="6,0,0,0"
                   IsEnabled="{Binding IsConnected}"
+                  IsVisible="{Binding IsConnected}"
                   Content="⇄"
                   ToolTip.Tip="Zum ausgewählten Core-Profil wechseln"
                   Click="SwitchCoreProfileButton_OnClick" />
