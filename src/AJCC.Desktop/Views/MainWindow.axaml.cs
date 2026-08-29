@@ -36,6 +36,9 @@ public sealed partial class MainWindow : Window
     private bool _coreProfileReachabilityRunning;
     private bool _coreProfileFailoverInProgress;
     private bool _suppressCoreProfileSwitchConfirmation;
+    private bool _autoLoadShareFilesAtStartup;
+    private bool _startupShareLoadEnabledForThisProcess;
+    private bool _automaticStartupShareLoadHandledThisProcess;
     private int _activeCoreReachabilityFailureCount;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
@@ -55,8 +58,10 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
-        _suppressCoreProfileSwitchConfirmation =
-            _uiPreferencesStore.Load().SuppressCoreProfileSwitchConfirmation;
+        UiPreferences uiPreferences = _uiPreferencesStore.Load();
+        _suppressCoreProfileSwitchConfirmation = uiPreferences.SuppressCoreProfileSwitchConfirmation;
+        _autoLoadShareFilesAtStartup = uiPreferences.AutoLoadShareFilesAtStartup;
+        _startupShareLoadEnabledForThisProcess = _autoLoadShareFilesAtStartup;
         _viewModel.CoreConnectionLost += ViewModel_OnCoreConnectionLost;
         LoadCoreProfiles();
         _coreProfileReachabilityTimer.Interval = TimeSpan.FromSeconds(10);
@@ -859,7 +864,9 @@ public sealed partial class MainWindow : Window
 
             if (confirm.SuppressFutureConfirmationRequested)
             {
-                if (_uiPreferencesStore.TrySave(new UiPreferences(true), out string errorMessage))
+                if (_uiPreferencesStore.TrySave(
+                        new UiPreferences(true, _autoLoadShareFilesAtStartup),
+                        out string errorMessage))
                 {
                     _suppressCoreProfileSwitchConfirmation = true;
                 }
@@ -936,7 +943,59 @@ public sealed partial class MainWindow : Window
 
         await _viewModel.ToggleConnectionAsync(password);
         if (_viewModel.IsConnected)
+        {
             _coreProfileSessionPasswords[selectedProfile.Id] = password;
+            await RunOptionalStartupShareLoadAsync();
+        }
+    }
+
+    private async Task RunOptionalStartupShareLoadAsync()
+    {
+        if (_automaticStartupShareLoadHandledThisProcess || !_viewModel.IsConnected)
+            return;
+
+        _automaticStartupShareLoadHandledThisProcess = true;
+
+        if (_uiPreferencesStore.HasStartupShareLoadMarker())
+        {
+            _uiPreferencesStore.ClearStartupShareLoadMarker();
+            if (_startupShareLoadEnabledForThisProcess)
+            {
+                _startupShareLoadEnabledForThisProcess = false;
+                _autoLoadShareFilesAtStartup = false;
+
+                string message =
+                    "Der automatische Share-Startload wurde deaktiviert, weil der letzte Start dabei nicht sauber abgeschlossen wurde. "
+                    + "AJCC-X lädt die Share-Dateiliste in diesem Programmstart nicht automatisch.";
+                if (!_uiPreferencesStore.TrySave(
+                        new UiPreferences(_suppressCoreProfileSwitchConfirmation, false),
+                        out string errorMessage))
+                {
+                    message += " Die deaktivierte Einstellung konnte nicht gespeichert werden: " + errorMessage;
+                }
+
+                _viewModel.SetStatusMessage(message);
+                ConfirmDialog warning = new(
+                    "Share-Startload deaktiviert",
+                    message,
+                    "OK",
+                    "Schließen");
+                await warning.ShowDialog<bool>(this);
+            }
+        }
+
+        if (!_startupShareLoadEnabledForThisProcess)
+            return;
+
+        _uiPreferencesStore.MarkStartupShareLoadInProgress();
+        try
+        {
+            await _viewModel.ReloadSharesAsync();
+        }
+        finally
+        {
+            _uiPreferencesStore.ClearStartupShareLoadMarker();
+        }
     }
 
     private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
@@ -948,9 +1007,12 @@ public sealed partial class MainWindow : Window
             mapping => _viewModel.LocalIncomingMappingText = mapping);
         dialog.ConfigureUiPreferences(
             _suppressCoreProfileSwitchConfirmation,
+            _autoLoadShareFilesAtStartup,
             suppress =>
             {
-                if (!_uiPreferencesStore.TrySave(new UiPreferences(suppress), out string errorMessage))
+                if (!_uiPreferencesStore.TrySave(
+                        new UiPreferences(suppress, _autoLoadShareFilesAtStartup),
+                        out string errorMessage))
                 {
                     _viewModel.SetStatusMessage(
                         "Core-Wechsel-Rückfrage konnte nicht gespeichert werden: " + errorMessage);
@@ -962,6 +1024,28 @@ public sealed partial class MainWindow : Window
                     suppress
                         ? "Manuelle Core-Profilwechsel erfolgen künftig ohne Rückfrage."
                         : "Rückfrage für manuelle Core-Profilwechsel ist wieder aktiv.");
+                return true;
+            },
+            autoLoadShareFilesAtStartup =>
+            {
+                if (!_uiPreferencesStore.TrySave(
+                        new UiPreferences(
+                            _suppressCoreProfileSwitchConfirmation,
+                            autoLoadShareFilesAtStartup),
+                        out string errorMessage))
+                {
+                    _viewModel.SetStatusMessage(
+                        "Share-Startload-Option konnte nicht gespeichert werden: " + errorMessage);
+                    return false;
+                }
+
+                _autoLoadShareFilesAtStartup = autoLoadShareFilesAtStartup;
+                if (!autoLoadShareFilesAtStartup)
+                    _startupShareLoadEnabledForThisProcess = false;
+                _viewModel.SetStatusMessage(
+                    autoLoadShareFilesAtStartup
+                        ? "Share-Dateiliste wird beim nächsten Programmstart nach der ersten Core-Verbindung automatisch geladen."
+                        : "Share-Dateiliste wird beim Programmstart nicht automatisch geladen.");
                 return true;
             });
         dialog.ConfigureCoreSettings(

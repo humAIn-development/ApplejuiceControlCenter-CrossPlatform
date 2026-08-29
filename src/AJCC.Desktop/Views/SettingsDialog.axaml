@@ -376,7 +376,7 @@
 
       <TabItem Header="Ansicht / Oberfläche">
         <Border Classes="panel" Padding="14" Margin="0,8,0,0">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                 ColumnDefinitions="Auto,*,Auto">
             <TextBlock Grid.ColumnSpan="3"
                        Text="Medienwiedergabe mit VLC"
@@ -424,6 +424,15 @@
                       Content="Core-Profilwechsel ohne Rückfrage durchführen"
                       ToolTip.Tip="Wenn aktiviert, erfolgt ein manueller Core-Profilwechsel nach Auswahl und Klick auf Wechseln ohne zusätzlichen Bestätigungsdialog."
                       Click="SuppressCoreSwitchConfirmationCheckBox_OnClick" />
+
+            <CheckBox x:Name="AutoLoadShareFilesAtStartupCheckBox"
+                      Grid.Row="5"
+                      Grid.Column="1"
+                      Grid.ColumnSpan="2"
+                      Margin="0,12,0,0"
+                      Content="Share-Dateiliste beim Programmstart automatisch laden"
+                      ToolTip.Tip="Komfortoption für kleine und mittlere Shares. Bei sehr großen Sharelisten kann der Start deutlich länger dauern. Nach einem nicht sauber abgeschlossenen Auto-Load deaktiviert AJCC-X die Option beim nächsten Start automatisch."
+                      Click="AutoLoadShareFilesAtStartupCheckBox_OnClick" />
           </Grid>
         </Border>
       </TabItem>

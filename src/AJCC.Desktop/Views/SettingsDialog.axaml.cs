@@ -14,8 +14,10 @@ public sealed partial class SettingsDialog : Window
     private bool _loadingExternalVlcConfiguration;
     private bool _loadingUiPreferences;
     private Func<bool, bool>? _applySuppressCoreSwitchConfirmation;
+    private Func<bool, bool>? _applyAutoLoadShareFilesAtStartup;
     private string _mappingEndpoint = string.Empty;
     private Action<string>? _mappingChanged;
+    private bool _autoLoadShareFilesAtStartup;
     private Func<int, Task<int>>? _applyMaxConnectionsAsync;
     private Func<int, Task<int>>? _applyMaxSourcesPerFileAsync;
     private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
@@ -47,18 +49,24 @@ public sealed partial class SettingsDialog : Window
 
     public void ConfigureUiPreferences(
         bool suppressCoreSwitchConfirmation,
-        Func<bool, bool>? applySuppressCoreSwitchConfirmation)
+        bool autoLoadShareFilesAtStartup,
+        Func<bool, bool>? applySuppressCoreSwitchConfirmation,
+        Func<bool, bool>? applyAutoLoadShareFilesAtStartup)
     {
         _applySuppressCoreSwitchConfirmation = applySuppressCoreSwitchConfirmation;
+        _applyAutoLoadShareFilesAtStartup = applyAutoLoadShareFilesAtStartup;
+        _autoLoadShareFilesAtStartup = autoLoadShareFilesAtStartup;
 
-        CheckBox? input = this.FindControl<CheckBox>("SuppressCoreSwitchConfirmationCheckBox");
-        if (input is null)
-            return;
+        CheckBox? suppressInput = this.FindControl<CheckBox>("SuppressCoreSwitchConfirmationCheckBox");
+        CheckBox? autoLoadInput = this.FindControl<CheckBox>("AutoLoadShareFilesAtStartupCheckBox");
 
         _loadingUiPreferences = true;
         try
         {
-            input.IsChecked = suppressCoreSwitchConfirmation;
+            if (suppressInput is not null)
+                suppressInput.IsChecked = suppressCoreSwitchConfirmation;
+            if (autoLoadInput is not null)
+                autoLoadInput.IsChecked = autoLoadShareFilesAtStartup;
         }
         finally
         {
@@ -1157,6 +1165,58 @@ public sealed partial class SettingsDialog : Window
         try
         {
             input.IsChecked = !requested;
+        }
+        finally
+        {
+            _loadingUiPreferences = false;
+        }
+    }
+
+    private async void AutoLoadShareFilesAtStartupCheckBox_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_loadingUiPreferences
+            || _applyAutoLoadShareFilesAtStartup is null
+            || sender is not CheckBox input)
+        {
+            return;
+        }
+
+        bool requested = input.IsChecked == true;
+        if (requested && !_autoLoadShareFilesAtStartup)
+        {
+            ConfirmDialog confirm = new(
+                "Share-Dateiliste beim Start laden",
+                "Diese Option lädt die vollständige Share-Dateiliste beim Programmstart nach der ersten Core-Verbindung.\n\n"
+                + "Bei sehr großen Shares kann das den Start deutlich verzögern oder den Core belasten. "
+                + "Wenn ein Auto-Load nicht sauber abgeschlossen wurde, deaktiviert AJCC-X die Option beim nächsten Start automatisch.\n\n"
+                + "Option aktivieren?",
+                "Aktivieren",
+                "Abbrechen");
+            if (!await confirm.ShowDialog<bool>(this))
+            {
+                _loadingUiPreferences = true;
+                try
+                {
+                    input.IsChecked = false;
+                }
+                finally
+                {
+                    _loadingUiPreferences = false;
+                }
+                return;
+            }
+        }
+
+        if (_applyAutoLoadShareFilesAtStartup(requested))
+        {
+            _autoLoadShareFilesAtStartup = requested;
+            return;
+        }
+
+        _loadingUiPreferences = true;
+        try
+        {
+            input.IsChecked = _autoLoadShareFilesAtStartup;
         }
         finally
         {
