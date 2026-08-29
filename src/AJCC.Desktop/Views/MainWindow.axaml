@@ -556,6 +556,11 @@
                         Content="Freigaben anzeigen…"
                         IsEnabled="{Binding IsConnected}"
                         Click="ShareDirectoriesButton_OnClick" />
+                <Button MinWidth="130"
+                        Content="Share-Vergleich…"
+                        IsEnabled="{Binding IsConnected}"
+                        ToolTip.Tip="Vergleicht ausschließlich die bereits geladene Share-Dateiliste mit einer lokalen Vergleichsbasis."
+                        Click="ShareSnapshotDiffButton_OnClick" />
                 <Button MinWidth="100"
                         Content="Neu laden"
                         IsEnabled="{Binding IsConnected}"

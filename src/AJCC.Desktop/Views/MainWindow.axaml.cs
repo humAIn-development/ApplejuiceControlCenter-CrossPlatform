@@ -1139,6 +1139,81 @@ public sealed partial class MainWindow : Window
     private async void SearchButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.StartSearchAsync();
 
+    private async void ShareSnapshotDiffButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsConnected || _viewModel.IsBusy)
+            return;
+
+        List<AjShareFile> shares = _viewModel.Shares.ToList();
+        if (shares.Count == 0)
+        {
+            _viewModel.SetStatusMessage(
+                "Share-Vergleich: Share-Dateiliste ist leer oder noch nicht manuell geladen. Bitte zuerst 'Neu laden' verwenden.");
+            return;
+        }
+
+        CoreEndpoint endpoint;
+        try
+        {
+            endpoint = CoreEndpoint.Parse(_viewModel.EndpointText);
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage(
+                "Share-Vergleich: Core-Endpunkt konnte nicht bestimmt werden: " + ex.Message);
+            return;
+        }
+
+        List<ShareSnapshotSourceFile> fileSource = shares
+            .Select(share => new ShareSnapshotSourceFile(share.Filename, share.Size))
+            .ToList();
+        List<ShareSnapshotSourceRoot> rootSource = _viewModel.ConfiguredShareDirectories
+            .Select(directory => new ShareSnapshotSourceRoot(directory.Name, directory.ShareMode))
+            .ToList();
+
+        _viewModel.SetStatusMessage(
+            $"Share-Vergleich wird lokal erstellt: {fileSource.Count:N0} Dateien ...");
+
+        try
+        {
+            ShareSnapshotDocument currentSnapshot = await Task.Run(() =>
+                ShareSnapshotService.CreateSnapshot(
+                    endpoint.Host,
+                    endpoint.BaseUri.Port,
+                    fileSource,
+                    rootSource));
+
+            ShareSnapshotLoadResult loadResult = await ShareSnapshotService.LoadAsync(
+                endpoint.Host,
+                endpoint.BaseUri.Port);
+
+            ShareSnapshotComparisonReport report = await Task.Run(() =>
+                ShareSnapshotService.Compare(
+                    currentSnapshot,
+                    loadResult.Snapshot,
+                    loadResult.StoragePath));
+
+            ShareSnapshotDiffDialog dialog = new(
+                report,
+                currentSnapshot,
+                loadResult.ErrorMessage);
+
+            bool baselineSaved = await dialog.ShowDialog<bool>(this);
+            _viewModel.SetStatusMessage(
+                baselineSaved
+                    ? "Share-Vergleich: aktueller Stand wurde als lokale Vergleichsbasis gespeichert."
+                    : loadResult.HasError
+                        ? "Share-Vergleich geschlossen. Die vorhandene Vergleichsbasis konnte nicht gelesen werden: "
+                          + loadResult.ErrorMessage
+                        : $"Share-Vergleich geschlossen: {report.TotalChangeCount:N0} Änderung(en) zur lokalen Vergleichsbasis.");
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage(
+                "Share-Vergleich konnte nicht erstellt werden: " + ex.Message);
+        }
+    }
+
     private async void ReloadSharesButton_OnClick(object? sender, RoutedEventArgs e)
     {
         await _viewModel.ReloadSharesAsync();
