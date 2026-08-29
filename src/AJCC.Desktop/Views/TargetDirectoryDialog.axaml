@@ -112,16 +112,16 @@
               Content="Direkt Incoming"
               Click="IncomingButton_OnClick" />
       <Button Grid.Column="2"
-              MinWidth="96"
-              Margin="8,0,0,0"
-              Content="Zurück"
-              Click="CancelButton_OnClick" />
-      <Button Grid.Column="3"
               Classes="primary"
               MinWidth="110"
               Margin="8,0,0,0"
               Content="Übernehmen"
               Click="AcceptButton_OnClick" />
+      <Button Grid.Column="3"
+              MinWidth="96"
+              Margin="8,0,0,0"
+              Content="Zurück"
+              Click="CancelButton_OnClick" />
     </Grid>
   </Grid>
 </Window>

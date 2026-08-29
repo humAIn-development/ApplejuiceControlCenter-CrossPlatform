@@ -43,13 +43,13 @@
                   Orientation="Horizontal"
                   HorizontalAlignment="Right"
                   Spacing="8">
-        <Button x:Name="CancelButton"
-                MinWidth="100"
-                Click="CancelButton_OnClick" />
         <Button x:Name="ConfirmButton"
                 Classes="primary"
                 MinWidth="110"
                 Click="ConfirmButton_OnClick" />
+        <Button x:Name="CancelButton"
+                MinWidth="100"
+                Click="CancelButton_OnClick" />
       </StackPanel>
     </Grid>
   </Border>

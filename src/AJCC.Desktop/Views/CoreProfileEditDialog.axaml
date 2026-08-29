@@ -41,13 +41,13 @@
                   HorizontalAlignment="Right"
                   VerticalAlignment="Bottom"
                   Spacing="8">
-        <Button MinWidth="100"
-                Content="Abbrechen"
-                Click="CancelButton_OnClick" />
         <Button Classes="primary"
                 MinWidth="110"
                 Content="Übernehmen"
                 Click="SaveButton_OnClick" />
+        <Button MinWidth="100"
+                Content="Abbrechen"
+                Click="CancelButton_OnClick" />
       </StackPanel>
     </Grid>
   </Border>
