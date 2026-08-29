@@ -44,6 +44,12 @@ public sealed partial class MainWindow : Window
     private long _embeddedPartListDownloadId;
     private string _appliedShareFilter = string.Empty;
     private int _shareFilterRequestVersion;
+    private const double ShareDragThreshold = 6.0;
+    private AjShareFile? _shareDragCandidate;
+    private double _shareDragStartX;
+    private double _shareDragStartY;
+    private bool _shareDragInProgress;
+    private PointerPressedEventArgs? _shareDragTriggerEvent;
 
     public MainWindow()
     {
@@ -60,6 +66,16 @@ public sealed partial class MainWindow : Window
         AddHandler(
             InputElement.PointerPressedEvent,
             MainWindow_OnPointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            InputElement.PointerMovedEvent,
+            MainWindow_OnPointerMoved,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            InputElement.PointerReleasedEvent,
+            MainWindow_OnPointerReleased,
             RoutingStrategies.Tunnel,
             handledEventsToo: true);
         AddHandler(
@@ -1530,10 +1546,25 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
+        if (e.Source is not Control source)
             return;
 
-        if (e.Source is not Control source)
+        var currentPoint = e.GetCurrentPoint(this);
+        if (currentPoint.Properties.IsLeftButtonPressed
+            && source.DataContext is AjShareFile dragShare)
+        {
+            var position = e.GetPosition(this);
+            _shareDragCandidate = dragShare;
+            _shareDragTriggerEvent = e;
+            _shareDragStartX = position.X;
+            _shareDragStartY = position.Y;
+        }
+        else if (!currentPoint.Properties.IsRightButtonPressed)
+        {
+            ResetShareDragState();
+        }
+
+        if (!currentPoint.Properties.IsRightButtonPressed)
             return;
 
         switch (source.DataContext)
@@ -1554,6 +1585,74 @@ public sealed partial class MainWindow : Window
                 _selectedServerForContext = server;
                 break;
         }
+    }
+
+    private async void MainWindow_OnPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_shareDragInProgress
+            || _shareDragCandidate is not { Id: > 0 } candidate
+            || _shareDragTriggerEvent is not { } triggerEvent)
+            return;
+
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            ResetShareDragState();
+            return;
+        }
+
+        var position = e.GetPosition(this);
+        if (Math.Abs(position.X - _shareDragStartX) < ShareDragThreshold
+            && Math.Abs(position.Y - _shareDragStartY) < ShareDragThreshold)
+        {
+            return;
+        }
+
+        ListBox? sharesList = this.FindControl<ListBox>("SharesList");
+        List<AjShareFile> selectedShares = sharesList?.SelectedItems?
+            .OfType<AjShareFile>()
+            .Where(share => share.Id > 0)
+            .GroupBy(share => share.Id)
+            .Select(group => group.First())
+            .ToList()
+            ?? new List<AjShareFile>();
+
+        if (!selectedShares.Any(share => share.Id == candidate.Id))
+        {
+            selectedShares.Clear();
+            selectedShares.Add(candidate);
+        }
+
+        string text = ShareAjfspDragExportSemantics.BuildPlainTextLinkList(selectedShares);
+        ResetShareDragState();
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        _shareDragInProgress = true;
+        try
+        {
+            DataTransfer data = new();
+            data.Add(DataTransferItem.CreateText(text));
+#pragma warning disable CS0618
+            await DragDrop.DoDragDropAsync(triggerEvent, data, DragDropEffects.Copy);
+#pragma warning restore CS0618
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage("AJFSP-Drag konnte nicht gestartet werden: " + ex.Message);
+        }
+        finally
+        {
+            _shareDragInProgress = false;
+        }
+    }
+
+    private void MainWindow_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+        => ResetShareDragState();
+
+    private void ResetShareDragState()
+    {
+        _shareDragCandidate = null;
+        _shareDragTriggerEvent = null;
     }
 
     private void MainWindow_OnContextRequested(object? sender, ContextRequestedEventArgs e)
