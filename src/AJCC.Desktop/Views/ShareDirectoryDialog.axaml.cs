@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using AJCC.Core.Helpers;
 using AJCC.Core.Models;
+using AJCC.Core.Services;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -16,6 +17,13 @@ public sealed partial class ShareDirectoryDialog : Window
     private List<AjShareDirectory> _draftDirectories = new();
     private Func<string?, Task<AjDirectoryListResult>>? _loadDirectoryAsync;
     private Func<IReadOnlyList<AjShareDirectory>, Task<IReadOnlyList<AjShareDirectory>>>? _transferDirectoriesAsync;
+    private IReadOnlyList<AjShareFile> _shareFiles = Array.Empty<AjShareFile>();
+    private const double DirectoryDragThreshold = 6.0;
+    private ShareDirectoryTreeNode? _directoryDragCandidate;
+    private PointerPressedEventArgs? _directoryDragTriggerEvent;
+    private double _directoryDragStartX;
+    private double _directoryDragStartY;
+    private bool _directoryDragInProgress;
     private char _separator = '\\';
     private bool _initialLoadStarted;
     private bool _transferRunning;
@@ -25,16 +33,28 @@ public sealed partial class ShareDirectoryDialog : Window
         InitializeComponent();
         DataContext = this;
         Opened += ShareDirectoryDialog_OnOpened;
+        AddHandler(
+            InputElement.PointerMovedEvent,
+            ShareDirectoryDialog_OnPointerMoved,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            InputElement.PointerReleasedEvent,
+            ShareDirectoryDialog_OnPointerReleased,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
     }
 
     public ShareDirectoryDialog(
         IReadOnlyList<AjShareDirectory> sharedDirectories,
+        IReadOnlyList<AjShareFile> shareFiles,
         Func<string?, Task<AjDirectoryListResult>> loadDirectoryAsync,
         Func<IReadOnlyList<AjShareDirectory>, Task<IReadOnlyList<AjShareDirectory>>> transferDirectoriesAsync)
         : this()
     {
         _configuredDirectories = CloneDirectories(sharedDirectories);
         _draftDirectories = CloneDirectories(_configuredDirectories);
+        _shareFiles = shareFiles?.ToList() ?? throw new ArgumentNullException(nameof(shareFiles));
         _loadDirectoryAsync = loadDirectoryAsync ?? throw new ArgumentNullException(nameof(loadDirectoryAsync));
         _transferDirectoriesAsync = transferDirectoriesAsync ?? throw new ArgumentNullException(nameof(transferDirectoriesAsync));
     }
@@ -152,6 +172,16 @@ public sealed partial class ShareDirectoryDialog : Window
         }
 
         SelectDirectory(selected);
+        var currentPoint = e.GetCurrentPoint(this);
+        if (currentPoint.Properties.IsLeftButtonPressed)
+        {
+            var position = e.GetPosition(this);
+            _directoryDragCandidate = selected;
+            _directoryDragTriggerEvent = e;
+            _directoryDragStartX = position.X;
+            _directoryDragStartY = position.Y;
+        }
+
         if (e.ClickCount != 2)
             return;
 
@@ -163,6 +193,71 @@ public sealed partial class ShareDirectoryDialog : Window
         }
 
         selected.IsExpanded = !selected.IsExpanded;
+    }
+
+    private async void ShareDirectoryDialog_OnPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_directoryDragInProgress
+            || _directoryDragCandidate is not { IsPlaceholder: false } candidate
+            || _directoryDragTriggerEvent is not { } triggerEvent)
+        {
+            return;
+        }
+
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            ResetDirectoryDragState();
+            return;
+        }
+
+        var position = e.GetPosition(this);
+        if (Math.Abs(position.X - _directoryDragStartX) < DirectoryDragThreshold
+            && Math.Abs(position.Y - _directoryDragStartY) < DirectoryDragThreshold)
+        {
+            return;
+        }
+
+        IReadOnlyList<AjShareFile> selectedShares =
+            ShareAjfspDragExportSemantics.SelectRecursiveDirectoryFiles(
+                _shareFiles,
+                candidate.FullPath,
+                _separator);
+        string text = ShareAjfspDragExportSemantics.BuildPlainTextLinkList(selectedShares);
+        ResetDirectoryDragState();
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            SetStatus(
+                $"Unter '{candidate.FullPath}' befinden sich in der bereits geladenen Share-Dateiliste keine exportierbaren Dateien.");
+            return;
+        }
+
+        _directoryDragInProgress = true;
+        try
+        {
+            DataTransfer data = new();
+            data.Add(DataTransferItem.CreateText(text));
+#pragma warning disable CS0618
+            await DragDrop.DoDragDropAsync(triggerEvent, data, DragDropEffects.Copy);
+#pragma warning restore CS0618
+        }
+        catch (Exception ex)
+        {
+            SetStatus("AJFSP-Ordner-Drag konnte nicht gestartet werden: " + ex.Message);
+        }
+        finally
+        {
+            _directoryDragInProgress = false;
+        }
+    }
+
+    private void ShareDirectoryDialog_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+        => ResetDirectoryDragState();
+
+    private void ResetDirectoryDragState()
+    {
+        _directoryDragCandidate = null;
+        _directoryDragTriggerEvent = null;
     }
 
     private void DirectoryItem_OnRightTapped(object? sender, TappedEventArgs e)
