@@ -111,7 +111,8 @@ public sealed partial class TargetDirectoryDialog : Window
 
             foreach (AjDirectoryEntry entry in result.Directories
                          .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
-                         .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+                         .OrderBy(entry => entry.Name, NaturalStringComparer.Instance)
+                         .ThenBy(entry => entry.Path ?? string.Empty, NaturalStringComparer.Instance))
             {
                 string fullPath = !string.IsNullOrWhiteSpace(entry.Path)
                     ? NormalizeAbsoluteCorePath(entry.Path)

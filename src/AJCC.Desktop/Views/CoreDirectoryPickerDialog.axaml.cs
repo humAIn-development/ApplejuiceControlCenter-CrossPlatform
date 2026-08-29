@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using AJCC.Core.Helpers;
 using AJCC.Core.Models;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -104,7 +105,8 @@ public sealed partial class CoreDirectoryPickerDialog : Window
     {
         return result.Directories
             .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
-            .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(entry => entry.Name, NaturalStringComparer.Instance)
+            .ThenBy(entry => entry.Path ?? string.Empty, NaturalStringComparer.Instance)
             .Select(entry =>
             {
                 string fullPath = !string.IsNullOrWhiteSpace(entry.Path)

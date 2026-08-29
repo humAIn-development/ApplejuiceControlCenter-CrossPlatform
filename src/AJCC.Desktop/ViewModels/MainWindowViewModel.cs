@@ -274,7 +274,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjUpload> InactiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => !upload.IsActiveTransfer);
     public IEnumerable<AjServer> Servers => _state is null ? Array.Empty<AjServer>() : _state.Servers;
     public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
-    public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
+    public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null
+        ? Array.Empty<AjSearchEntry>()
+        : SelectedSearch.Entries
+            .OrderByDescending(entry => entry.FilenameUsers)
+            .ThenBy(entry => entry.Filename, NaturalStringComparer.Instance);
     public IEnumerable<AjShareFile> Shares => _state is null ? Array.Empty<AjShareFile>() : _state.Shares;
     public IEnumerable<AjShareFile> VisibleShares => _visibleSharesOverride ?? Shares;
     public IReadOnlyList<AjShareDirectory> ConfiguredShareDirectories
