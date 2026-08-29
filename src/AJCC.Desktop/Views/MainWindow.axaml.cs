@@ -1202,8 +1202,8 @@ public sealed partial class MainWindow : Window
         string filter)
         => shares
             .Where(share =>
-                ContainsShareFilter(share.DisplayFilename, filter)
-                || ContainsShareFilter(share.DirectoryPath, filter)
+                ContainsShareFilterText(share.DisplayFilename, filter)
+                || ContainsShareFilterText(share.DirectoryPath, filter)
                 || ContainsShareFilter(share.FileType, filter)
                 || ContainsShareFilter(share.Checksum, filter))
             .ToList();
@@ -1211,6 +1211,59 @@ public sealed partial class MainWindow : Window
     private static bool ContainsShareFilter(string? value, string filter)
         => !string.IsNullOrWhiteSpace(value)
             && value.Contains(filter, StringComparison.OrdinalIgnoreCase);
+
+    private static bool ContainsShareFilterText(string? value, string filter)
+    {
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(filter))
+            return false;
+
+        if (value.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!filter.Any(IsShareFilterSeparator))
+            return false;
+
+        for (int start = 0; start < value.Length; start++)
+        {
+            if (ShareFilterMatchesAt(value, filter, start))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ShareFilterMatchesAt(string value, string filter, int valueStart)
+    {
+        int valueIndex = valueStart;
+        int filterIndex = 0;
+
+        while (filterIndex < filter.Length && valueIndex < value.Length)
+        {
+            bool filterSeparator = IsShareFilterSeparator(filter[filterIndex]);
+            if (filterSeparator)
+            {
+                if (!IsShareFilterSeparator(value[valueIndex]))
+                    return false;
+
+                while (filterIndex < filter.Length && IsShareFilterSeparator(filter[filterIndex]))
+                    filterIndex++;
+                while (valueIndex < value.Length && IsShareFilterSeparator(value[valueIndex]))
+                    valueIndex++;
+                continue;
+            }
+
+            if (char.ToUpperInvariant(value[valueIndex]) != char.ToUpperInvariant(filter[filterIndex]))
+                return false;
+
+            valueIndex++;
+            filterIndex++;
+        }
+
+        return filterIndex == filter.Length;
+    }
+
+    private static bool IsShareFilterSeparator(char value)
+        => value == '.' || value == '_' || char.IsWhiteSpace(value);
 
     private void UpdateShareFilterSummary(int visibleCount, int totalCount)
     {
