@@ -24,6 +24,7 @@ public sealed partial class MainWindow : Window
     private readonly MainWindowViewModel _viewModel = new();
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
+    private readonly UiPreferencesStore _uiPreferencesStore = new();
     private readonly CoreProfileStore _coreProfileStore = new();
     private readonly ObservableCollection<CoreProfileEntry> _coreProfiles = new();
     private readonly Dictionary<string, string> _coreProfileSessionPasswords = new(StringComparer.OrdinalIgnoreCase);
@@ -34,6 +35,7 @@ public sealed partial class MainWindow : Window
     private bool _loadingCoreProfiles;
     private bool _coreProfileReachabilityRunning;
     private bool _coreProfileFailoverInProgress;
+    private bool _suppressCoreProfileSwitchConfirmation;
     private int _activeCoreReachabilityFailureCount;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
@@ -45,6 +47,8 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        _suppressCoreProfileSwitchConfirmation =
+            _uiPreferencesStore.Load().SuppressCoreProfileSwitchConfirmation;
         _viewModel.CoreConnectionLost += ViewModel_OnCoreConnectionLost;
         LoadCoreProfiles();
         _coreProfileReachabilityTimer.Interval = TimeSpan.FromSeconds(10);
@@ -824,13 +828,30 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        ConfirmDialog confirm = new(
-            "Core-Profil wechseln",
-            $"Aktiven Core wechseln?\n\nVon: {activeEndpoint}\nZu: {profile.Name} · {parsedTarget.BaseUri}\n\nDie sichtbaren Core-Daten werden vollständig geleert und vom Ziel-Core neu geladen.",
-            "Wechseln",
-            "Abbrechen");
-        if (!await confirm.ShowDialog<bool>(this))
-            return;
+        if (!_suppressCoreProfileSwitchConfirmation)
+        {
+            ConfirmDialog confirm = new(
+                "Core-Profil wechseln",
+                $"Aktiven Core wechseln?\n\nVon: {activeEndpoint}\nZu: {profile.Name} · {parsedTarget.BaseUri}\n\nDie sichtbaren Core-Daten werden vollständig geleert und vom Ziel-Core neu geladen.",
+                "Wechseln",
+                "Abbrechen",
+                showSuppressFutureConfirmationOption: true);
+            if (!await confirm.ShowDialog<bool>(this))
+                return;
+
+            if (confirm.SuppressFutureConfirmationRequested)
+            {
+                if (_uiPreferencesStore.TrySave(new UiPreferences(true), out string errorMessage))
+                {
+                    _suppressCoreProfileSwitchConfirmation = true;
+                }
+                else
+                {
+                    _viewModel.SetStatusMessage(
+                        "Core-Wechsel-Rückfrage konnte nicht gespeichert werden: " + errorMessage);
+                }
+            }
+        }
 
         await _viewModel.ToggleConnectionAsync(string.Empty);
         if (_viewModel.IsConnected)
@@ -907,6 +928,24 @@ public sealed partial class MainWindow : Window
             _viewModel.EndpointText,
             _viewModel.LocalIncomingMappingText,
             mapping => _viewModel.LocalIncomingMappingText = mapping);
+        dialog.ConfigureUiPreferences(
+            _suppressCoreProfileSwitchConfirmation,
+            suppress =>
+            {
+                if (!_uiPreferencesStore.TrySave(new UiPreferences(suppress), out string errorMessage))
+                {
+                    _viewModel.SetStatusMessage(
+                        "Core-Wechsel-Rückfrage konnte nicht gespeichert werden: " + errorMessage);
+                    return false;
+                }
+
+                _suppressCoreProfileSwitchConfirmation = suppress;
+                _viewModel.SetStatusMessage(
+                    suppress
+                        ? "Manuelle Core-Profilwechsel erfolgen künftig ohne Rückfrage."
+                        : "Rückfrage für manuelle Core-Profilwechsel ist wieder aktiv.");
+                return true;
+            });
         dialog.ConfigureCoreSettings(
             _viewModel.CoreNickValue,
             _viewModel.CoreIncomingDirectory,

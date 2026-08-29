@@ -12,6 +12,8 @@ public sealed partial class SettingsDialog : Window
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private bool _loadingExternalVlcConfiguration;
+    private bool _loadingUiPreferences;
+    private Func<bool, bool>? _applySuppressCoreSwitchConfirmation;
     private string _mappingEndpoint = string.Empty;
     private Action<string>? _mappingChanged;
     private Func<int, Task<int>>? _applyMaxConnectionsAsync;
@@ -41,6 +43,27 @@ public sealed partial class SettingsDialog : Window
     {
         InitializeComponent();
         LoadExternalVlcConfiguration();
+    }
+
+    public void ConfigureUiPreferences(
+        bool suppressCoreSwitchConfirmation,
+        Func<bool, bool>? applySuppressCoreSwitchConfirmation)
+    {
+        _applySuppressCoreSwitchConfirmation = applySuppressCoreSwitchConfirmation;
+
+        CheckBox? input = this.FindControl<CheckBox>("SuppressCoreSwitchConfirmationCheckBox");
+        if (input is null)
+            return;
+
+        _loadingUiPreferences = true;
+        try
+        {
+            input.IsChecked = suppressCoreSwitchConfirmation;
+        }
+        finally
+        {
+            _loadingUiPreferences = false;
+        }
     }
 
     public void ConfigureLocalIncomingMapping(
@@ -1115,6 +1138,30 @@ public sealed partial class SettingsDialog : Window
             input.Text = mapping;
 
         _mappingChanged?.Invoke(mapping);
+    }
+
+    private void SuppressCoreSwitchConfirmationCheckBox_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_loadingUiPreferences
+            || _applySuppressCoreSwitchConfirmation is null
+            || sender is not CheckBox input)
+        {
+            return;
+        }
+
+        bool requested = input.IsChecked == true;
+        if (_applySuppressCoreSwitchConfirmation(requested))
+            return;
+
+        _loadingUiPreferences = true;
+        try
+        {
+            input.IsChecked = !requested;
+        }
+        finally
+        {
+            _loadingUiPreferences = false;
+        }
     }
 
     private async void BrowseVlcButton_OnClick(object? sender, RoutedEventArgs e)

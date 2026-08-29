@@ -376,7 +376,7 @@
 
       <TabItem Header="Ansicht / Oberfläche">
         <Border Classes="panel" Padding="14" Margin="0,8,0,0">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                 ColumnDefinitions="Auto,*,Auto">
             <TextBlock Grid.ColumnSpan="3"
                        Text="Medienwiedergabe mit VLC"
@@ -415,6 +415,15 @@
                        Margin="0,8,0,0"
                        Text="deaktiviert"
                        TextWrapping="Wrap" />
+
+            <CheckBox x:Name="SuppressCoreSwitchConfirmationCheckBox"
+                      Grid.Row="4"
+                      Grid.Column="1"
+                      Grid.ColumnSpan="2"
+                      Margin="0,18,0,0"
+                      Content="Core-Profilwechsel ohne Rückfrage durchführen"
+                      ToolTip.Tip="Wenn aktiviert, erfolgt ein manueller Core-Profilwechsel nach Auswahl und Klick auf Wechseln ohne zusätzlichen Bestätigungsdialog."
+                      Click="SuppressCoreSwitchConfirmationCheckBox_OnClick" />
           </Grid>
         </Border>
       </TabItem>
