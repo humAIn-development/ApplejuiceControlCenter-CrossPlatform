@@ -39,6 +39,15 @@ public sealed class CoreProfileEntry : INotifyPropertyChanged
         _ => "TCP-Erreichbarkeit noch nicht geprüft"
     };
 
+    [JsonIgnore]
+    public bool IsReachable => _reachabilityStatus == CoreProfileReachabilityStatus.Reachable;
+
+    [JsonIgnore]
+    public bool IsUnreachable => _reachabilityStatus == CoreProfileReachabilityStatus.Unreachable;
+
+    [JsonIgnore]
+    public bool IsSelectable => IsReachable;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public void SetReachabilityStatus(CoreProfileReachabilityStatus status)
@@ -49,6 +58,9 @@ public sealed class CoreProfileEntry : INotifyPropertyChanged
         _reachabilityStatus = status;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ReachabilityLabel)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ReachabilityText)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsReachable)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsUnreachable)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelectable)));
     }
 
     public override string ToString() => Name;

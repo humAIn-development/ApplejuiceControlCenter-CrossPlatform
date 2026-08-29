@@ -137,6 +137,37 @@ public sealed partial class MainWindow : Window
         if (sender is not ComboBox comboBox || comboBox.SelectedItem is not CoreProfileEntry profile)
             return;
 
+        if (!profile.IsSelectable)
+        {
+            CoreProfileEntry? previousSelectable = e.RemovedItems
+                .OfType<CoreProfileEntry>()
+                .FirstOrDefault(item => item.IsSelectable);
+
+            CoreProfileEntry? activeSelectable = _viewModel.IsConnected
+                ? FindCoreProfileByEndpoint(_viewModel.EndpointText)
+                : null;
+            if (activeSelectable?.IsSelectable != true)
+                activeSelectable = null;
+
+            CoreProfileEntry? fallback = previousSelectable
+                ?? activeSelectable
+                ?? _coreProfiles.FirstOrDefault(item => item.IsSelectable);
+
+            _loadingCoreProfiles = true;
+            try
+            {
+                comboBox.SelectedItem = fallback;
+            }
+            finally
+            {
+                _loadingCoreProfiles = false;
+            }
+
+            _viewModel.SetStatusMessage(
+                $"Core-Profil {profile.Name} ist aktuell nicht erreichbar und kann nicht ausgewählt werden.");
+            return;
+        }
+
         if (_viewModel.IsConnected)
         {
             _viewModel.SetStatusMessage(

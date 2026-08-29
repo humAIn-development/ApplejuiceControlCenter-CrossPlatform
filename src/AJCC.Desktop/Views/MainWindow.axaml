@@ -22,6 +22,15 @@
     <Style Selector="Border.connectionBadge.online">
       <Setter Property="BorderBrush" Value="{DynamicResource AjGood}" />
     </Style>
+    <Style Selector="TextBlock.coreProfileReachability.reachable">
+      <Setter Property="Foreground" Value="{DynamicResource AjGood}" />
+    </Style>
+    <Style Selector="TextBlock.coreProfileReachability.unreachable">
+      <Setter Property="Foreground" Value="{DynamicResource AjBad}" />
+    </Style>
+    <Style Selector="StackPanel.coreProfileItem.unreachable">
+      <Setter Property="Opacity" Value="0.55" />
+    </Style>
   </Window.Styles>
 
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="14">
@@ -62,12 +71,19 @@
                     IsEnabled="{Binding CanToggleConnection}"
                     SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
                     DropDownOpened="CoreProfileComboBox_OnDropDownOpened"
-                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Der Wechsel erfolgt erst über 'Wechseln'.">
+                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Grüne Profile sind erreichbar; rote Profile bleiben bis zur nächsten erfolgreichen Prüfung gesperrt.">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="services:CoreProfileEntry">
-                <StackPanel Orientation="Horizontal" Spacing="6">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6"
+                            Classes="coreProfileItem"
+                            Classes.unreachable="{Binding IsUnreachable}"
+                            IsEnabled="{Binding IsSelectable}">
                   <TextBlock Width="14"
                              TextAlignment="Center"
+                             Classes="coreProfileReachability"
+                             Classes.reachable="{Binding IsReachable}"
+                             Classes.unreachable="{Binding IsUnreachable}"
                              Text="{Binding ReachabilityLabel}"
                              ToolTip.Tip="{Binding ReachabilityText}" />
                   <TextBlock Text="{Binding Name}"
