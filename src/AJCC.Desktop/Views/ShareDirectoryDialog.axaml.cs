@@ -1,13 +1,16 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text;
 using AJCC.Core.Helpers;
+using AJCC.Core.Links;
 using AJCC.Core.Models;
 using AJCC.Core.Services;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 
 namespace AJCC.Desktop.Views;
 
@@ -300,6 +303,75 @@ public sealed partial class ShareDirectoryDialog : Window
 
     private void AddSingleShareMenuItem_OnClick(object? sender, RoutedEventArgs e)
         => ApplySelectedShareDraft(ShareDirectoryDraftSemantics.SingleDirectoryShareMode);
+
+    private async void ExportDirectoryAjlMenuItem_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedDirectory(out ShareDirectoryTreeNode selected))
+            return;
+
+        IReadOnlyList<AjShareFile> recursiveShares =
+            ShareAjfspDragExportSemantics.SelectRecursiveDirectoryFiles(
+                _shareFiles,
+                selected.FullPath,
+                _separator);
+        IReadOnlyList<AjShareFile> shares =
+            AjLegacyLinkListBuilder.PrepareShareExport(recursiveShares);
+
+        if (shares.Count == 0)
+        {
+            SetStatus(
+                $"Unter '{selected.FullPath}' befinden sich in der bereits geladenen Share-Dateiliste keine exportierbaren Dateien.");
+            return;
+        }
+
+        FilePickerSaveOptions options = new()
+        {
+            Title = "AppleJuice-Linkliste (.ajl) aus Ordner erstellen",
+            SuggestedFileName = BuildDirectoryAjlExportFileName(selected.Name),
+            DefaultExtension = "ajl",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("AppleJuice-Linkliste")
+                {
+                    Patterns = new[] { "*.ajl" }
+                }
+            }
+        };
+
+        IStorageFile? file = await StorageProvider.SaveFilePickerAsync(options);
+        if (file is null)
+            return;
+
+        try
+        {
+            await using Stream stream = await file.OpenWriteAsync();
+            stream.SetLength(0);
+            await using StreamWriter writer =
+                new(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            await writer.WriteAsync(AjLegacyLinkListBuilder.BuildLegacyContent(shares));
+
+            SetStatus(
+                $"AJL-Ordnerexport abgeschlossen: {shares.Count:N0} Datei(en) aus '{selected.FullPath}'.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus("AJL-Ordnerexport fehlgeschlagen: " + ex.Message);
+        }
+    }
+
+    private static string BuildDirectoryAjlExportFileName(string directoryName)
+    {
+        string source = (directoryName ?? string.Empty).Trim();
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+        StringBuilder builder = new(source.Length);
+        foreach (char c in source)
+            builder.Append(invalidChars.Contains(c) ? '_' : c);
+
+        string baseName = builder.ToString().Trim(' ', '.');
+        return string.IsNullOrWhiteSpace(baseName)
+            ? $"ApplejuiceControlCenter_OrdnerExport_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.ajl"
+            : baseName + "_AJL.ajl";
+    }
 
     private void ApplySelectedShareDraft(string shareMode)
     {

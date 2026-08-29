@@ -48,6 +48,9 @@
                       Click="AddSingleShareMenuItem_OnClick" />
             <MenuItem Header="Vormerkung entfernen"
                       Click="RemoveShareDraftMenuItem_OnClick" />
+            <Separator />
+            <MenuItem Header="AppleJuice-Linkliste (.ajl) aus Ordner erstellen..."
+                      Click="ExportDirectoryAjlMenuItem_OnClick" />
           </ContextMenu>
         </TreeView.ContextMenu>
         <TreeView.ItemTemplate>
