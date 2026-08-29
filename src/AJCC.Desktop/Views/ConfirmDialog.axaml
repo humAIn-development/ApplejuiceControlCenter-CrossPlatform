@@ -2,12 +2,17 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="AJCC.Desktop.Views.ConfirmDialog"
         Width="520"
-        Height="220"
-        MinWidth="420"
+        MinWidth="470"
+        MinHeight="220"
+        MaxWidth="900"
+        MaxHeight="720"
+        SizeToContent="Height"
         CanResize="False"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AjBackground}">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
   <Border Margin="14"
           Padding="16"
           Background="{DynamicResource AjPanel}"
@@ -41,4 +46,5 @@
       </StackPanel>
     </Grid>
   </Border>
+  </ScrollViewer>
 </Window>

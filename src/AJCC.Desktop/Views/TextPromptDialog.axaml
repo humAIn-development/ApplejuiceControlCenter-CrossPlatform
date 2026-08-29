@@ -3,9 +3,14 @@
         x:Class="AJCC.Desktop.Views.TextPromptDialog"
         Title="Eingabe"
         Width="560"
-        Height="245"
+        MinWidth="430"
+        MinHeight="210"
+        MaxHeight="620"
+        SizeToContent="Height"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18">
     <TextBlock x:Name="PromptText"
                FontSize="16"
@@ -37,4 +42,5 @@
               Click="AcceptButton_OnClick" />
     </StackPanel>
   </Grid>
+  </ScrollViewer>
 </Window>
