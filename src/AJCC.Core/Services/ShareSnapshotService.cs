@@ -3,7 +3,7 @@ using AJCC.Core.Models;
 
 namespace AJCC.Core.Services;
 
-public static class ShareSnapshotService
+public static partial class ShareSnapshotService
 {
     private const int CurrentFormatVersion = 1;
 
