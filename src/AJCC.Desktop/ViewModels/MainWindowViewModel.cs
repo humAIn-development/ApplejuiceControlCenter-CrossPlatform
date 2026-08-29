@@ -37,6 +37,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
     private AjState? _state;
+    private IReadOnlyList<AjShareFile>? _visibleSharesOverride;
     private string _endpointText = "http://192.168.178.25:9851/";
     private string _localIncomingMappingText = string.Empty;
     private string _serverReconnectRestrictionEndpoint = string.Empty;
@@ -275,6 +276,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null ? Array.Empty<AjSearchEntry>() : SelectedSearch.Entries;
     public IEnumerable<AjShareFile> Shares => _state is null ? Array.Empty<AjShareFile>() : _state.Shares;
+    public IEnumerable<AjShareFile> VisibleShares => _visibleSharesOverride ?? Shares;
     public IReadOnlyList<AjShareDirectory> ConfiguredShareDirectories
         => _state is null ? Array.Empty<AjShareDirectory>() : _state.Settings.SharedDirectories.ToList();
     public string ShareCountText => _state is null ? "0 Dateien" : $"{_state.Shares.Count:N0} Dateien";
@@ -1055,6 +1057,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             .ToArray();
 
         return expectedKeys.SequenceEqual(actualKeys, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public void SetVisibleSharesOverride(IReadOnlyList<AjShareFile>? shares)
+    {
+        _visibleSharesOverride = shares;
+        OnPropertyChanged(nameof(VisibleShares));
     }
 
     public async Task ReloadSharesAsync()
@@ -2172,6 +2180,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         _state = null;
+        _visibleSharesOverride = null;
         _serverReconnectRestriction.Clear();
         _serverReconnectRestrictionEndpoint = string.Empty;
         SelectedDownload = null;
@@ -2689,6 +2698,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(Servers));
         OnPropertyChanged(nameof(Searches));
         OnPropertyChanged(nameof(Shares));
+        OnPropertyChanged(nameof(VisibleShares));
         OnPropertyChanged(nameof(ShareCountText));
         OnPropertyChanged(nameof(ShareSizeText));
         OnPropertyChanged(nameof(SelectedDownloadText));

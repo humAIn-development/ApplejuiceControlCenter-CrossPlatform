@@ -42,6 +42,8 @@ public sealed partial class MainWindow : Window
     private AjShareFile? _selectedShareForContext;
     private int _embeddedPartListRequestVersion;
     private long _embeddedPartListDownloadId;
+    private string _appliedShareFilter = string.Empty;
+    private int _shareFilterRequestVersion;
 
     public MainWindow()
     {
@@ -1138,7 +1140,84 @@ public sealed partial class MainWindow : Window
         => await _viewModel.StartSearchAsync();
 
     private async void ReloadSharesButton_OnClick(object? sender, RoutedEventArgs e)
-        => await _viewModel.ReloadSharesAsync();
+    {
+        await _viewModel.ReloadSharesAsync();
+        await ApplyShareFilterAsync(_appliedShareFilter);
+    }
+
+    private async void ShareFilterInput_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+
+        e.Handled = true;
+        await ApplyShareFilterFromInputAsync();
+    }
+
+    private async void ShareFilterApplyButton_OnClick(object? sender, RoutedEventArgs e)
+        => await ApplyShareFilterFromInputAsync();
+
+    private async void ShareFilterClearButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        TextBox? input = this.FindControl<TextBox>("ShareFilterInput");
+        if (input is not null)
+            input.Text = string.Empty;
+
+        await ApplyShareFilterAsync(string.Empty);
+    }
+
+    private async Task ApplyShareFilterFromInputAsync()
+    {
+        TextBox? input = this.FindControl<TextBox>("ShareFilterInput");
+        await ApplyShareFilterAsync(input?.Text);
+    }
+
+    private async Task ApplyShareFilterAsync(string? filterText)
+    {
+        string filter = (filterText ?? string.Empty).Trim();
+        _appliedShareFilter = filter;
+        int requestVersion = ++_shareFilterRequestVersion;
+
+        List<AjShareFile> allShares = _viewModel.Shares.ToList();
+        if (filter.Length == 0)
+        {
+            _viewModel.SetVisibleSharesOverride(null);
+            UpdateShareFilterSummary(allShares.Count, allShares.Count);
+            return;
+        }
+
+        List<AjShareFile> visibleShares = allShares.Count >= 5000
+            ? await Task.Run(() => FilterShareFiles(allShares, filter))
+            : FilterShareFiles(allShares, filter);
+
+        if (requestVersion != _shareFilterRequestVersion)
+            return;
+
+        _viewModel.SetVisibleSharesOverride(visibleShares);
+        UpdateShareFilterSummary(visibleShares.Count, allShares.Count);
+    }
+
+    private static List<AjShareFile> FilterShareFiles(
+        IReadOnlyList<AjShareFile> shares,
+        string filter)
+        => shares
+            .Where(share =>
+                ContainsShareFilter(share.DisplayFilename, filter)
+                || ContainsShareFilter(share.DirectoryPath, filter)
+                || ContainsShareFilter(share.FileType, filter)
+                || ContainsShareFilter(share.Checksum, filter))
+            .ToList();
+
+    private static bool ContainsShareFilter(string? value, string filter)
+        => !string.IsNullOrWhiteSpace(value)
+            && value.Contains(filter, StringComparison.OrdinalIgnoreCase);
+
+    private void UpdateShareFilterSummary(int visibleCount, int totalCount)
+    {
+        TextBlock? summary = this.FindControl<TextBlock>("ShareFilterSummaryText");
+        if (summary is not null)
+            summary.Text = $"{visibleCount:N0} / {totalCount:N0} sichtbar";
+    }
 
     private async void ShareDirectoriesButton_OnClick(object? sender, RoutedEventArgs e)
     {

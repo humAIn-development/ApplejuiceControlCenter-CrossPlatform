@@ -561,6 +561,39 @@
                         IsEnabled="{Binding IsConnected}"
                         Click="ReloadSharesButton_OnClick" />
               </StackPanel>
+
+              <Grid Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                    Margin="0,8,0,0">
+                <TextBlock Text="Filter"
+                           Classes="muted"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center" />
+                <TextBox x:Name="ShareFilterInput"
+                         Grid.Column="1"
+                         MinWidth="240"
+                         PlaceholderText="Dateiname, Pfad, Typ oder Checksum"
+                         KeyDown="ShareFilterInput_OnKeyDown" />
+                <Button Grid.Column="2"
+                        MinWidth="88"
+                        Margin="8,0,0,0"
+                        Content="Anwenden"
+                        IsEnabled="{Binding IsConnected}"
+                        Click="ShareFilterApplyButton_OnClick" />
+                <Button Grid.Column="3"
+                        MinWidth="36"
+                        Margin="6,0,0,0"
+                        Content="×"
+                        ToolTip.Tip="Share-Filter zurücksetzen"
+                        Click="ShareFilterClearButton_OnClick" />
+                <TextBlock x:Name="ShareFilterSummaryText"
+                           Grid.Column="4"
+                           Classes="muted"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="0 / 0 sichtbar" />
+              </Grid>
             </Grid>
           </Border>
 
@@ -576,7 +609,7 @@
             </Grid>
           </Border>
 
-          <ListBox x:Name="SharesList" Grid.Row="2" SelectionMode="Multiple" ItemsSource="{Binding Shares}">
+          <ListBox x:Name="SharesList" Grid.Row="2" SelectionMode="Multiple" ItemsSource="{Binding VisibleShares}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjShareFile">
                 <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*" Margin="8,6">
