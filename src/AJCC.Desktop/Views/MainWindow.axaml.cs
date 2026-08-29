@@ -29,9 +29,12 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, string> _coreProfileSessionPasswords = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _coreProfileReachabilityTimer = new();
     private static readonly TimeSpan CoreProfileReachabilityTimeout = TimeSpan.FromMilliseconds(2500);
+    private const int ActiveCoreReachabilityFailureThreshold = 2;
     private string _defaultCoreProfileId = string.Empty;
     private bool _loadingCoreProfiles;
     private bool _coreProfileReachabilityRunning;
+    private bool _coreProfileFailoverInProgress;
+    private int _activeCoreReachabilityFailureCount;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
     private AjShareFile? _selectedShareForContext;
@@ -42,6 +45,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        _viewModel.CoreConnectionLost += ViewModel_OnCoreConnectionLost;
         LoadCoreProfiles();
         _coreProfileReachabilityTimer.Interval = TimeSpan.FromSeconds(10);
         _coreProfileReachabilityTimer.Tick += CoreProfileReachabilityTimer_OnTick;
@@ -58,7 +62,11 @@ public sealed partial class MainWindow : Window
             RoutingStrategies.Tunnel,
             handledEventsToo: true);
         Opened += async (_, _) => await RefreshCoreProfileReachabilityAsync();
-        Closed += (_, _) => _coreProfileReachabilityTimer.Stop();
+        Closed += (_, _) =>
+        {
+            _coreProfileReachabilityTimer.Stop();
+            _viewModel.CoreConnectionLost -= ViewModel_OnCoreConnectionLost;
+        };
         Closed += MainWindow_OnClosed;
     }
 
@@ -153,12 +161,24 @@ public sealed partial class MainWindow : Window
 
     private async Task RefreshCoreProfileReachabilityAsync()
     {
-        if (_coreProfileReachabilityRunning || _coreProfiles.Count == 0)
+        if (_coreProfileReachabilityRunning
+            || _coreProfileFailoverInProgress
+            || _viewModel.IsBusy
+            || _coreProfiles.Count == 0)
+        {
             return;
+        }
+
+        CoreProfileEntry? failedActiveProfile = null;
+        string failureMessage = string.Empty;
 
         _coreProfileReachabilityRunning = true;
         try
         {
+            CoreProfileEntry? activeProfile = _viewModel.IsConnected
+                ? FindCoreProfileByEndpoint(_viewModel.EndpointText)
+                : null;
+
             foreach (CoreProfileEntry profile in _coreProfiles.ToList())
             {
                 if (!_coreProfiles.Contains(profile))
@@ -166,24 +186,42 @@ public sealed partial class MainWindow : Window
 
                 profile.SetReachabilityStatus(CoreProfileReachabilityStatus.Checking);
 
-                bool reachable;
-                try
+                if (activeProfile is not null
+                    && string.Equals(profile.Id, activeProfile.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    CoreEndpoint endpoint = CoreEndpoint.Parse(profile.Endpoint);
-                    reachable = await TcpReachabilityProbe.TestAsync(
-                        endpoint.Host,
-                        endpoint.BaseUri.Port,
-                        CoreProfileReachabilityTimeout);
-                }
-                catch
-                {
-                    reachable = false;
+                    bool activeReachable = await TestCoreProfileTcpEndpointAsync(profile);
+                    if (activeReachable)
+                    {
+                        _activeCoreReachabilityFailureCount = 0;
+                        profile.SetReachabilityStatus(CoreProfileReachabilityStatus.Reachable);
+                        continue;
+                    }
+
+                    _activeCoreReachabilityFailureCount++;
+                    profile.SetReachabilityStatus(CoreProfileReachabilityStatus.Unreachable);
+
+                    if (_activeCoreReachabilityFailureCount < ActiveCoreReachabilityFailureThreshold)
+                        continue;
+
+                    bool verificationSucceeded = await TestCoreProfileTcpEndpointAsync(profile);
+                    if (verificationSucceeded)
+                    {
+                        _activeCoreReachabilityFailureCount = 0;
+                        profile.SetReachabilityStatus(CoreProfileReachabilityStatus.Reachable);
+                        continue;
+                    }
+
+                    failureMessage =
+                        $"Der XML-Port des aktiven Core ist in {_activeCoreReachabilityFailureCount:N0} aufeinanderfolgenden Profilprüfungen nicht erreichbar.";
+                    failedActiveProfile = profile;
+                    break;
                 }
 
+                bool profileReachable = await TestCoreProfileTcpEndpointAsync(profile);
                 if (_coreProfiles.Contains(profile))
                 {
                     profile.SetReachabilityStatus(
-                        reachable
+                        profileReachable
                             ? CoreProfileReachabilityStatus.Reachable
                             : CoreProfileReachabilityStatus.Unreachable);
                 }
@@ -192,6 +230,188 @@ public sealed partial class MainWindow : Window
         finally
         {
             _coreProfileReachabilityRunning = false;
+        }
+
+        if (failedActiveProfile is not null && !_coreProfileFailoverInProgress)
+            await TryAutomaticCoreProfileFailoverAsync(failedActiveProfile, failureMessage);
+    }
+
+    private static async Task<bool> TestCoreProfileTcpEndpointAsync(CoreProfileEntry profile)
+    {
+        try
+        {
+            CoreEndpoint endpoint = CoreEndpoint.Parse(profile.Endpoint);
+            return await TcpReachabilityProbe.TestAsync(
+                endpoint.Host,
+                endpoint.BaseUri.Port,
+                CoreProfileReachabilityTimeout);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private CoreProfileEntry? FindCoreProfileByEndpoint(string? endpointText)
+    {
+        string normalized = CoreProfileStore.TryNormalizeEndpoint(endpointText);
+        return _coreProfiles.FirstOrDefault(profile =>
+            string.Equals(
+                CoreProfileStore.TryNormalizeEndpoint(profile.Endpoint),
+                normalized,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private List<CoreProfileEntry> BuildCoreFailoverCandidates(CoreProfileEntry failedProfile)
+    {
+        List<CoreProfileEntry> profiles = _coreProfiles.ToList();
+        List<CoreProfileEntry> result = new();
+        HashSet<string> added = new(StringComparer.OrdinalIgnoreCase);
+
+        CoreProfileEntry? defaultProfile = profiles.FirstOrDefault(profile =>
+            string.Equals(profile.Id, _defaultCoreProfileId, StringComparison.OrdinalIgnoreCase));
+        if (defaultProfile is not null
+            && !string.Equals(defaultProfile.Id, failedProfile.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            result.Add(defaultProfile);
+            added.Add(defaultProfile.Id);
+        }
+
+        int failedIndex = profiles.FindIndex(profile =>
+            string.Equals(profile.Id, failedProfile.Id, StringComparison.OrdinalIgnoreCase));
+        if (failedIndex < 0)
+            failedIndex = -1;
+
+        for (int offset = 1; offset <= profiles.Count; offset++)
+        {
+            int index = (failedIndex + offset + profiles.Count) % profiles.Count;
+            CoreProfileEntry candidate = profiles[index];
+            if (string.Equals(candidate.Id, failedProfile.Id, StringComparison.OrdinalIgnoreCase)
+                || !added.Add(candidate.Id))
+            {
+                continue;
+            }
+
+            result.Add(candidate);
+        }
+
+        return result;
+    }
+
+    private void SelectCoreProfileWithoutHandling(
+        ComboBox comboBox,
+        CoreProfileEntry profile)
+    {
+        _loadingCoreProfiles = true;
+        try
+        {
+            comboBox.SelectedItem = profile;
+        }
+        finally
+        {
+            _loadingCoreProfiles = false;
+        }
+    }
+
+    private async void ViewModel_OnCoreConnectionLost(string message)
+    {
+        if (_coreProfileFailoverInProgress)
+            return;
+
+        CoreProfileEntry? failedProfile = FindCoreProfileByEndpoint(_viewModel.EndpointText);
+        if (failedProfile is null)
+            return;
+
+        failedProfile.SetReachabilityStatus(CoreProfileReachabilityStatus.Unreachable);
+        await TryAutomaticCoreProfileFailoverAsync(failedProfile, message);
+    }
+
+    private async Task TryAutomaticCoreProfileFailoverAsync(
+        CoreProfileEntry failedProfile,
+        string reason)
+    {
+        if (_coreProfileFailoverInProgress)
+            return;
+
+        _coreProfileFailoverInProgress = true;
+        _coreProfileReachabilityTimer.Stop();
+        _activeCoreReachabilityFailureCount = 0;
+
+        try
+        {
+            failedProfile.SetReachabilityStatus(CoreProfileReachabilityStatus.Unreachable);
+            _viewModel.SetStatusMessage(
+                $"Aktiver Core ausgefallen: {failedProfile.Name}. Suche erreichbares Ersatzprofil ...");
+
+            await _viewModel.DisconnectAsync();
+
+            foreach (CoreProfileEntry candidate in BuildCoreFailoverCandidates(failedProfile))
+            {
+                if (!_coreProfileSessionPasswords.TryGetValue(candidate.Id, out string? password))
+                    continue;
+
+                if (!await TestCoreProfileTcpEndpointAsync(candidate))
+                {
+                    candidate.SetReachabilityStatus(CoreProfileReachabilityStatus.Unreachable);
+                    continue;
+                }
+
+                candidate.SetReachabilityStatus(CoreProfileReachabilityStatus.Reachable);
+
+                CoreEndpoint endpoint;
+                try
+                {
+                    endpoint = CoreEndpoint.Parse(candidate.Endpoint);
+                }
+                catch
+                {
+                    candidate.SetReachabilityStatus(CoreProfileReachabilityStatus.Unreachable);
+                    continue;
+                }
+
+                _viewModel.EndpointText = endpoint.BaseUri.ToString();
+                await _viewModel.ToggleConnectionAsync(password);
+                if (!_viewModel.IsConnected)
+                    continue;
+
+                ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+                if (comboBox is not null)
+                    SelectCoreProfileWithoutHandling(comboBox, candidate);
+
+                _viewModel.SetStatusMessage(
+                    $"Automatischer Core-Failover abgeschlossen: {candidate.Name} ist jetzt aktiv.");
+                return;
+            }
+
+            if (_coreProfileSessionPasswords.TryGetValue(failedProfile.Id, out string? failedPassword)
+                && await TestCoreProfileTcpEndpointAsync(failedProfile))
+            {
+                CoreEndpoint failedEndpoint = CoreEndpoint.Parse(failedProfile.Endpoint);
+                _viewModel.EndpointText = failedEndpoint.BaseUri.ToString();
+                await _viewModel.ToggleConnectionAsync(failedPassword);
+                if (_viewModel.IsConnected)
+                {
+                    failedProfile.SetReachabilityStatus(CoreProfileReachabilityStatus.Reachable);
+                    ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
+                    if (comboBox is not null)
+                        SelectCoreProfileWithoutHandling(comboBox, failedProfile);
+
+                    _viewModel.SetStatusMessage(
+                        $"Der bisherige Core {failedProfile.Name} ist wieder erreichbar und wurde erneut verbunden.");
+                    return;
+                }
+            }
+
+            string detail = string.IsNullOrWhiteSpace(reason)
+                ? "Kein erreichbares Core-Profil mit bekanntem Sitzungspasswort verfügbar."
+                : reason + " Kein erreichbares Core-Profil mit bekanntem Sitzungspasswort verfügbar.";
+            _viewModel.SetStatusMessage(
+                $"Automatischer Core-Failover nicht möglich. AJCC-X bleibt offline. {detail}");
+        }
+        finally
+        {
+            _coreProfileFailoverInProgress = false;
+            _coreProfileReachabilityTimer.Start();
         }
     }
 
@@ -394,7 +614,7 @@ public sealed partial class MainWindow : Window
 
     private async void ManageCoreProfilesButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!_viewModel.CanToggleConnection)
+        if (_coreProfileFailoverInProgress || !_viewModel.CanToggleConnection)
             return;
 
         ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
@@ -504,8 +724,12 @@ public sealed partial class MainWindow : Window
 
     private async void SwitchCoreProfileButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!_viewModel.IsConnected || !_viewModel.CanToggleConnection)
+        if (_coreProfileFailoverInProgress
+            || !_viewModel.IsConnected
+            || !_viewModel.CanToggleConnection)
+        {
             return;
+        }
 
         ComboBox? comboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
         if (comboBox?.SelectedItem is not CoreProfileEntry profile)
@@ -604,6 +828,9 @@ public sealed partial class MainWindow : Window
 
     private async void ConnectButton_OnClick(object? sender, RoutedEventArgs e)
     {
+        if (_coreProfileFailoverInProgress)
+            return;
+
         ComboBox? profileComboBox = this.FindControl<ComboBox>("CoreProfileComboBox");
         CoreProfileEntry? selectedProfile = profileComboBox?.SelectedItem as CoreProfileEntry;
 

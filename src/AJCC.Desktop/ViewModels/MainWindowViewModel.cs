@@ -62,6 +62,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         long ActualUploadPosition);
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public event Action<string>? CoreConnectionLost;
 
     public MainWindowViewModel()
     {
@@ -2535,6 +2536,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             IsConnected = false;
             UpdateServerCoreStates();
             StatusText = "Core-Verbindung verloren: " + message;
+            CoreConnectionLost?.Invoke(message);
         });
 
     private void PollingOnFullResyncRequested(int missingTimestamps, string reason)
