@@ -1,0 +1,82 @@
+using System.Net;
+using System.Net.Http;
+using AJCC.Core.Protocol;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace AJCC.Core.Tests;
+
+[TestClass]
+public sealed class AppleJuiceCoreClientTests
+{
+    [TestMethod]
+    public async Task GetSettings_UsesHttpsBasePathAndHashedPassword()
+    {
+        RecordingHandler handler = new("<settings />");
+        using HttpClient httpClient = new(handler);
+        CoreEndpoint endpoint = new("https", "example.org", basePath: "/applejuice/");
+        AppleJuiceCoreClient client = new(endpoint, "secret", httpClient);
+
+        await client.GetSettingsXmlAsync();
+
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("https", handler.LastRequestUri.Scheme);
+        Assert.AreEqual("example.org", handler.LastRequestUri.Host);
+        Assert.AreEqual("/applejuice/xml/settings.xml", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "password=5ebe2294ecd0e0f08eab7690d2a6ee69");
+        Assert.IsFalse(query.Contains("secret", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task GetModified_SendsTimestampSessionAndFilter()
+    {
+        RecordingHandler handler = new("<modified><time>43</time></modified>");
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+
+        await client.GetModifiedXmlAsync(42, "session-1", "ids;down;server");
+
+        Assert.IsNotNull(handler.LastRequestUri);
+        Assert.AreEqual("/xml/modified.xml", handler.LastRequestUri.AbsolutePath);
+        string query = WebUtility.UrlDecode(handler.LastRequestUri.Query);
+        StringAssert.Contains(query, "timestamp=42");
+        StringAssert.Contains(query, "session=session-1");
+        StringAssert.Contains(query, "filter=ids;down;server");
+    }
+
+    [TestMethod]
+    public async Task TestConnection_AcceptsAppleJuiceSettingsShape()
+    {
+        const string settingsXml = "<settings><xmlport>9851</xmlport><incomingdirectory>/in</incomingdirectory><temporarydirectory>/tmp</temporarydirectory></settings>";
+        RecordingHandler handler = new(settingsXml);
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "localhost", 9851), httpClient: httpClient);
+
+        ConnectionTestResult result = await client.TestConnectionAsync();
+
+        Assert.IsTrue(result.Success);
+        StringAssert.Contains(result.Message, "Verbindung erfolgreich");
+    }
+
+    private sealed class RecordingHandler : HttpMessageHandler
+    {
+        private readonly string _responseBody;
+
+        public RecordingHandler(string responseBody)
+        {
+            _responseBody = responseBody;
+        }
+
+        public Uri? LastRequestUri { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastRequestUri = request.RequestUri;
+            HttpResponseMessage response = new(HttpStatusCode.OK)
+            {
+                Content = new StringContent(_responseBody)
+            };
+            return Task.FromResult(response);
+        }
+    }
+}

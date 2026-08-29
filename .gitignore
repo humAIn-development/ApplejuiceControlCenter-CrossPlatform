@@ -1,0 +1,42 @@
+# Build output
+bin/
+obj/
+out/
+publish/
+artifacts/
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local logs / diagnostics
+*.log
+*.tmp
+*.bak
+
+# Local configuration / secrets
+*.local.json
+*.secrets.json
+.env
+.env.*
