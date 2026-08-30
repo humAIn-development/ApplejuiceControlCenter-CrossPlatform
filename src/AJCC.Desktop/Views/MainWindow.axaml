@@ -31,6 +31,9 @@
     <Style Selector="StackPanel.coreProfileItem.unreachable">
       <Setter Property="Opacity" Value="0.55" />
     </Style>
+    <Style Selector="Grid.searchResultRow.existingDownload">
+      <Setter Property="Background" Value="#382A12" />
+    </Style>
   </Window.Styles>
 
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="14">
@@ -518,7 +521,7 @@
                           Classes="primary"
                           MinWidth="170"
                           Margin="8,0,0,0"
-                          Content="Als Download übernehmen"
+                          Content="{Binding SelectedSearchEntryDownloadActionText}"
                           IsEnabled="{Binding CanDownloadSelectedSearchEntry}"
                           Click="DownloadSearchResultButton_OnClick" />
                 </Grid>
@@ -530,11 +533,16 @@
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:AjSearchEntry">
                     <Grid ColumnDefinitions="4*,1.2*,1.2*"
+                          Classes="searchResultRow"
+                          Classes.existingDownload="{Binding IsExistingDownload}"
+                          ToolTip.Tip="{Binding ExistingDownloadToolTip}"
                           Margin="8,6"
                           ContextRequested="SearchResultRow_OnContextRequested">
                       <Grid.ContextMenu>
                         <ContextMenu>
-                          <MenuItem Header="Als Download übernehmen" Click="SearchResultContextDownload_OnClick" />
+                          <MenuItem Header="{Binding DownloadActionText}"
+                                    IsEnabled="{Binding CanImportAsDownload}"
+                                    Click="SearchResultContextDownload_OnClick" />
                           <MenuItem Header="AJFSP-Link kopieren" Click="SearchResultContextCopyAjfsp_OnClick" />
                           <Separator />
                           <MenuItem Header="Dateiname kopieren" Click="SearchResultContextCopyFilename_OnClick" />

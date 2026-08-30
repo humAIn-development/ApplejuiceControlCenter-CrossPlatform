@@ -646,8 +646,12 @@ public sealed class AjSearch : INotifyPropertyChanged
     }
 }
 
-public sealed class AjSearchEntry
+public sealed class AjSearchEntry : INotifyPropertyChanged
 {
+    private bool _isExistingDownload;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public long Id { get; set; }
     public long SearchId { get; set; }
     public string Checksum { get; set; } = "";
@@ -657,6 +661,36 @@ public sealed class AjSearchEntry
     public string SourceText { get; set; } = "";
     public bool HasSourceText => !string.IsNullOrWhiteSpace(SourceText);
     public int FilenameUsers { get; set; }
+
+    public bool IsExistingDownload
+    {
+        get => _isExistingDownload;
+        set
+        {
+            if (_isExistingDownload == value)
+                return;
+
+            _isExistingDownload = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanImportAsDownload));
+            OnPropertyChanged(nameof(DownloadActionText));
+            OnPropertyChanged(nameof(ExistingDownloadToolTip));
+        }
+    }
+
+    public bool CanImportAsDownload => !IsExistingDownload;
+    public string DownloadActionText => IsExistingDownload
+        ? "ist bereits in der Downloadliste"
+        : "Als Download übernehmen";
+    public string ExistingDownloadToolTip => IsExistingDownload
+        ? "Diese Datei ist bereits in der Downloadliste."
+        : string.Empty;
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        if (!string.IsNullOrWhiteSpace(propertyName))
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public sealed class AjDirectoryEntry

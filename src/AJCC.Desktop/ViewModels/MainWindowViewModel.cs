@@ -179,6 +179,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 return;
 
             OnPropertyChanged(nameof(SelectedSearchEntryText));
+            OnPropertyChanged(nameof(SelectedSearchEntryDownloadActionText));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         }
     }
@@ -240,7 +241,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public bool CanSetPowerDownloadSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanRenameSelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
     public bool CanSetTargetDirectorySelectedDownload => IsConnected && !IsBusy && DownloadActionSemantics.CanChangeMetadata(SelectedDownload);
-    public bool CanDownloadSelectedSearchEntry => IsConnected && !IsBusy && IsValidSearchEntryForDownload(SelectedSearchEntry);
+    public bool CanDownloadSelectedSearchEntry => IsConnected
+        && !IsBusy
+        && IsValidSearchEntryForDownload(SelectedSearchEntry)
+        && SelectedSearchEntry?.IsExistingDownload != true;
+    public string SelectedSearchEntryDownloadActionText
+        => SelectedSearchEntry?.DownloadActionText ?? "Als Download übernehmen";
     public string ConnectButtonText => IsConnected ? "Trennen" : "Verbinden";
     public string ConnectionStateText => IsConnected ? "ONLINE" : "OFFLINE";
     public bool HasServerReconnectRestriction => IsConnected && _serverReconnectRestriction.IsActive(DateTimeOffset.UtcNow);
@@ -3218,6 +3224,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         UpdateDownloadSourceCounts();
         UpdateUploadSpeedHistories();
         UpdateServerCoreStates();
+        if (_state is { } state)
+            SearchExistingDownloadSemantics.Apply(state.Searches, state.Downloads);
         OnPropertyChanged(nameof(Downloads));
         OnPropertyChanged(nameof(SelectedDownloadSources));
         OnPropertyChanged(nameof(SelectedDownloadSourcesText));
@@ -3238,6 +3246,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
         OnPropertyChanged(nameof(SelectedSearchEntries));
         OnPropertyChanged(nameof(SelectedSearchEntryText));
+        OnPropertyChanged(nameof(SelectedSearchEntryDownloadActionText));
         OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
         OnPropertyChanged(nameof(CanRemoveSelectedSearch));
         OnPropertyChanged(nameof(CoreNick));
