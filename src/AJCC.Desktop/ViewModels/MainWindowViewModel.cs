@@ -66,6 +66,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _isServerReachabilityProbeRunning;
     private int _serverReachabilityNextIndex;
     private bool _externalCorePortTestRunning;
+    private bool _runtimeFullResyncInProgress;
+    private DateTime _lastRuntimeFullResyncUtc = DateTime.MinValue;
+    private static readonly TimeSpan RuntimeFullResyncCooldown = TimeSpan.FromSeconds(20);
     private bool _disposed;
 
     private readonly record struct UploadSpeedSampleSignature(
@@ -2904,7 +2907,117 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
 
     private void PollingOnFullResyncRequested(int missingTimestamps, string reason)
-        => Dispatcher.UIThread.Post(() => StatusText = $"Core fordert Neuabgleich an ({missingTimestamps}): {reason}");
+        => Dispatcher.UIThread.Post(() => _ = RunRuntimeFullResyncAsync(missingTimestamps, reason));
+
+    private async Task RunRuntimeFullResyncAsync(int missingTimestamps, string reason)
+    {
+        if (_runtimeFullResyncInProgress || !IsConnected || _client is null || _state is null)
+            return;
+
+        if (IsBusy)
+        {
+            StatusText = $"Core-Neuabgleich nach {missingTimestamps} Minimalantwort(en) aufgeschoben: AJCC verarbeitet gerade eine andere Core-Aktion.";
+            return;
+        }
+
+        DateTime nowUtc = DateTime.UtcNow;
+        if (nowUtc - _lastRuntimeFullResyncUtc < RuntimeFullResyncCooldown)
+        {
+            StatusText = $"Core-Neuabgleich wegen Cooldown aufgeschoben: {reason}";
+            return;
+        }
+
+        AppleJuiceCoreClient client = _client;
+        AjState previousState = _state;
+        long selectedDownloadId = SelectedDownload?.Id ?? 0;
+        long selectedSearchId = SelectedSearch?.Id ?? 0;
+        List<AjShareFile> preservedShares = previousState.Shares.ToList();
+        Dictionary<long, string> preservedShareNames = new(previousState.ShareFilenameById);
+
+        _runtimeFullResyncInProgress = true;
+        _lastRuntimeFullResyncUtc = nowUtc;
+        IsBusy = true;
+        StatusText = $"Runtime-Neuabgleich gestartet nach {missingTimestamps} Minimalantwort(en): {reason}";
+        CancelUploadObjectNameLookup();
+
+        try
+        {
+            AjPollingService? polling = _polling;
+            _polling = null;
+            if (polling is not null)
+            {
+                polling.ModifiedReceived -= PollingOnModifiedReceived;
+                polling.ConnectionDegraded -= PollingOnConnectionDegraded;
+                polling.ConnectionRestored -= PollingOnConnectionRestored;
+                polling.ConnectionLost -= PollingOnConnectionLost;
+                polling.FullResyncRequested -= PollingOnFullResyncRequested;
+                await polling.StopAsync().ConfigureAwait(true);
+            }
+
+            CoreBootstrapResult bootstrap = await new CoreRuntimeBootstrapper(client)
+                .LoadAsync()
+                .ConfigureAwait(true);
+            AjState refreshedState = bootstrap.State;
+
+            // share.xml bleibt ein expliziter/manueller Load. Ein Runtime-Resync darf
+            // die bereits lokal geladene Share-Dateiliste weder verlieren noch neu pollen.
+            if (refreshedState.Shares.Count == 0)
+            {
+                foreach (AjShareFile share in preservedShares)
+                    refreshedState.Shares.Add(share);
+            }
+
+            foreach (KeyValuePair<long, string> entry in preservedShareNames)
+                refreshedState.ShareFilenameById.TryAdd(entry.Key, entry.Value);
+
+            _state = refreshedState;
+            CoreVersion = string.IsNullOrWhiteSpace(bootstrap.CoreVersion)
+                ? "unbekannt"
+                : bootstrap.CoreVersion;
+            SelectedDownload = selectedDownloadId > 0
+                ? refreshedState.Downloads.FirstOrDefault(download => download.Id == selectedDownloadId)
+                : null;
+            SelectedSearch = selectedSearchId > 0
+                ? refreshedState.Searches.FirstOrDefault(search => search.Id == selectedSearchId)
+                : refreshedState.Searches.LastOrDefault();
+            RaiseStateProperties();
+            StatusText = "Runtime-Neuabgleich abgeschlossen: neue Core-Session und vollständiger Laufzeitstatus geladen.";
+        }
+        catch (Exception ex)
+        {
+            _state = previousState;
+            SelectedDownload = selectedDownloadId > 0
+                ? previousState.Downloads.FirstOrDefault(download => download.Id == selectedDownloadId)
+                : null;
+            SelectedSearch = selectedSearchId > 0
+                ? previousState.Searches.FirstOrDefault(search => search.Id == selectedSearchId)
+                : previousState.Searches.LastOrDefault();
+            RaiseStateProperties();
+            StatusText = "Runtime-Neuabgleich fehlgeschlagen; bisheriger Laufzeitstatus bleibt erhalten: " + ex.Message;
+        }
+        finally
+        {
+            if (!_disposed
+                && IsConnected
+                && ReferenceEquals(_client, client)
+                && _state is { } state
+                && _polling is null)
+            {
+                AjPollingService replacementPolling = new(client);
+                replacementPolling.ModifiedReceived += PollingOnModifiedReceived;
+                replacementPolling.ConnectionDegraded += PollingOnConnectionDegraded;
+                replacementPolling.ConnectionRestored += PollingOnConnectionRestored;
+                replacementPolling.ConnectionLost += PollingOnConnectionLost;
+                replacementPolling.FullResyncRequested += PollingOnFullResyncRequested;
+                _polling = replacementPolling;
+                await replacementPolling.StartAsync(state, intervalMs: 2000).ConfigureAwait(true);
+            }
+
+            _runtimeFullResyncInProgress = false;
+            IsBusy = false;
+            QueueUploadObjectNameLookup();
+        }
+    }
 
     private static bool IsValidSearchEntryForDownload(AjSearchEntry? entry)
     {
