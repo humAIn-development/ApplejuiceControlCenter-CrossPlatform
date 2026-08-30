@@ -98,6 +98,20 @@ public static class ShareDirectoryDraftSemantics
         out string ancestorPath)
         => TryGetRecursiveAncestor(Clone(directories), path, ignoredDirectory: null, out ancestorPath);
 
+    public static bool HasSharedDescendant(
+        IEnumerable<AjShareDirectory>? directories,
+        string? parentPath)
+    {
+        string normalizedParent = NormalizePath(parentPath);
+        if (normalizedParent.Length == 0)
+            return false;
+
+        return directories?
+            .Where(directory => directory is not null)
+            .Any(directory => IsStrictChildDirectory(normalizedParent, directory.Name))
+            ?? false;
+    }
+
     private static bool TryGetRecursiveAncestor(
         IReadOnlyList<AjShareDirectory> directories,
         string? path,

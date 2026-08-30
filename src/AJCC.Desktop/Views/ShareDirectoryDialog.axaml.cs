@@ -148,12 +148,14 @@ public sealed partial class ShareDirectoryDialog : Window
                 string fullPath = !string.IsNullOrWhiteSpace(entry.Path)
                     ? entry.Path.Trim()
                     : BuildCorePath(parentPath, entry.Name);
-                return new ShareDirectoryTreeNode(
+                ShareDirectoryTreeNode node = new(
                     entry.Name.Trim(),
                     fullPath,
                     GetShareStatus(fullPath),
                     CanHaveChildren(entry),
                     LoadChildrenAsync);
+                node.HasSharedDescendant = ShouldMarkSharedDescendant(fullPath);
+                return node;
             })
             .ToList();
 
@@ -533,7 +535,10 @@ public sealed partial class ShareDirectoryDialog : Window
     private void RefreshNodeShareStatuses(ShareDirectoryTreeNode node)
     {
         if (!node.IsPlaceholder)
+        {
             node.ShareStatus = GetShareStatus(node.FullPath);
+            node.HasSharedDescendant = ShouldMarkSharedDescendant(node.FullPath);
+        }
 
         foreach (ShareDirectoryTreeNode child in node.Children)
             RefreshNodeShareStatuses(child);
@@ -606,7 +611,25 @@ public sealed partial class ShareDirectoryDialog : Window
             return "Abgedeckt durch " + ancestorPath;
         }
 
-        return string.Empty;
+        return ShareDirectoryDraftSemantics.HasSharedDescendant(_draftDirectories, path)
+            ? "Enthält Freigabe"
+            : string.Empty;
+    }
+
+    private bool ShouldMarkSharedDescendant(string path)
+    {
+        if (_draftDirectories.Any(directory => PathsEqual(directory.Name, path)))
+            return false;
+
+        if (ShareDirectoryDraftSemantics.TryGetRecursiveAncestor(
+                _draftDirectories,
+                path,
+                out _))
+        {
+            return false;
+        }
+
+        return ShareDirectoryDraftSemantics.HasSharedDescendant(_draftDirectories, path);
     }
 
     private static string FormatShareMode(string shareMode)
@@ -678,6 +701,7 @@ public sealed partial class ShareDirectoryDialog : Window
         private readonly Func<ShareDirectoryTreeNode, Task>? _loadChildrenAsync;
         private bool _isExpanded;
         private string _shareStatus;
+        private bool _hasSharedDescendant;
 
         public ShareDirectoryTreeNode(
             string name,
@@ -717,6 +741,19 @@ public sealed partial class ShareDirectoryDialog : Window
                     return;
 
                 _shareStatus = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool HasSharedDescendant
+        {
+            get => _hasSharedDescendant;
+            set
+            {
+                if (_hasSharedDescendant == value)
+                    return;
+
+                _hasSharedDescendant = value;
                 OnPropertyChanged();
             }
         }

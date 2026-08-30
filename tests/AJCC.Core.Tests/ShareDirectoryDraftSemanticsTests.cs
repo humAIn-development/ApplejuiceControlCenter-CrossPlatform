@@ -138,6 +138,47 @@ public sealed class ShareDirectoryDraftSemanticsTests
         Assert.AreEqual("/", result.BlockingAncestorPath);
     }
 
+    [TestMethod]
+    public void HasSharedDescendant_DetectsWindowsDescendantAcrossSeparatorsAndCase()
+    {
+        AjShareDirectory[] directories =
+        {
+            Share(@"C:\Share\Music\Live", ShareDirectoryDraftSemantics.SingleDirectoryShareMode)
+        };
+
+        Assert.IsTrue(ShareDirectoryDraftSemantics.HasSharedDescendant(
+            directories,
+            "c:/share/music"));
+    }
+
+    [TestMethod]
+    public void HasSharedDescendant_ExactPathAndSiblingPrefixAreNotDescendants()
+    {
+        AjShareDirectory[] directories =
+        {
+            Share("/srv/share/music", ShareDirectoryDraftSemantics.SingleDirectoryShareMode),
+            Share("/srv/share/musical/live", ShareDirectoryDraftSemantics.SingleDirectoryShareMode)
+        };
+
+        Assert.IsFalse(ShareDirectoryDraftSemantics.HasSharedDescendant(
+            directories,
+            "/srv/share/music"));
+    }
+
+    [TestMethod]
+    public void HasSharedDescendant_HandlesUnixRoot()
+    {
+        AjShareDirectory[] directories =
+        {
+            Share("/home/user/share", ShareDirectoryDraftSemantics.RecursiveShareMode)
+        };
+
+        Assert.IsTrue(ShareDirectoryDraftSemantics.HasSharedDescendant(directories, "/"));
+        Assert.IsFalse(ShareDirectoryDraftSemantics.HasSharedDescendant(
+            new[] { Share("/", ShareDirectoryDraftSemantics.RecursiveShareMode) },
+            "/"));
+    }
+
     private static AjShareDirectory Share(string path, string mode)
         => new() { Name = path, ShareMode = mode };
 }
