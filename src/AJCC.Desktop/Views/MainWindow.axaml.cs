@@ -1322,6 +1322,9 @@ public sealed partial class MainWindow : Window
     private async void RemoveSearchButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.RemoveSelectedSearchAsync();
 
+    private void ClearSearchResultFilterButton_OnClick(object? sender, RoutedEventArgs e)
+        => _viewModel.SearchResultFilterText = string.Empty;
+
     private async void ShareSnapshotDiffButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (!_viewModel.IsConnected || _viewModel.IsBusy)

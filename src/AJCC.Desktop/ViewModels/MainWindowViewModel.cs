@@ -54,6 +54,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _statusText = "Nicht verbunden";
     private string _coreVersion = "-";
     private string _searchText = string.Empty;
+    private string _searchResultFilterText = string.Empty;
     private string _pendingSearchText = string.Empty;
     private long _pendingSearchPreviousMaxId;
     private int _pendingSearchPollCount;
@@ -137,6 +138,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public string SearchResultFilterText
+    {
+        get => _searchResultFilterText;
+        set
+        {
+            string next = value ?? string.Empty;
+            if (!SetField(ref _searchResultFilterText, next))
+                return;
+
+            if (SelectedSearchEntry is not null
+                && !SearchResultFilterSemantics.Matches(SelectedSearchEntry, next))
+            {
+                SelectedSearchEntry = null;
+            }
+
+            OnPropertyChanged(nameof(SelectedSearchEntries));
+            OnPropertyChanged(nameof(SearchResultsSummaryText));
+        }
+    }
+
     public AjDownload? SelectedDownload
     {
         get => _selectedDownload;
@@ -166,6 +187,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             SelectedSearchEntry = null;
             OnPropertyChanged(nameof(SelectedSearchEntries));
+            OnPropertyChanged(nameof(SearchResultsSummaryText));
             OnPropertyChanged(nameof(CanRemoveSelectedSearch));
         }
     }
@@ -304,8 +326,37 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null
         ? Array.Empty<AjSearchEntry>()
         : SelectedSearch.Entries
+            .Where(entry => SearchResultFilterSemantics.Matches(entry, SearchResultFilterText))
             .OrderByDescending(entry => entry.FilenameUsers)
             .ThenBy(entry => entry.Filename, NaturalStringComparer.Instance);
+
+    public string SearchResultsSummaryText
+    {
+        get
+        {
+            AjSearch? search = SelectedSearch;
+            string filter = SearchResultFilterText.Trim();
+            string searchSuffix = search is not null && !string.IsNullOrWhiteSpace(search.SearchText)
+                ? $" für: {search.SearchText}"
+                : string.Empty;
+            int totalCount = search?.Entries.Count ?? 0;
+
+            if (totalCount == 0)
+            {
+                return filter.Length == 0
+                    ? "Keine Ergebnisse" + searchSuffix
+                    : "0 gefilterte von 0 Ergebnissen" + searchSuffix;
+            }
+
+            if (filter.Length == 0)
+                return $"{totalCount:N0} Ergebnisse{searchSuffix}";
+
+            int visibleCount = search!.Entries.Count(entry =>
+                SearchResultFilterSemantics.Matches(entry, filter));
+            return $"{visibleCount:N0} gefilterte von {totalCount:N0} Ergebnissen{searchSuffix}";
+        }
+    }
+
     public IEnumerable<AjShareFile> Shares => _state is null ? Array.Empty<AjShareFile>() : _state.Shares;
     public IEnumerable<AjShareFile> VisibleShares => _visibleSharesOverride ?? Shares;
     public IReadOnlyList<AjShareDirectory> ConfiguredShareDirectories
@@ -3245,6 +3296,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CanRenameSelectedDownload));
         OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
         OnPropertyChanged(nameof(SelectedSearchEntries));
+        OnPropertyChanged(nameof(SearchResultsSummaryText));
         OnPropertyChanged(nameof(SelectedSearchEntryText));
         OnPropertyChanged(nameof(SelectedSearchEntryDownloadActionText));
         OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
