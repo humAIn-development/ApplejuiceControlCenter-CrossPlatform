@@ -179,6 +179,54 @@ public sealed class ShareDirectoryDraftSemanticsTests
             "/"));
     }
 
+
+    [TestMethod]
+    public void GetVisualState_DistinguishesDirectSingleAndRecursiveShares()
+    {
+        AjShareDirectory[] directories =
+        {
+            Share("/srv/single", ShareDirectoryDraftSemantics.SingleDirectoryShareMode),
+            Share("/srv/recursive", ShareDirectoryDraftSemantics.RecursiveShareMode)
+        };
+
+        Assert.AreEqual(
+            ShareDirectoryVisualState.Shared,
+            ShareDirectoryDraftSemantics.GetVisualState(directories, "/srv/single"));
+        Assert.AreEqual(
+            ShareDirectoryVisualState.RecursiveShared,
+            ShareDirectoryDraftSemantics.GetVisualState(directories, "/srv/recursive"));
+    }
+
+    [TestMethod]
+    public void GetVisualState_RecursiveAncestorIsInheritedAcrossWindowsSeparators()
+    {
+        AjShareDirectory[] directories =
+        {
+            Share(@"C:\Share\Media", ShareDirectoryDraftSemantics.RecursiveShareMode)
+        };
+
+        Assert.AreEqual(
+            ShareDirectoryVisualState.RecursiveShared,
+            ShareDirectoryDraftSemantics.GetVisualState(
+                directories,
+                "c:/share/media/movies"));
+    }
+
+    [TestMethod]
+    public void GetVisualState_ContainerOfSeparateShareRemainsNotShared()
+    {
+        AjShareDirectory[] directories =
+        {
+            Share("/srv/media/movies", ShareDirectoryDraftSemantics.SingleDirectoryShareMode)
+        };
+
+        Assert.AreEqual(
+            ShareDirectoryVisualState.NotShared,
+            ShareDirectoryDraftSemantics.GetVisualState(directories, "/srv/media"));
+        Assert.IsTrue(
+            ShareDirectoryDraftSemantics.HasSharedDescendant(directories, "/srv/media"));
+    }
+
     private static AjShareDirectory Share(string path, string mode)
         => new() { Name = path, ShareMode = mode };
 }

@@ -112,6 +112,33 @@ public static class ShareDirectoryDraftSemantics
             ?? false;
     }
 
+    public static ShareDirectoryVisualState GetVisualState(
+        IEnumerable<AjShareDirectory>? directories,
+        string? path)
+    {
+        string normalizedPath = NormalizePath(path);
+        if (normalizedPath.Length == 0)
+            return ShareDirectoryVisualState.NotShared;
+
+        List<AjShareDirectory> snapshot = Clone(directories);
+        AjShareDirectory? exact = snapshot.FirstOrDefault(
+            directory => PathsEqual(directory.Name, normalizedPath));
+        if (exact is not null)
+        {
+            return IsRecursive(exact)
+                ? ShareDirectoryVisualState.RecursiveShared
+                : ShareDirectoryVisualState.Shared;
+        }
+
+        return TryGetRecursiveAncestor(
+            snapshot,
+            normalizedPath,
+            ignoredDirectory: null,
+            out _)
+            ? ShareDirectoryVisualState.RecursiveShared
+            : ShareDirectoryVisualState.NotShared;
+    }
+
     private static bool TryGetRecursiveAncestor(
         IReadOnlyList<AjShareDirectory> directories,
         string? path,
@@ -228,6 +255,13 @@ public static class ShareDirectoryDraftSemantics
 
         return suffix;
     }
+}
+
+public enum ShareDirectoryVisualState
+{
+    NotShared,
+    Shared,
+    RecursiveShared
 }
 
 public sealed record ShareDirectoryDraftResult(

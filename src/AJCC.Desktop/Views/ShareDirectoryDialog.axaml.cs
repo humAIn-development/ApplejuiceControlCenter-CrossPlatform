@@ -152,6 +152,7 @@ public sealed partial class ShareDirectoryDialog : Window
                     entry.Name.Trim(),
                     fullPath,
                     GetShareStatus(fullPath),
+                    ShareDirectoryDraftSemantics.GetVisualState(_draftDirectories, fullPath),
                     CanHaveChildren(entry),
                     LoadChildrenAsync);
                 node.HasSharedDescendant = ShouldMarkSharedDescendant(fullPath);
@@ -537,6 +538,9 @@ public sealed partial class ShareDirectoryDialog : Window
         if (!node.IsPlaceholder)
         {
             node.ShareStatus = GetShareStatus(node.FullPath);
+            node.ShareVisualState = ShareDirectoryDraftSemantics.GetVisualState(
+                _draftDirectories,
+                node.FullPath);
             node.HasSharedDescendant = ShouldMarkSharedDescendant(node.FullPath);
         }
 
@@ -701,12 +705,14 @@ public sealed partial class ShareDirectoryDialog : Window
         private readonly Func<ShareDirectoryTreeNode, Task>? _loadChildrenAsync;
         private bool _isExpanded;
         private string _shareStatus;
+        private ShareDirectoryVisualState _shareVisualState;
         private bool _hasSharedDescendant;
 
         public ShareDirectoryTreeNode(
             string name,
             string fullPath,
             string shareStatus,
+            ShareDirectoryVisualState shareVisualState,
             bool canOpen,
             Func<ShareDirectoryTreeNode, Task>? loadChildrenAsync,
             bool isPlaceholder = false)
@@ -714,6 +720,7 @@ public sealed partial class ShareDirectoryDialog : Window
             Name = name;
             FullPath = fullPath;
             _shareStatus = shareStatus;
+            _shareVisualState = shareVisualState;
             CanOpen = canOpen;
             _loadChildrenAsync = loadChildrenAsync;
             IsPlaceholder = isPlaceholder;
@@ -731,6 +738,10 @@ public sealed partial class ShareDirectoryDialog : Window
         public bool IsLoaded { get; set; }
         public bool IsLoading { get; private set; }
         public ObservableCollection<ShareDirectoryTreeNode> Children { get; } = new();
+        public bool IsShared => _shareVisualState is ShareDirectoryVisualState.Shared
+            or ShareDirectoryVisualState.RecursiveShared;
+        public bool IsNotShared => _shareVisualState == ShareDirectoryVisualState.NotShared;
+        public bool IsRecursiveShared => _shareVisualState == ShareDirectoryVisualState.RecursiveShared;
 
         public string ShareStatus
         {
@@ -742,6 +753,22 @@ public sealed partial class ShareDirectoryDialog : Window
 
                 _shareStatus = value;
                 OnPropertyChanged();
+            }
+        }
+
+        public ShareDirectoryVisualState ShareVisualState
+        {
+            get => _shareVisualState;
+            set
+            {
+                if (_shareVisualState == value)
+                    return;
+
+                _shareVisualState = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsShared));
+                OnPropertyChanged(nameof(IsNotShared));
+                OnPropertyChanged(nameof(IsRecursiveShared));
             }
         }
 
@@ -789,7 +816,14 @@ public sealed partial class ShareDirectoryDialog : Window
         }
 
         private static ShareDirectoryTreeNode CreatePlaceholder()
-            => new("Lade …", string.Empty, string.Empty, false, null, true);
+            => new(
+                "Lade …",
+                string.Empty,
+                string.Empty,
+                ShareDirectoryVisualState.NotShared,
+                false,
+                null,
+                true);
 
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

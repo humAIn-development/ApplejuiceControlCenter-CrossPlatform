@@ -24,6 +24,56 @@
                  Margin="0,4,0,0"
                  Text="Core-Verzeichnisse werden als Baum geladen. Änderungen bleiben lokal, bis „An Core übertragen“ ausdrücklich bestätigt wird."
                  TextWrapping="Wrap" />
+      <StackPanel Orientation="Horizontal"
+                  Spacing="14"
+                  Margin="0,8,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Grid Width="18" Height="16">
+            <Canvas Width="16" Height="16">
+              <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
+                       Fill="#D94A3A" Stroke="#8A241C" StrokeThickness="0.8" />
+              <Path Data="M8,4 C7.5,2.7 8.4,1.7 9.6,1.1"
+                    Stroke="#6B3D16" StrokeThickness="1.2" />
+              <Ellipse Canvas.Left="9.1" Canvas.Top="1.5" Width="4.2" Height="2.5"
+                       Fill="#F06A5A" Stroke="#8A241C" StrokeThickness="0.45" />
+            </Canvas>
+          </Grid>
+          <TextBlock Classes="muted" FontSize="11" Text="nicht freigegeben" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Grid Width="18" Height="16">
+            <Canvas Width="16" Height="16">
+              <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
+                       Fill="#5FBF4A" Stroke="#2A7A28" StrokeThickness="0.8" />
+              <Path Data="M8,4 C7.5,2.7 8.4,1.7 9.6,1.1"
+                    Stroke="#6B3D16" StrokeThickness="1.2" />
+              <Ellipse Canvas.Left="9.1" Canvas.Top="1.5" Width="4.2" Height="2.5"
+                       Fill="#7ED957" Stroke="#2A7A28" StrokeThickness="0.45" />
+            </Canvas>
+          </Grid>
+          <TextBlock Classes="muted" FontSize="11" Text="freigegeben" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Grid Width="18" Height="16">
+            <Canvas Width="16" Height="16">
+              <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
+                       Fill="#5FBF4A" Stroke="#2A7A28" StrokeThickness="0.8" />
+              <Path Data="M8,4 C7.5,2.7 8.4,1.7 9.6,1.1"
+                    Stroke="#6B3D16" StrokeThickness="1.2" />
+              <Ellipse Canvas.Left="9.1" Canvas.Top="1.5" Width="4.2" Height="2.5"
+                       Fill="#7ED957" Stroke="#2A7A28" StrokeThickness="0.45" />
+            </Canvas>
+            <Ellipse Width="5.2" Height="5.2"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Bottom"
+                     Margin="0,0,1,1"
+                     Fill="#D7A51E"
+                     Stroke="#8A6210"
+                     StrokeThickness="0.6" />
+          </Grid>
+          <TextBlock Classes="muted" FontSize="11" Text="inkl. Unterordner" />
+        </StackPanel>
+      </StackPanel>
     </StackPanel>
 
     <Border Grid.Row="2" Classes="panel" Padding="8">
@@ -59,8 +109,39 @@
                   Margin="4,3"
                   PointerPressed="DirectoryItem_OnPointerPressed"
                   RightTapped="DirectoryItem_OnRightTapped">
-              <TextBlock Text="📁"
-                         Margin="0,0,6,0" />
+              <Grid Width="22" Height="18"
+                    Margin="0,0,6,0">
+                <Canvas Width="16" Height="16"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsNotShared}">
+                  <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
+                           Fill="#D94A3A" Stroke="#8A241C" StrokeThickness="0.8" />
+                  <Path Data="M8,4 C7.5,2.7 8.4,1.7 9.6,1.1"
+                        Stroke="#6B3D16" StrokeThickness="1.2" />
+                  <Ellipse Canvas.Left="9.1" Canvas.Top="1.5" Width="4.2" Height="2.5"
+                           Fill="#F06A5A" Stroke="#8A241C" StrokeThickness="0.45" />
+                </Canvas>
+                <Canvas Width="16" Height="16"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsShared}">
+                  <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
+                           Fill="#5FBF4A" Stroke="#2A7A28" StrokeThickness="0.8" />
+                  <Path Data="M8,4 C7.5,2.7 8.4,1.7 9.6,1.1"
+                        Stroke="#6B3D16" StrokeThickness="1.2" />
+                  <Ellipse Canvas.Left="9.1" Canvas.Top="1.5" Width="4.2" Height="2.5"
+                           Fill="#7ED957" Stroke="#2A7A28" StrokeThickness="0.45" />
+                </Canvas>
+                <Ellipse Width="5.2" Height="5.2"
+                         HorizontalAlignment="Right"
+                         VerticalAlignment="Bottom"
+                         Margin="0,0,1,1"
+                         Fill="#D7A51E"
+                         Stroke="#8A6210"
+                         StrokeThickness="0.6"
+                         IsVisible="{Binding IsRecursiveShared}" />
+              </Grid>
               <TextBlock Grid.Column="1"
                          Text="{Binding Name}"
                          TextTrimming="CharacterEllipsis" />
