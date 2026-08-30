@@ -6,6 +6,52 @@ namespace AJCC.Core.Tests;
 [TestClass]
 public sealed class AjUploadDisplayTests
 {
+
+    [TestMethod]
+    public void LoadedPercent_FractionalCoreValueNormalizesToPercent()
+    {
+        AjUpload upload = new() { Loaded = 0.24 };
+
+        Assert.AreEqual(24.0, upload.LoadedPercent, 0.0001);
+        Assert.AreEqual(24.0, upload.ProgressPercent, 0.0001);
+        Assert.AreEqual($"{24.0:0.0} %", upload.ProgressPercentText);
+        Assert.AreEqual($"{24.0:0.0} %", upload.WatermarkText);
+    }
+
+    [TestMethod]
+    public void LoadedPercent_AlreadyPercentValuePassesThrough()
+    {
+        AjUpload upload = new() { Loaded = 24.0 };
+
+        Assert.AreEqual(24.0, upload.LoadedPercent, 0.0001);
+        Assert.AreEqual(24.0, upload.ProgressPercent, 0.0001);
+    }
+
+    [TestMethod]
+    public void LoadedPercent_InvalidAndOutOfRangeValuesAreClamped()
+    {
+        Assert.AreEqual(0.0, new AjUpload { Loaded = double.NaN }.LoadedPercent, 0.0001);
+        Assert.AreEqual(0.0, new AjUpload { Loaded = double.PositiveInfinity }.LoadedPercent, 0.0001);
+        Assert.AreEqual(0.0, new AjUpload { Loaded = -0.5 }.LoadedPercent, 0.0001);
+        Assert.AreEqual(100.0, new AjUpload { Loaded = 120.0 }.LoadedPercent, 0.0001);
+    }
+
+    [TestMethod]
+    public void ProgressPercent_TransferRangeStillOverridesLoadedFallback()
+    {
+        AjUpload upload = new()
+        {
+            Loaded = 0.90,
+            UploadFrom = 0,
+            UploadTo = 1000,
+            ActualUploadPosition = 250
+        };
+
+        Assert.AreEqual(90.0, upload.LoadedPercent, 0.0001);
+        Assert.AreEqual(25.0, upload.ProgressPercent, 0.0001);
+        Assert.AreEqual($"{90.0:0.0} %", upload.WatermarkText);
+    }
+
     [TestMethod]
     public void LastConnectionText_Zero_IsDash()
     {

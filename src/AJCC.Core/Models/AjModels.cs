@@ -395,9 +395,21 @@ public sealed class AjUpload
     public long UploadSize => Math.Max(0, UploadTo - UploadFrom);
     public long UploadedBytes => UploadSize <= 0 ? 0 : Math.Clamp(ActualUploadPosition - UploadFrom, 0, UploadSize);
     public string UploadedText => UploadSize > 0 ? DisplayFormatHelper.Bytes(UploadedBytes) : "-";
-    public double ProgressPercent => UploadSize <= 0 ? Math.Clamp(Loaded, 0.0, 100.0) : Math.Clamp((double)UploadedBytes / UploadSize * 100.0, 0.0, 100.0);
-    public string ProgressPercentText => UploadSize > 0 || Loaded > 0 ? $"{ProgressPercent:0.0} %" : "-";
-    public string WatermarkText => Loaded > 0 ? $"{Loaded:0.0} %" : ProgressPercentText;
+    public double LoadedPercent
+    {
+        get
+        {
+            double raw = Loaded;
+            if (double.IsNaN(raw) || double.IsInfinity(raw) || raw <= 0.0)
+                return 0.0;
+
+            double percent = raw <= 1.0 ? raw * 100.0 : raw;
+            return Math.Clamp(percent, 0.0, 100.0);
+        }
+    }
+    public double ProgressPercent => UploadSize <= 0 ? LoadedPercent : Math.Clamp((double)UploadedBytes / UploadSize * 100.0, 0.0, 100.0);
+    public string ProgressPercentText => UploadSize > 0 || LoadedPercent > 0 ? $"{ProgressPercent:0.0} %" : "-";
+    public string WatermarkText => LoadedPercent > 0 ? $"{LoadedPercent:0.0} %" : ProgressPercentText;
     public string ClientText => string.IsNullOrWhiteSpace(Version) ? "-" : Version;
     public bool IsActiveTransfer
     {
