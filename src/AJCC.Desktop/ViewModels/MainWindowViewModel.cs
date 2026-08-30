@@ -1104,9 +1104,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             string xml = await client.GetShareXmlAsync().ConfigureAwait(true);
-            List<AjShareFile> shares = AjXmlParser.ParseShares(xml);
+            List<AjShareFile> shares = await Task
+                .Run(() => AjXmlParser.ParseShares(xml))
+                .ConfigureAwait(true);
 
-            ShareRuntimeSnapshotDeltaSemantics.Apply(state.Shares, shares);
+            await ShareRuntimeSnapshotDeltaSemantics.ApplyBatchedAsync(
+                state.Shares,
+                shares,
+                YieldShareUpdateAsync).ConfigureAwait(true);
 
             OnPropertyChanged(nameof(Shares));
             OnPropertyChanged(nameof(ShareCountText));
@@ -1122,6 +1127,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             IsBusy = false;
         }
     }
+
+    private static async Task YieldShareUpdateAsync()
+        => await Task.Yield();
 
     public async Task SetSharePriorityAsync(IEnumerable<AjShareFile> shares, string priorityText)
     {

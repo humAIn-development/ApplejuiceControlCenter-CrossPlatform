@@ -155,6 +155,100 @@ public sealed class ShareRuntimeSnapshotDeltaSemanticsTests
         Assert.AreEqual(0, current.Count);
     }
 
+
+    [TestMethod]
+    public async Task ApplyBatchedAsync_LargeFullRebuildYieldsBetweenBatches()
+    {
+        ObservableCollection<AjShareFile> current = [];
+        List<AjShareFile> incoming =
+        [
+            Share(1, "one.bin", 10, "aa"),
+            Share(2, "two.bin", 20, "bb"),
+            Share(3, "three.bin", 30, "cc"),
+            Share(4, "four.bin", 40, "dd"),
+            Share(5, "five.bin", 50, "ee")
+        ];
+        int yields = 0;
+
+        ShareRuntimeSnapshotApplyMode mode =
+            await ShareRuntimeSnapshotDeltaSemantics.ApplyBatchedAsync(
+                current,
+                incoming,
+                () =>
+                {
+                    yields++;
+                    return Task.CompletedTask;
+                },
+                largeShareThreshold: 4,
+                batchSize: 2);
+
+        Assert.AreEqual(ShareRuntimeSnapshotApplyMode.FullRebuild, mode);
+        CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4, 5 }, current.Select(item => item.Id).ToArray());
+        Assert.AreEqual(2, yields);
+    }
+
+    [TestMethod]
+    public async Task ApplyBatchedAsync_LargeAttributeUpdatePreservesObjectsAndYields()
+    {
+        AjShareFile first = Share(1, "one.bin", 10, "aa", priority: 1);
+        AjShareFile second = Share(2, "two.bin", 20, "bb", priority: 1);
+        AjShareFile third = Share(3, "three.bin", 30, "cc", priority: 1);
+        AjShareFile fourth = Share(4, "four.bin", 40, "dd", priority: 1);
+        ObservableCollection<AjShareFile> current = [first, second, third, fourth];
+        List<AjShareFile> incoming =
+        [
+            Share(1, "one.bin", 10, "aa", priority: 11),
+            Share(2, "two.bin", 20, "bb", priority: 12),
+            Share(3, "three.bin", 30, "cc", priority: 13),
+            Share(4, "four.bin", 40, "dd", priority: 14)
+        ];
+        int yields = 0;
+
+        ShareRuntimeSnapshotApplyMode mode =
+            await ShareRuntimeSnapshotDeltaSemantics.ApplyBatchedAsync(
+                current,
+                incoming,
+                () =>
+                {
+                    yields++;
+                    return Task.CompletedTask;
+                },
+                largeShareThreshold: 4,
+                batchSize: 2);
+
+        Assert.AreEqual(ShareRuntimeSnapshotApplyMode.AttributesOnly, mode);
+        Assert.AreSame(first, current[0]);
+        Assert.AreSame(second, current[1]);
+        Assert.AreSame(third, current[2]);
+        Assert.AreSame(fourth, current[3]);
+        CollectionAssert.AreEqual(new[] { 11, 12, 13, 14 }, current.Select(item => item.Priority).ToArray());
+        Assert.AreEqual(2, yields);
+    }
+
+    [TestMethod]
+    public async Task ApplyBatchedAsync_SmallSnapshotUsesSynchronousPathWithoutYield()
+    {
+        ObservableCollection<AjShareFile> current = [Share(1, "one.bin", 10, "aa", priority: 1)];
+        List<AjShareFile> incoming = [Share(1, "one.bin", 10, "aa", priority: 2)];
+        int yields = 0;
+
+        ShareRuntimeSnapshotApplyMode mode =
+            await ShareRuntimeSnapshotDeltaSemantics.ApplyBatchedAsync(
+                current,
+                incoming,
+                () =>
+                {
+                    yields++;
+                    return Task.CompletedTask;
+                },
+                largeShareThreshold: 4,
+                batchSize: 2);
+
+        Assert.AreEqual(ShareRuntimeSnapshotApplyMode.AttributesOnly, mode);
+        Assert.AreEqual(2, current[0].Priority);
+        Assert.AreEqual(0, yields);
+    }
+
     private static AjShareFile Share(
         long id,
         string filename,
