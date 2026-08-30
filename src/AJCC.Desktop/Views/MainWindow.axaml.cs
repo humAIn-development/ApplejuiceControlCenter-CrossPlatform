@@ -46,6 +46,7 @@ public sealed partial class MainWindow : Window
     private int _embeddedPartListRequestVersion;
     private long _embeddedPartListDownloadId;
     private long _embeddedPartListSourceId;
+    private readonly RecentDownloadPartListCache<EmbeddedDownloadPartListSnapshot> _embeddedPartListCache = new();
     private bool _suppressDownloadSourceSelectionChanged;
     private string _appliedShareFilter = string.Empty;
     private int _shareFilterRequestVersion;
@@ -59,6 +60,14 @@ public sealed partial class MainWindow : Window
     private readonly Queue<string> _pendingStartupLinkListFiles = new();
     private readonly DispatcherTimer _startupImportTimer = new();
     private bool _processingStartupImports;
+
+    private sealed record EmbeddedDownloadPartListSnapshot(
+        long DownloadId,
+        long FileSize,
+        IReadOnlyList<AjPart> Parts,
+        int SourcePartListCount,
+        int SourceCandidateCount,
+        int SourceErrorCount);
 
     public MainWindow(AjStartupImportRequest? startupRequest = null)
     {
@@ -2024,6 +2033,9 @@ public sealed partial class MainWindow : Window
         _viewModel.SelectedDownload = selected;
         if (selected is null)
         {
+            if (!_viewModel.IsConnected)
+                _embeddedPartListCache.Clear();
+
             ClearEmbeddedPartList("Markiere einen Download, um die Partliste zu laden.");
             return;
         }
@@ -2031,13 +2043,20 @@ public sealed partial class MainWindow : Window
         if (_embeddedPartListDownloadId == selected.Id)
             return;
 
-        _embeddedPartListDownloadId = 0;
-        ClearEmbeddedPartList("Partliste wird geladen…");
-        await Task.Delay(140);
+        bool showedCachedPartList = TryShowCachedEmbeddedPartList(selected.Id);
+        if (!showedCachedPartList)
+        {
+            _embeddedPartListDownloadId = 0;
+            ClearEmbeddedPartList("Partliste wird geladen…");
+        }
+
+        await Task.Delay(showedCachedPartList ? 60 : 140);
         if (requestVersion != _embeddedPartListRequestVersion)
             return;
 
-        await LoadEmbeddedPartListAsync(requestVersion);
+        await LoadEmbeddedPartListAsync(
+            requestVersion,
+            preserveExistingOnFailure: showedCachedPartList);
     }
 
     private async void DownloadRow_OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -2129,7 +2148,9 @@ public sealed partial class MainWindow : Window
         await LoadEmbeddedPartListAsync(requestVersion);
     }
 
-    private async Task LoadEmbeddedPartListAsync(int requestVersion)
+    private async Task LoadEmbeddedPartListAsync(
+        int requestVersion,
+        bool preserveExistingOnFailure = false)
     {
         if (!await WaitForPartListIdleAsync(requestVersion))
             return;
@@ -2149,11 +2170,45 @@ public sealed partial class MainWindow : Window
 
         if (!result.HasValue)
         {
-            ClearEmbeddedPartList("Partliste konnte nicht geladen werden.");
+            if (!preserveExistingOnFailure)
+                ClearEmbeddedPartList("Partliste konnte nicht geladen werden.");
             return;
         }
 
         var partList = result.Value;
+        long downloadId = _viewModel.SelectedDownload?.Id ?? 0;
+        if (downloadId <= 0)
+            return;
+
+        EmbeddedDownloadPartListSnapshot snapshot = new(
+            downloadId,
+            partList.FileSize,
+            partList.Parts.ToArray(),
+            partList.SourcePartListCount,
+            partList.SourceCandidateCount,
+            partList.SourceErrorCount);
+
+        ShowEmbeddedPartList(snapshot);
+        _embeddedPartListCache.Remember(downloadId, snapshot, DateTimeOffset.UtcNow);
+    }
+
+    private bool TryShowCachedEmbeddedPartList(long downloadId)
+    {
+        if (!_embeddedPartListCache.TryGet(
+                downloadId,
+                DateTimeOffset.UtcNow,
+                out EmbeddedDownloadPartListSnapshot? snapshot)
+            || snapshot is null)
+        {
+            return false;
+        }
+
+        ShowEmbeddedPartList(snapshot);
+        return true;
+    }
+
+    private void ShowEmbeddedPartList(EmbeddedDownloadPartListSnapshot partList)
+    {
         WrapPanel? segmentsPanel = this.FindControl<WrapPanel>("EmbeddedPartListSegmentsPanel");
         TextBlock? summaryText = this.FindControl<TextBlock>("EmbeddedPartListSummaryText");
         if (segmentsPanel is null || summaryText is null)
@@ -2181,7 +2236,7 @@ public sealed partial class MainWindow : Window
             sourceSummary += $", Fehler {partList.SourceErrorCount:N0}";
 
         summaryText.Text = $"Aggregierte Partliste · {segments.Count:N0} Blöcke · {sourceSummary}";
-        _embeddedPartListDownloadId = _viewModel.SelectedDownload?.Id ?? 0;
+        _embeddedPartListDownloadId = partList.DownloadId;
         _embeddedPartListSourceId = 0;
     }
 
