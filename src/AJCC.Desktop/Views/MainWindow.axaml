@@ -222,6 +222,7 @@
               <DataTemplate x:DataType="models:AjDownload">
                 <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*"
                       Margin="8,6"
+                      PointerPressed="DownloadRow_OnPointerPressed"
                       ContextRequested="DownloadRow_OnContextRequested">
                   <Grid.ContextMenu>
                     <ContextMenu>
@@ -275,7 +276,11 @@
             </Grid>
           </Border>
 
-          <ListBox Grid.Row="5" ItemsSource="{Binding SelectedDownloadSources}">
+          <ListBox x:Name="DownloadSourcesList"
+                   Grid.Row="5"
+                   ItemsSource="{Binding SelectedDownloadSources}"
+                   SelectionMode="Single"
+                   SelectionChanged="DownloadSourcesList_OnSelectionChanged">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjUserSource">
                 <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*" Margin="8,6">

@@ -45,6 +45,8 @@ public sealed partial class MainWindow : Window
     private AjShareFile? _selectedShareForContext;
     private int _embeddedPartListRequestVersion;
     private long _embeddedPartListDownloadId;
+    private long _embeddedPartListSourceId;
+    private bool _suppressDownloadSourceSelectionChanged;
     private string _appliedShareFilter = string.Empty;
     private int _shareFilterRequestVersion;
     private const double ShareDragThreshold = 6.0;
@@ -1946,12 +1948,13 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        ClearDownloadSourceSelection();
+
         int requestVersion = ++_embeddedPartListRequestVersion;
         AjDownload? selected = (sender as ListBox)?.SelectedItem as AjDownload;
         _viewModel.SelectedDownload = selected;
         if (selected is null)
         {
-            _embeddedPartListDownloadId = 0;
             ClearEmbeddedPartList("Markiere einen Download, um die Partliste zu laden.");
             return;
         }
@@ -1968,15 +1971,100 @@ public sealed partial class MainWindow : Window
         await LoadEmbeddedPartListAsync(requestVersion);
     }
 
+    private async void DownloadRow_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: AjDownload download }
+            || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        ListBox? sourceList = this.FindControl<ListBox>("DownloadSourcesList");
+        bool sourcePartListIsActive =
+            _embeddedPartListSourceId != 0 || sourceList?.SelectedItem is AjUserSource;
+        if (!sourcePartListIsActive || _viewModel.SelectedDownload?.Id != download.Id)
+            return;
+
+        ClearDownloadSourceSelection();
+        int requestVersion = ++_embeddedPartListRequestVersion;
+        _embeddedPartListDownloadId = 0;
+        ClearEmbeddedPartList("Partliste wird geladen…");
+        await LoadEmbeddedPartListAsync(requestVersion);
+    }
+
+    private void ClearDownloadSourceSelection()
+    {
+        ListBox? sourceList = this.FindControl<ListBox>("DownloadSourcesList");
+        _suppressDownloadSourceSelectionChanged = true;
+        try
+        {
+            if (sourceList is not null)
+                sourceList.SelectedItem = null;
+        }
+        finally
+        {
+            _suppressDownloadSourceSelectionChanged = false;
+        }
+
+        _selectedDownloadSourceForContext = null;
+        _embeddedPartListSourceId = 0;
+    }
+
+    private async void DownloadSourcesList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressDownloadSourceSelectionChanged)
+            return;
+
+        AjUserSource? source = (sender as ListBox)?.SelectedItem as AjUserSource;
+        _selectedDownloadSourceForContext = source;
+        if (source is null)
+        {
+            if (_embeddedPartListSourceId == 0 || _viewModel.SelectedDownload is null)
+                return;
+
+            int fallbackRequestVersion = ++_embeddedPartListRequestVersion;
+            _embeddedPartListSourceId = 0;
+            _embeddedPartListDownloadId = 0;
+            ClearEmbeddedPartList("Partliste wird geladen…");
+            await LoadEmbeddedPartListAsync(fallbackRequestVersion);
+            return;
+        }
+
+        if (_embeddedPartListSourceId == source.Id)
+            return;
+
+        int requestVersion = ++_embeddedPartListRequestVersion;
+        _embeddedPartListDownloadId = 0;
+        _embeddedPartListSourceId = 0;
+        ClearEmbeddedPartList("Quellen-Partliste wird geladen…");
+
+        await Task.Delay(80);
+        if (requestVersion != _embeddedPartListRequestVersion)
+            return;
+
+        await LoadEmbeddedSourcePartListAsync(source, requestVersion);
+    }
+
     private async void EmbeddedPartListRefresh_OnClick(object? sender, RoutedEventArgs e)
     {
         int requestVersion = ++_embeddedPartListRequestVersion;
+        if (this.FindControl<ListBox>("DownloadSourcesList")?.SelectedItem is AjUserSource source)
+        {
+            _embeddedPartListSourceId = 0;
+            await LoadEmbeddedSourcePartListAsync(source, requestVersion);
+            return;
+        }
+
         _embeddedPartListDownloadId = 0;
+        _embeddedPartListSourceId = 0;
         await LoadEmbeddedPartListAsync(requestVersion);
     }
 
     private async Task LoadEmbeddedPartListAsync(int requestVersion)
     {
+        if (!await WaitForPartListIdleAsync(requestVersion))
+            return;
+
         if (!_viewModel.CanShowSelectedDownloadPartList)
         {
             ClearEmbeddedPartList(
@@ -2023,8 +2111,63 @@ public sealed partial class MainWindow : Window
         if (partList.SourceErrorCount > 0)
             sourceSummary += $", Fehler {partList.SourceErrorCount:N0}";
 
-        summaryText.Text = $"{segments.Count:N0} Blöcke · {sourceSummary}";
+        summaryText.Text = $"Aggregierte Partliste · {segments.Count:N0} Blöcke · {sourceSummary}";
         _embeddedPartListDownloadId = _viewModel.SelectedDownload?.Id ?? 0;
+        _embeddedPartListSourceId = 0;
+    }
+
+    private async Task LoadEmbeddedSourcePartListAsync(AjUserSource source, int requestVersion)
+    {
+        if (!await WaitForPartListIdleAsync(requestVersion))
+            return;
+
+        var result = await _viewModel.LoadDownloadSourcePartListAsync(source);
+        if (requestVersion != _embeddedPartListRequestVersion)
+            return;
+
+        if (!result.HasValue)
+        {
+            ClearEmbeddedPartList("Quellen-Partliste konnte nicht geladen werden.");
+            return;
+        }
+
+        var partList = result.Value;
+        WrapPanel? segmentsPanel = this.FindControl<WrapPanel>("EmbeddedPartListSegmentsPanel");
+        TextBlock? summaryText = this.FindControl<TextBlock>("EmbeddedPartListSummaryText");
+        if (segmentsPanel is null || summaryText is null)
+            return;
+
+        segmentsPanel.Children.Clear();
+        List<PartListDialog.VisualSegment> segments =
+            PartListDialog.BuildVisualSegments(partList.Parts, partList.FileSize);
+        foreach (PartListDialog.VisualSegment segment in segments)
+        {
+            segmentsPanel.Children.Add(new Border
+            {
+                Width = 8,
+                Height = 10,
+                Margin = new Avalonia.Thickness(1),
+                CornerRadius = new Avalonia.CornerRadius(2),
+                Background = PartListDialog.BrushForType(segment.Type == 1 ? -1 : segment.Type)
+            });
+        }
+
+        summaryText.Text =
+            $"Partliste Quelle · {partList.SourceName} · {partList.Filename} · {segments.Count:N0} Blöcke · Grün verfügbar · Blau wird geladen · Schwarz nicht verfügbar";
+        _embeddedPartListDownloadId = 0;
+        _embeddedPartListSourceId = source.Id;
+    }
+
+    private async Task<bool> WaitForPartListIdleAsync(int requestVersion)
+    {
+        while (_viewModel.IsBusy)
+        {
+            await Task.Delay(50);
+            if (requestVersion != _embeddedPartListRequestVersion)
+                return false;
+        }
+
+        return requestVersion == _embeddedPartListRequestVersion;
     }
 
     private void ClearEmbeddedPartList(string message)
@@ -2035,6 +2178,8 @@ public sealed partial class MainWindow : Window
             segmentsPanel.Children.Clear();
         if (summaryText is not null)
             summaryText.Text = message;
+        _embeddedPartListDownloadId = 0;
+        _embeddedPartListSourceId = 0;
     }
 
     private async void SearchResultContextDownload_OnClick(object? sender, RoutedEventArgs e)

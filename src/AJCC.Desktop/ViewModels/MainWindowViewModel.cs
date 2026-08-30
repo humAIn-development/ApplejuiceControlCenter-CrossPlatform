@@ -1321,6 +1321,76 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task<(string SourceName, string Filename, long FileSize, IReadOnlyList<AjPart> Parts)?> LoadDownloadSourcePartListAsync(AjUserSource source)
+    {
+        ThrowIfDisposed();
+        AppleJuiceCoreClient? client = _client;
+        AjDownload? download = SelectedDownload;
+        if (client is null
+            || _state is null
+            || download is null
+            || !IsConnected
+            || IsBusy
+            || source.Id <= 0
+            || source.DownloadId != download.Id
+            || !IsVisibleDownloadSource(source))
+        {
+            return null;
+        }
+
+        IsBusy = true;
+        StatusText = $"Lade Quellen-Partliste: {source.NicknameText}";
+
+        try
+        {
+            string xml = await client.GetUserPartListXmlAsync(source.Id).ConfigureAwait(true);
+            List<AjPart> sourceParts = AjXmlParser.ParseParts(xml)
+                .Where(part => part.FromPosition >= 0)
+                .OrderBy(part => part.FromPosition)
+                .ToList();
+
+            long fileSize = AjXmlParser.ParseFileSizeFromPartList(xml);
+            if (fileSize <= 0)
+                fileSize = download.Size;
+            if (fileSize <= 0)
+            {
+                fileSize = Math.Max(
+                    source.DownloadTo,
+                    Math.Max(source.ActualDownloadPosition, source.DownloadFrom));
+            }
+
+            if (fileSize <= 0)
+            {
+                StatusText = $"Quellen-Partliste ohne gültige Dateigröße: {source.NicknameText}";
+                return null;
+            }
+
+            IReadOnlyList<IReadOnlyList<AjPart>> sourcePartLists = [sourceParts];
+            List<(long From, long To)> activeTransferRanges =
+                BuildPartListActiveTransferRanges([source], fileSize);
+            List<AjPart> parts = DownloadPartListAggregator.Aggregate(
+                Array.Empty<AjPart>(),
+                sourcePartLists,
+                fileSize,
+                activeTransferRanges);
+
+            string filename = string.IsNullOrWhiteSpace(source.Filename)
+                ? download.DisplayFilename
+                : source.Filename;
+            StatusText = $"Quellen-Partliste geladen: {source.NicknameText} · {filename}";
+            return (source.NicknameText, filename, fileSize, parts);
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Quellen-Partliste konnte nicht geladen werden: " + ex.Message;
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private static bool IsVisibleDownloadSource(AjUserSource user)
         => user.Status is not (3 or 4 or 8 or 16);
 

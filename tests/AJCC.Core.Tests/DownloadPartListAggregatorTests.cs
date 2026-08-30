@@ -67,6 +67,34 @@ public sealed class DownloadPartListAggregatorTests
         Assert.AreEqual(1, TypeAt(result, 80));
     }
 
+    [TestMethod]
+    public void Aggregate_SingleSourceWithoutDownloadPartsBuildsAvailabilityMap()
+    {
+        IReadOnlyList<IReadOnlyList<AjPart>> sourcePartLists =
+        [
+            new List<AjPart>
+            {
+                new AjPart { FromPosition = 0, Type = 1 },
+                new AjPart { FromPosition = 70, Type = 0 }
+            }
+        ];
+        IReadOnlyList<(long From, long To)> activeRanges =
+        [
+            (30, 50)
+        ];
+
+        List<AjPart> result = DownloadPartListAggregator.Aggregate(
+            Array.Empty<AjPart>(),
+            sourcePartLists,
+            100,
+            activeRanges);
+
+        Assert.AreEqual(1, TypeAt(result, 20));
+        Assert.AreEqual(DownloadPartListAggregator.ActiveDownloadPartType, TypeAt(result, 40));
+        Assert.AreEqual(1, TypeAt(result, 60));
+        Assert.AreEqual(0, TypeAt(result, 80));
+    }
+
     private static int TypeAt(IReadOnlyList<AjPart> parts, long position)
     {
         int type = 0;
