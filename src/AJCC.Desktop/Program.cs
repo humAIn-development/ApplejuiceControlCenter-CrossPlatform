@@ -14,6 +14,22 @@ internal static class Program
 
         try
         {
+            StartupDiagnostics.SetPhase("SingleInstance.create");
+            using AjSingleInstanceService singleInstance = AjSingleInstanceService.Create();
+            if (!singleInstance.IsPrimaryInstance)
+            {
+                StartupDiagnostics.SetPhase("SingleInstance.forward-secondary");
+                bool forwarded = AjSingleInstanceService
+                    .TryForwardArgumentsAsync(args)
+                    .GetAwaiter()
+                    .GetResult();
+                StartupDiagnostics.WriteState(
+                    "Secondary instance exiting; forward result=" + forwarded,
+                    args);
+                return;
+            }
+
+            App.ConfigureStartup(singleInstance, args);
             StartupDiagnostics.SetPhase("Avalonia.start");
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             StartupDiagnostics.SetPhase("Process.exit");

@@ -1553,6 +1553,65 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task ImportStartupRequestAsync(AjStartupImportRequest request)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(request);
+
+        AppleJuiceCoreClient? client = _client;
+        if (!IsConnected || IsBusy || client is null || !request.HasItems)
+            return;
+
+        IsBusy = true;
+        StatusText = "Verarbeite AJFSP-/AJL-Startübergabe ...";
+
+        try
+        {
+            AjStartupImportResolution resolution = AjStartupImportResolver.Resolve(request);
+            if (resolution.Links.Count == 0)
+            {
+                StatusText = resolution.Errors.Count == 0
+                    ? "Startübergabe enthielt keine verarbeitbaren AJFSP-Links."
+                    : $"Startübergabe enthielt keine verarbeitbaren AJFSP-Links · Fehler {resolution.Errors.Count:N0}.";
+                return;
+            }
+
+            AjCoreCompatibilityProfile profile =
+                AjCoreCompatibilityProfile.FromCoreVersion(CoreVersion);
+            int accepted = 0;
+            int alreadyKnown = 0;
+            int rejected = 0;
+
+            foreach (AjLinkInfo linkInfo in resolution.Links)
+            {
+                AjProcessLinkResult result = await client
+                    .ProcessLinkDetailedAsync(linkInfo.RawLink, profile, string.Empty)
+                    .ConfigureAwait(true);
+
+                if (result.IsAccepted)
+                    accepted++;
+                else if (result.IsAlreadyDownloaded)
+                    alreadyKnown++;
+                else
+                    rejected++;
+            }
+
+            string errorSuffix = resolution.Errors.Count == 0
+                ? string.Empty
+                : $" · Dateifehler {resolution.Errors.Count:N0}";
+            StatusText =
+                $"Startübergabe: {resolution.Links.Count:N0} Link(s) · {accepted:N0} akzeptiert · {alreadyKnown:N0} bereits bekannt · {rejected:N0} abgewiesen{errorSuffix}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "AJFSP-/AJL-Startübergabe fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task ImportMoreServersAsync()
     {
         ThrowIfDisposed();

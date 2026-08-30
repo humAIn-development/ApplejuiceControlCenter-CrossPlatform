@@ -55,11 +55,18 @@ public sealed partial class MainWindow : Window
     private double _shareDragStartY;
     private bool _shareDragInProgress;
     private PointerPressedEventArgs? _shareDragTriggerEvent;
+    private readonly Queue<string> _pendingStartupLinks = new();
+    private readonly Queue<string> _pendingStartupLinkListFiles = new();
+    private readonly DispatcherTimer _startupImportTimer = new();
+    private bool _processingStartupImports;
 
-    public MainWindow()
+    public MainWindow(AjStartupImportRequest? startupRequest = null)
     {
         InitializeComponent();
         DataContext = _viewModel;
+        _startupImportTimer.Interval = TimeSpan.FromMilliseconds(250);
+        _startupImportTimer.Tick += StartupImportTimer_OnTick;
+        EnqueueStartupImportRequest(startupRequest);
         UiPreferences uiPreferences = _uiPreferencesStore.Load();
         _suppressCoreProfileSwitchConfirmation = uiPreferences.SuppressCoreProfileSwitchConfirmation;
         _autoLoadShareFilesAtStartup = uiPreferences.AutoLoadShareFilesAtStartup;
@@ -93,6 +100,8 @@ public sealed partial class MainWindow : Window
         Opened += async (_, _) => await RefreshCoreProfileReachabilityAsync();
         Closed += (_, _) =>
         {
+            _startupImportTimer.Stop();
+            _startupImportTimer.Tick -= StartupImportTimer_OnTick;
             _coreProfileReachabilityTimer.Stop();
             _viewModel.CoreConnectionLost -= ViewModel_OnCoreConnectionLost;
         };
@@ -101,6 +110,66 @@ public sealed partial class MainWindow : Window
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+    public void EnqueueExternalStartupArguments(string[] args)
+    {
+        AjStartupImportRequest request = AjStartupArgumentParser.Parse(args);
+        if (!request.HasItems)
+            return;
+
+        EnqueueStartupImportRequest(request);
+        StartupDiagnostics.WriteState("External AJFSP/AJL arguments queued", args);
+    }
+
+    private void EnqueueStartupImportRequest(AjStartupImportRequest? request)
+    {
+        if (request is null)
+            return;
+
+        foreach (string link in request.Links.Where(link => !string.IsNullOrWhiteSpace(link)))
+            _pendingStartupLinks.Enqueue(link.Trim());
+
+        foreach (string file in request.LinkListFiles.Where(file => !string.IsNullOrWhiteSpace(file)))
+            _pendingStartupLinkListFiles.Enqueue(file.Trim());
+
+        if (_pendingStartupLinks.Count > 0 || _pendingStartupLinkListFiles.Count > 0)
+            _startupImportTimer.Start();
+    }
+
+    private async void StartupImportTimer_OnTick(object? sender, EventArgs e)
+    {
+        if (_processingStartupImports
+            || _coreProfileFailoverInProgress
+            || !_viewModel.IsConnected
+            || _viewModel.IsBusy)
+        {
+            return;
+        }
+
+        if (_pendingStartupLinks.Count == 0 && _pendingStartupLinkListFiles.Count == 0)
+        {
+            _startupImportTimer.Stop();
+            return;
+        }
+
+        AjStartupImportRequest request = new();
+        while (_pendingStartupLinks.Count > 0)
+            request.Links.Add(_pendingStartupLinks.Dequeue());
+        while (_pendingStartupLinkListFiles.Count > 0)
+            request.LinkListFiles.Add(_pendingStartupLinkListFiles.Dequeue());
+
+        _processingStartupImports = true;
+        try
+        {
+            await _viewModel.ImportStartupRequestAsync(request);
+        }
+        finally
+        {
+            _processingStartupImports = false;
+            if (_pendingStartupLinks.Count == 0 && _pendingStartupLinkListFiles.Count == 0)
+                _startupImportTimer.Stop();
+        }
+    }
 
     private void LoadCoreProfiles()
     {
