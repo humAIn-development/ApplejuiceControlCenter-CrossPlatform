@@ -30,11 +30,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan ExternalCorePortTestTimeout = TimeSpan.FromMilliseconds(2500);
     private const int UploadSpeedHistoryLength = 48;
     private static readonly TimeSpan UploadSpeedHistoryMinimumSampleDistance = TimeSpan.FromMilliseconds(1500);
+    private const int UploadObjectNameLookupMaxPerSweep = 12;
+    private static readonly TimeSpan UploadObjectNameLookupRetryDelay = TimeSpan.FromMinutes(5);
     private const int SearchAdoptionExistingFallbackPollCount = 2;
     private const int SearchAdoptionMaximumPollCount = 5;
     private readonly Dictionary<long, Queue<long>> _uploadSpeedHistory = new();
     private readonly Dictionary<long, UploadSpeedSampleSignature> _lastUploadSpeedSamples = new();
     private readonly Dictionary<long, DateTime> _lastUploadSpeedSampleTimesUtc = new();
+    private readonly Dictionary<long, string> _uploadObjectFilenameByShareId = new();
+    private readonly Dictionary<long, DateTime> _uploadObjectFilenameFailedAtUtc = new();
+    private CancellationTokenSource? _uploadObjectNameLookupCts;
+    private bool _uploadObjectNameLookupInProgress;
     private HttpClient? _httpClient;
     private AppleJuiceCoreClient? _client;
     private AjPollingService? _polling;
@@ -2088,6 +2094,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             IsConnected = true;
             RaiseStateProperties();
+            QueueUploadObjectNameLookup();
 
             await _polling.StartAsync(_state, intervalMs: 2000).ConfigureAwait(true);
             StartServerReachabilityTimer();
@@ -2175,6 +2182,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task DisconnectInternalAsync(bool clearState)
     {
+        CancelUploadObjectNameLookup();
+
         AjPollingService? polling = _polling;
         _polling = null;
 
@@ -2272,7 +2281,138 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             RaiseStateProperties();
+            QueueUploadObjectNameLookup();
         });
+    }
+
+    private void QueueUploadObjectNameLookup()
+    {
+        if (_uploadObjectNameLookupInProgress || !IsConnected)
+            return;
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (client is null || state is null)
+            return;
+
+        if (!state.Uploads.Any(upload =>
+                upload.ShareId > 0 && !AjStateUpdater.IsUsableUploadFilename(upload.Filename)))
+        {
+            return;
+        }
+
+        _ = ResolveUploadObjectNamesAsync(client, state);
+    }
+
+    private async Task ResolveUploadObjectNamesAsync(AppleJuiceCoreClient client, AjState state)
+    {
+        if (_uploadObjectNameLookupInProgress)
+            return;
+
+        bool cachedApplied = UploadObjectFilenameSemantics.ApplyCachedFilenames(
+            state.Uploads,
+            _uploadObjectFilenameByShareId);
+        IReadOnlyList<long> candidateShareIds = UploadObjectFilenameSemantics.GetCandidateShareIds(
+            state.Uploads,
+            _uploadObjectFilenameByShareId,
+            _uploadObjectFilenameFailedAtUtc,
+            DateTime.UtcNow,
+            UploadObjectNameLookupRetryDelay,
+            UploadObjectNameLookupMaxPerSweep);
+
+        if (cachedApplied)
+            RaiseStateProperties();
+        if (candidateShareIds.Count == 0)
+            return;
+
+        CancellationTokenSource cts = new();
+        _uploadObjectNameLookupCts = cts;
+        _uploadObjectNameLookupInProgress = true;
+
+        try
+        {
+            bool changed = false;
+            foreach (long shareId in candidateShareIds)
+            {
+                try
+                {
+                    string objectXml = await client
+                        .GetObjectXmlAsync(shareId, cts.Token)
+                        .ConfigureAwait(true);
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    if (!ReferenceEquals(_client, client)
+                        || !ReferenceEquals(_state, state)
+                        || !IsConnected)
+                    {
+                        break;
+                    }
+
+                    string? filename = UploadObjectFilenameSemantics.TryExtractUsableFilename(objectXml);
+                    if (AjStateUpdater.IsUsableUploadFilename(filename))
+                    {
+                        string usableFilename = filename!.Trim();
+                        _uploadObjectFilenameByShareId[shareId] = usableFilename;
+                        _uploadObjectFilenameFailedAtUtc.Remove(shareId);
+                        changed |= UploadObjectFilenameSemantics.ApplyFilename(
+                            state.Uploads,
+                            shareId,
+                            usableFilename);
+                    }
+                    else
+                    {
+                        _uploadObjectFilenameFailedAtUtc[shareId] = DateTime.UtcNow;
+                    }
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch
+                {
+                    if (!ReferenceEquals(_client, client)
+                        || !ReferenceEquals(_state, state)
+                        || !IsConnected)
+                    {
+                        break;
+                    }
+
+                    _uploadObjectFilenameFailedAtUtc[shareId] = DateTime.UtcNow;
+                }
+            }
+
+            if (!cts.IsCancellationRequested
+                && ReferenceEquals(_client, client)
+                && ReferenceEquals(_state, state)
+                && IsConnected)
+            {
+                changed |= UploadObjectFilenameSemantics.ApplyCachedFilenames(
+                    state.Uploads,
+                    _uploadObjectFilenameByShareId);
+                if (changed)
+                    RaiseStateProperties();
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_uploadObjectNameLookupCts, cts))
+            {
+                _uploadObjectNameLookupCts = null;
+                _uploadObjectNameLookupInProgress = false;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    private void CancelUploadObjectNameLookup()
+    {
+        CancellationTokenSource? cts = _uploadObjectNameLookupCts;
+        _uploadObjectNameLookupCts = null;
+        _uploadObjectNameLookupInProgress = false;
+        cts?.Cancel();
+        _uploadObjectFilenameByShareId.Clear();
+        _uploadObjectFilenameFailedAtUtc.Clear();
     }
 
     private void RestoreServerReconnectRestrictionState(DateTimeOffset nowUtc)
