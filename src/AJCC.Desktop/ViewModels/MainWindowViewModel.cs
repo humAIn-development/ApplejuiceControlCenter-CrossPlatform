@@ -506,6 +506,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     $"Core meldet nach der Übertragung IncomingDirectory='{effective}' statt '{requested}'.");
 
             StatusText = $"Core-Incoming vom Core bestätigt: {effective}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -554,6 +555,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     $"Core meldet nach der Übertragung TemporaryDirectory='{effective}' statt '{requested}'.");
 
             StatusText = $"Core-Temp vom Core bestätigt: {effective}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -609,6 +611,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             StatusText = $"Maximale Verbindungen vom Core bestätigt: {effective:N0}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -665,6 +668,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             }
 
             StatusText = $"Maximale Quellen pro Datei vom Core bestätigt: {effective:N0}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -709,6 +713,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 throw new InvalidOperationException($"Core meldet nach der Übertragung {effective:N0} statt {maxNewConnectionsPerTurn:N0} maximale neue Verbindungen pro 10 Sekunden.");
 
             StatusText = $"Maximale neue Verbindungen pro 10 Sekunden vom Core bestätigt: {effective:N0}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -751,6 +756,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 throw new InvalidOperationException($"Core meldet nach der Übertragung AutoConnect={effective} statt AutoConnect={autoConnect}.");
 
             StatusText = $"Automatisch verbinden vom Core bestätigt: {(effective ? "ein" : "aus")}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -797,6 +803,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusText = string.IsNullOrEmpty(effective)
                 ? "Leerer Benutzername vom Core bestätigt."
                 : $"Benutzername vom Core bestätigt: {effective}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -842,6 +849,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 throw new InvalidOperationException($"Core meldet nach der Übertragung Port={effective} statt Port={corePort}.");
 
             StatusText = $"Core-Port vom Core bestätigt: {effective}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -888,6 +896,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 throw new InvalidOperationException($"Core meldet nach der Übertragung XMLPort={effective} statt XMLPort={xmlPort}.");
 
             StatusText = $"XML-Port vom Core bestätigt: {effective}.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effective;
         }
         catch (Exception ex)
@@ -933,6 +942,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             long effectiveKb = effectiveCoreValue / 1024L;
             StatusText = $"Max. Download vom Core bestätigt: {effectiveKb} kb/s.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return effectiveKb;
         }
         catch (Exception ex)
@@ -996,6 +1006,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             StatusText = effectiveCoreValue > 0
                 ? $"Upload-Limits vom Core bestätigt: Max. Upload {displayMaxUploadKb} kb/s, {effectiveSpeedPerSlot} kb/s pro Slot."
                 : $"Upload-Limits vom Core bestätigt: MaxUpload=0, Anzeige-Fallback 5000 kb/s, {effectiveSpeedPerSlot} kb/s pro Slot.";
+            await RunAutomaticCorePortReachabilityAsync().ConfigureAwait(true);
             return (displayMaxUploadKb, effectiveSpeedPerSlot);
         }
         catch (Exception ex)
