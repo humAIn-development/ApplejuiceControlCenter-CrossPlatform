@@ -30,6 +30,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan ExternalCorePortTestTimeout = TimeSpan.FromMilliseconds(2500);
     private const int UploadSpeedHistoryLength = 48;
     private static readonly TimeSpan UploadSpeedHistoryMinimumSampleDistance = TimeSpan.FromMilliseconds(1500);
+    private const int SearchAdoptionExistingFallbackPollCount = 2;
+    private const int SearchAdoptionMaximumPollCount = 5;
     private readonly Dictionary<long, Queue<long>> _uploadSpeedHistory = new();
     private readonly Dictionary<long, UploadSpeedSampleSignature> _lastUploadSpeedSamples = new();
     private readonly Dictionary<long, DateTime> _lastUploadSpeedSampleTimesUtc = new();
@@ -44,6 +46,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _statusText = "Nicht verbunden";
     private string _coreVersion = "-";
     private string _searchText = string.Empty;
+    private string _pendingSearchText = string.Empty;
+    private long _pendingSearchPreviousMaxId;
+    private int _pendingSearchPollCount;
     private AjDownload? _selectedDownload;
     private AjSearch? _selectedSearch;
     private AjSearchEntry? _selectedSearchEntry;
@@ -1992,12 +1997,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         string text = SearchText.Trim();
+        long previousMaxSearchId = _state?.Searches
+            .Where(search => search.Id > 0)
+            .Select(search => search.Id)
+            .DefaultIfEmpty(0L)
+            .Max() ?? 0L;
+        ClearPendingSearchAdoption();
         IsBusy = true;
         StatusText = $"Sende Suche: {text}";
 
         try
         {
             await _client.SearchAsync(text).ConfigureAwait(true);
+            _pendingSearchText = text;
+            _pendingSearchPreviousMaxId = previousMaxSearchId;
+            _pendingSearchPollCount = 0;
             SearchText = string.Empty;
             StatusText = $"Suchauftrag gesendet: {text}";
         }
@@ -2179,6 +2193,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _httpClient?.Dispose();
         _httpClient = null;
         IsConnected = false;
+        ClearPendingSearchAdoption();
 
         if (!clearState)
             return;
@@ -2194,6 +2209,39 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         RaiseStateProperties();
     }
 
+    private void TryAdoptPendingSearch()
+    {
+        AjState? state = _state;
+        if (state is null || string.IsNullOrWhiteSpace(_pendingSearchText))
+            return;
+
+        _pendingSearchPollCount++;
+        bool allowExistingFallback =
+            _pendingSearchPollCount >= SearchAdoptionExistingFallbackPollCount;
+        AjSearch? candidate = SearchStartAdoptionSemantics.FindCandidate(
+            state.Searches,
+            _pendingSearchText,
+            _pendingSearchPreviousMaxId,
+            allowExistingFallback);
+
+        if (candidate is not null)
+        {
+            SelectedSearch = candidate;
+            ClearPendingSearchAdoption();
+            return;
+        }
+
+        if (_pendingSearchPollCount >= SearchAdoptionMaximumPollCount)
+            ClearPendingSearchAdoption();
+    }
+
+    private void ClearPendingSearchAdoption()
+    {
+        _pendingSearchText = string.Empty;
+        _pendingSearchPreviousMaxId = 0;
+        _pendingSearchPollCount = 0;
+    }
+
     private void PollingOnModifiedReceived(ModifiedParseResult result, string rawXml)
     {
         Dispatcher.UIThread.Post(() =>
@@ -2205,12 +2253,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             if (result.CoreTimestamp > 0)
                 _state.LastTimestamp = result.CoreTimestamp;
 
+            TryAdoptPendingSearch();
+
             RefreshServerReconnectRestrictionState(DateTimeOffset.UtcNow);
 
             if (SelectedDownload is not null && !_state.Downloads.Any(download => download.Id == SelectedDownload.Id))
                 SelectedDownload = null;
 
-            if (SelectedSearch is null && _state.Searches.Count > 0)
+            if (SelectedSearch is null
+                && string.IsNullOrWhiteSpace(_pendingSearchText)
+                && _state.Searches.Count > 0)
                 SelectedSearch = _state.Searches[^1];
 
             if (SelectedSearchEntry is not null
