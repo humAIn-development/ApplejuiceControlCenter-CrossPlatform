@@ -353,7 +353,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string NetworkUsersText => _state is null ? "-" : _state.NetworkInfo.Users.ToString("N0");
     public string NetworkFilesText => _state is null ? "-" : _state.NetworkInfo.Files.ToString("N0");
     public string CreditsText => _state?.Information.CreditsText ?? "-";
-    public string DownloadSpeedText => _state?.Information.DownloadSpeedText ?? "-";
+    public string DownloadSpeedText => _state is null
+        ? "-"
+        : DisplayFormatHelper.BytesPerSecond(DownloadTransferSpeedSemantics.CalculateDisplayedTotal(_state.Downloads));
     public string UploadSpeedText => _state?.Information.UploadSpeedText ?? "-";
     public string DownloadCountText => _state?.Downloads.Count.ToString("N0") ?? "0";
     public string UploadCountText => _state?.Uploads.Count.ToString("N0") ?? "0";
