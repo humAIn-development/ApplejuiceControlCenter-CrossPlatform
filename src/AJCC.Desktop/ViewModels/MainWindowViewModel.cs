@@ -39,6 +39,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly Dictionary<long, DateTime> _lastUploadSpeedSampleTimesUtc = new();
     private readonly Dictionary<long, string> _uploadObjectFilenameByShareId = new();
     private readonly Dictionary<long, DateTime> _uploadObjectFilenameFailedAtUtc = new();
+    private readonly HashSet<long> _locallyHiddenSearchIds = new();
+    private readonly HashSet<long> _coreRemoveRequestedSearchIds = new();
     private CancellationTokenSource? _uploadObjectNameLookupCts;
     private bool _uploadObjectNameLookupInProgress;
     private HttpClient? _httpClient;
@@ -161,6 +163,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             SelectedSearchEntry = null;
             OnPropertyChanged(nameof(SelectedSearchEntries));
+            OnPropertyChanged(nameof(CanRemoveSelectedSearch));
         }
     }
 
@@ -194,6 +197,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanRenameSelectedDownload));
             OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
+            OnPropertyChanged(nameof(CanRemoveSelectedSearch));
         }
     }
 
@@ -218,6 +222,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(CanRenameSelectedDownload));
             OnPropertyChanged(nameof(CanSetTargetDirectorySelectedDownload));
             OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
+            OnPropertyChanged(nameof(CanRemoveSelectedSearch));
         }
     }
 
@@ -284,7 +289,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public IEnumerable<AjUpload> ActiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => upload.IsActiveTransfer);
     public IEnumerable<AjUpload> InactiveUploads => _state is null ? Array.Empty<AjUpload>() : _state.Uploads.Where(static upload => !upload.IsActiveTransfer);
     public IEnumerable<AjServer> Servers => _state is null ? Array.Empty<AjServer>() : _state.Servers;
-    public IEnumerable<AjSearch> Searches => _state is null ? Array.Empty<AjSearch>() : _state.Searches;
+    public IEnumerable<AjSearch> Searches => _state is null
+        ? Array.Empty<AjSearch>()
+        : SearchListCleanupSemantics.GetVisible(_state.Searches, _locallyHiddenSearchIds);
     public IEnumerable<AjSearchEntry> SelectedSearchEntries => SelectedSearch is null
         ? Array.Empty<AjSearchEntry>()
         : SelectedSearch.Entries
@@ -348,7 +355,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string DownloadCountText => _state?.Downloads.Count.ToString("N0") ?? "0";
     public string UploadCountText => _state?.Uploads.Count.ToString("N0") ?? "0";
     public string ServerCountText => _state?.Servers.Count.ToString("N0") ?? "0";
-    public string SearchCountText => _state?.Searches.Count.ToString("N0") ?? "0";
+    public string SearchCountText => _state is null
+        ? "0"
+        : SearchListCleanupSemantics.CountVisible(_state.Searches, _locallyHiddenSearchIds).ToString("N0");
+    public bool CanRemoveSelectedSearch => IsConnected && !IsBusy && SearchListCleanupSemantics.CanRemove(SelectedSearch);
     public string CoreTimestampText => _state is null || _state.LastTimestamp <= 0 ? "-" : _state.LastTimestamp.ToString();
 
     public string BuildSelectedDownloadAjfspLinkWithSource()
@@ -1994,6 +2004,73 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public async Task RemoveSelectedSearchAsync()
+    {
+        ThrowIfDisposed();
+        AjSearch? search = SelectedSearch;
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (!IsConnected || IsBusy || client is null || state is null)
+            return;
+
+        if (!SearchListCleanupSemantics.CanRemove(search))
+        {
+            StatusText = search is { Running: true }
+                ? $"Suche {search.Id} läuft noch und wird nicht entfernt. Bitte Abschluss abwarten."
+                : "Keine abgeschlossene Suche zum Entfernen ausgewählt.";
+            return;
+        }
+
+        long searchId = search!.Id;
+        string searchText = search.SearchText;
+        bool coreContacted = false;
+        string coreError = string.Empty;
+
+        IsBusy = true;
+        try
+        {
+            if (_coreRemoveRequestedSearchIds.Add(searchId))
+            {
+                try
+                {
+                    await client.CancelSearchAsync(searchId).ConfigureAwait(true);
+                    coreContacted = true;
+                }
+                catch (Exception ex)
+                {
+                    coreError = ex.Message;
+                }
+            }
+
+            if (!SearchListCleanupSemantics.TryHideAndRemove(
+                    state.Searches,
+                    _locallyHiddenSearchIds,
+                    searchId))
+            {
+                StatusText = $"Suche {searchId} läuft inzwischen wieder und wurde nicht entfernt.";
+                return;
+            }
+
+            if (SelectedSearch?.Id == searchId)
+            {
+                SelectedSearch = SearchListCleanupSemantics.FindLastVisible(
+                    state.Searches,
+                    _locallyHiddenSearchIds);
+            }
+
+            RaiseStateProperties();
+            StatusText = coreContacted
+                ? $"Suche entfernt: {searchText}. Core-Entfernung wurde per cancelsearch angefordert."
+                : string.IsNullOrWhiteSpace(coreError)
+                    ? $"Suche lokal entfernt: {searchText}."
+                    : $"Suche lokal entfernt: {searchText}. Core-Entfernung fehlgeschlagen: {coreError}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     public async Task StartSearchAsync()
     {
         ThrowIfDisposed();
@@ -2205,6 +2282,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (!clearState)
             return;
 
+        _locallyHiddenSearchIds.Clear();
+        _coreRemoveRequestedSearchIds.Clear();
         _state = null;
         _visibleSharesOverride = null;
         _serverReconnectRestriction.Clear();
@@ -2233,6 +2312,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         if (candidate is not null)
         {
+            SearchListCleanupSemantics.RestoreVisibility(_locallyHiddenSearchIds, candidate.Id);
             SelectedSearch = candidate;
             ClearPendingSearchAdoption();
             return;
@@ -2268,9 +2348,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 SelectedDownload = null;
 
             if (SelectedSearch is null
-                && string.IsNullOrWhiteSpace(_pendingSearchText)
-                && _state.Searches.Count > 0)
-                SelectedSearch = _state.Searches[^1];
+                && string.IsNullOrWhiteSpace(_pendingSearchText))
+            {
+                SelectedSearch = SearchListCleanupSemantics.FindLastVisible(
+                    _state.Searches,
+                    _locallyHiddenSearchIds);
+            }
 
             if (SelectedSearchEntry is not null
                 && (SelectedSearch is null || SelectedSearch.Entries.All(entry => entry.Id != SelectedSearchEntry.Id)))
@@ -2904,6 +2987,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(SelectedSearchEntries));
         OnPropertyChanged(nameof(SelectedSearchEntryText));
         OnPropertyChanged(nameof(CanDownloadSelectedSearchEntry));
+        OnPropertyChanged(nameof(CanRemoveSelectedSearch));
         OnPropertyChanged(nameof(CoreNick));
         OnPropertyChanged(nameof(CoreIncomingDirectory));
         OnPropertyChanged(nameof(NetworkUsersText));

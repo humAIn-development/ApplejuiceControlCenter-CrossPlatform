@@ -445,7 +445,7 @@
 
       <TabItem Header="Suche">
         <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
             <TextBox Grid.Column="0"
                      Margin="0,0,8,0"
                      PlaceholderText="Suchbegriff"
@@ -456,6 +456,13 @@
                     Content="Suchen"
                     IsEnabled="{Binding CanSearch}"
                     Click="SearchButton_OnClick" />
+            <Button Grid.Column="2"
+                    MinWidth="130"
+                    Margin="8,0,0,0"
+                    Content="Suche entfernen"
+                    IsEnabled="{Binding CanRemoveSelectedSearch}"
+                    ToolTip.Tip="Entfernt die ausgewählte abgeschlossene Suche. Laufende Suchen bleiben erhalten."
+                    Click="RemoveSearchButton_OnClick" />
           </Grid>
 
           <Grid Grid.Row="1" ColumnDefinitions="1.1*,2.2*">
