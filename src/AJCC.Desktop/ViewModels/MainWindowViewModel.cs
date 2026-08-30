@@ -1096,9 +1096,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             string xml = await client.GetShareXmlAsync().ConfigureAwait(true);
             List<AjShareFile> shares = AjXmlParser.ParseShares(xml);
 
-            state.Shares.Clear();
-            foreach (AjShareFile share in shares)
-                state.Shares.Add(share);
+            ShareRuntimeSnapshotDeltaSemantics.Apply(state.Shares, shares);
 
             OnPropertyChanged(nameof(Shares));
             OnPropertyChanged(nameof(ShareCountText));
