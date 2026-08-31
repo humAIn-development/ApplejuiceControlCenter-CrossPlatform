@@ -40,7 +40,7 @@
     <Border Grid.Row="0"
             Classes="panel"
             Padding="10">
-      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,*,Auto,Auto">
+      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <Border Grid.Column="0"
                 Classes="connectionBadge"
                 Classes.online="{Binding IsConnected}"
@@ -115,6 +115,13 @@
                 Click="SettingsButton_OnClick" />
 
         <Button Grid.Column="3"
+                MinWidth="120"
+                Margin="0,0,10,0"
+                Content="Diagnose-ZIP"
+                Click="DiagnosticZipButton_OnClick"
+                ToolTip.Tip="Anonymisiertes Diagnosepaket als ZIP speichern." />
+
+        <Button Grid.Column="4"
                 Classes="primary"
                 MinWidth="120"
                 IsEnabled="{Binding CanToggleConnection}"

@@ -57,6 +57,85 @@ internal static class StartupDiagnostics
         }
     }
 
+    public static string ReadRecentLogTails(int maxBytesPerFile = 64 * 1024)
+    {
+        if (maxBytesPerFile <= 0)
+            return string.Empty;
+
+        StringBuilder builder = new();
+        string folder = GetDiagnosticsFolder();
+
+        lock (Sync)
+        {
+            AppendRecentLogTail(
+                builder,
+                Path.Combine(folder, "startup-diagnostics.log"),
+                "startup-diagnostics.log",
+                maxBytesPerFile);
+
+            AppendRecentLogTail(
+                builder,
+                Path.Combine(folder, "startup-error.log"),
+                "startup-error.log",
+                maxBytesPerFile);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendRecentLogTail(
+        StringBuilder builder,
+        string path,
+        string label,
+        int maxBytes)
+    {
+        if (builder.Length > 0)
+            builder.AppendLine();
+
+        builder.AppendLine($"===== {label} (bounded tail) =====");
+
+        if (!File.Exists(path))
+        {
+            builder.AppendLine("[not present]");
+            return;
+        }
+
+        try
+        {
+            using FileStream stream = new(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+
+            long start = Math.Max(0, stream.Length - maxBytes);
+            stream.Seek(start, SeekOrigin.Begin);
+
+            using StreamReader reader = new(
+                stream,
+                Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: start == 0,
+                bufferSize: 4096,
+                leaveOpen: false);
+
+            string text = reader.ReadToEnd();
+            if (start > 0)
+            {
+                int firstLineBreak = text.IndexOf('\n');
+                if (firstLineBreak >= 0 && firstLineBreak + 1 < text.Length)
+                    text = text[(firstLineBreak + 1)..];
+            }
+
+            builder.Append(text);
+            if (text.Length > 0 && !text.EndsWith('\n'))
+                builder.AppendLine();
+        }
+        catch (Exception ex)
+        {
+            builder.AppendLine($"[read failed: {ex.GetType().Name}]");
+        }
+    }
+
     private static void AppendDiagnostic(string content)
     {
         string folder = GetDiagnosticsFolder();

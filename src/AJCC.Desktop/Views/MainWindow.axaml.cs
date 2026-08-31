@@ -1078,6 +1078,59 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void DiagnosticZipButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string createdUtc = DateTimeOffset.UtcNow.ToString("O");
+            string connectionState = _viewModel.IsConnected ? "connected" : "offline";
+
+            DiagnosticPackageContent content = new(
+                Summary:
+                    "AJCC-X FirstLight anonymized diagnostic export" + Environment.NewLine +
+                    $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                    $"ConnectionState={connectionState}" + Environment.NewLine +
+                    "StartupLogTails=bounded" + Environment.NewLine,
+                DeveloperLog: StartupDiagnostics.ReadRecentLogTails(),
+                StateSnapshot:
+                    $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                    $"IsConnected={_viewModel.IsConnected}" + Environment.NewLine +
+                    $"IsBusy={_viewModel.IsBusy}" + Environment.NewLine);
+
+            byte[] zip = DiagnosticPackageBuilder.CreateZip(content);
+
+            FilePickerSaveOptions options = new()
+            {
+                Title = "Anonymisiertes Diagnosepaket speichern",
+                SuggestedFileName = $"AJCC-X-diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.zip",
+                DefaultExtension = "zip",
+                FileTypeChoices = new[]
+                {
+                    new FilePickerFileType("ZIP-Archiv")
+                    {
+                        Patterns = new[] { "*.zip" }
+                    }
+                }
+            };
+
+            IStorageFile? file = await StorageProvider.SaveFilePickerAsync(options);
+            if (file is null)
+                return;
+
+            await using Stream stream = await file.OpenWriteAsync();
+            stream.SetLength(0);
+            await stream.WriteAsync(zip);
+            await stream.FlushAsync();
+
+            _viewModel.SetStatusMessage("Anonymisiertes Diagnose-ZIP gespeichert.");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException("DiagnosticZipExport", ex);
+            _viewModel.SetStatusMessage("Diagnose-ZIP konnte nicht gespeichert werden: " + ex.Message);
+        }
+    }
+
     private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         SettingsDialog dialog = new();
