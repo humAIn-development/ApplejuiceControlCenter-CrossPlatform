@@ -39,22 +39,22 @@
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="Border.downloadStatusRow.completed">
-      <Setter Property="Background" Value="#39FF14" />
+      <Setter Property="Background" Value="{DynamicResource DownloadStatusCompletedBackground}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.completed TextBlock">
-      <Setter Property="Foreground" Value="#071407" />
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusCompletedForeground}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.aborted">
-      <Setter Property="Background" Value="#FF2020" />
+      <Setter Property="Background" Value="{DynamicResource DownloadStatusAbortedBackground}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.aborted TextBlock">
-      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusAbortedForeground}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.paused">
-      <Setter Property="Background" Value="#FF77C8" />
+      <Setter Property="Background" Value="{DynamicResource DownloadStatusPausedBackground}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.paused TextBlock">
-      <Setter Property="Foreground" Value="#1A0010" />
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusPausedForeground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.completed, ListBoxItem:selected Border.downloadStatusRow.aborted, ListBoxItem:selected Border.downloadStatusRow.paused">
       <Setter Property="BorderBrush" Value="#FFFFFF" />

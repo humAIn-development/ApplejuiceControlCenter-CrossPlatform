@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -25,6 +26,7 @@ public sealed partial class MainWindow : Window
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private readonly UiPreferencesStore _uiPreferencesStore = new();
+    private readonly DownloadStatusColorConfigurationStore _downloadStatusColorConfigurationStore = new();
     private readonly CoreProfileStore _coreProfileStore = new();
     private readonly ObservableCollection<CoreProfileEntry> _coreProfiles = new();
     private readonly Dictionary<string, string> _coreProfileSessionPasswords = new(StringComparer.OrdinalIgnoreCase);
@@ -72,6 +74,7 @@ public sealed partial class MainWindow : Window
     public MainWindow(AjStartupImportRequest? startupRequest = null)
     {
         InitializeComponent();
+        ApplyDownloadStatusColors(_downloadStatusColorConfigurationStore.Load());
         DataContext = _viewModel;
         _startupImportTimer.Interval = TimeSpan.FromMilliseconds(250);
         _startupImportTimer.Tick += StartupImportTimer_OnTick;
@@ -119,6 +122,28 @@ public sealed partial class MainWindow : Window
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+    private void ApplyDownloadStatusColors(DownloadStatusColorConfiguration configuration)
+    {
+        Resources["DownloadStatusCompletedBackground"] = CreateStatusBrush(configuration.CompletedBackground, "#39FF14");
+        Resources["DownloadStatusCompletedForeground"] = CreateStatusBrush(configuration.CompletedForeground, "#071407");
+        Resources["DownloadStatusAbortedBackground"] = CreateStatusBrush(configuration.AbortedBackground, "#FF2020");
+        Resources["DownloadStatusAbortedForeground"] = CreateStatusBrush(configuration.AbortedForeground, "#FFFFFF");
+        Resources["DownloadStatusPausedBackground"] = CreateStatusBrush(configuration.PausedBackground, "#FF77C8");
+        Resources["DownloadStatusPausedForeground"] = CreateStatusBrush(configuration.PausedForeground, "#1A0010");
+    }
+
+    private static SolidColorBrush CreateStatusBrush(string? value, string fallback)
+    {
+        try
+        {
+            return new SolidColorBrush(Color.Parse(string.IsNullOrWhiteSpace(value) ? fallback : value));
+        }
+        catch
+        {
+            return new SolidColorBrush(Color.Parse(fallback));
+        }
+    }
 
     public void EnqueueExternalStartupArguments(string[] args)
     {
