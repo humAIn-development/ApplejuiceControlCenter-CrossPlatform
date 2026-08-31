@@ -135,6 +135,11 @@ public sealed class AjDownload : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(DownloadStatusSortKey));
+                OnPropertyChanged(nameof(StatusVisualRole));
+                OnPropertyChanged(nameof(HasStatusVisualColor));
+                OnPropertyChanged(nameof(IsCompletedStatusVisual));
+                OnPropertyChanged(nameof(IsAbortedStatusVisual));
+                OnPropertyChanged(nameof(IsPausedStatusVisual));
                 OnPropertyChanged(nameof(PowerDownloadText));
                 NotifyProgressProperties();
             }
@@ -153,6 +158,12 @@ public sealed class AjDownload : INotifyPropertyChanged
         1 or 13 => 70,
         _ => 90
     };
+
+    public DownloadStatusVisualRole StatusVisualRole => DownloadStatusVisualSemantics.GetRole(Status);
+    public bool HasStatusVisualColor => StatusVisualRole != DownloadStatusVisualRole.Neutral;
+    public bool IsCompletedStatusVisual => StatusVisualRole == DownloadStatusVisualRole.Completed;
+    public bool IsAbortedStatusVisual => StatusVisualRole == DownloadStatusVisualRole.Aborted;
+    public bool IsPausedStatusVisual => StatusVisualRole == DownloadStatusVisualRole.Paused;
 
     public string Filename
     {

@@ -34,6 +34,31 @@
     <Style Selector="Grid.searchResultRow.existingDownload">
       <Setter Property="Background" Value="#382A12" />
     </Style>
+    <Style Selector="Border.downloadStatusRow">
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.completed">
+      <Setter Property="Background" Value="#39FF14" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.completed TextBlock">
+      <Setter Property="Foreground" Value="#071407" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.aborted">
+      <Setter Property="Background" Value="#FF2020" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.aborted TextBlock">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.paused">
+      <Setter Property="Background" Value="#FF77C8" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.paused TextBlock">
+      <Setter Property="Foreground" Value="#1A0010" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.completed, ListBoxItem:selected Border.downloadStatusRow.aborted, ListBoxItem:selected Border.downloadStatusRow.paused">
+      <Setter Property="BorderBrush" Value="#FFFFFF" />
+    </Style>
   </Window.Styles>
 
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="14">
@@ -230,36 +255,41 @@
                    SelectionChanged="DownloadsList_OnSelectionChanged">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjDownload">
-                <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*"
-                      Margin="8,6"
-                      PointerPressed="DownloadRow_OnPointerPressed"
-                      ContextRequested="DownloadRow_OnContextRequested">
-                  <Grid.ContextMenu>
-                    <ContextMenu>
-                      <MenuItem Header="Pausieren" Click="DownloadContextPause_OnClick" />
-                      <MenuItem Header="Fortsetzen" Click="DownloadContextResume_OnClick" />
-                      <MenuItem Header="Download abbrechen…" Click="DownloadContextCancel_OnClick" />
-                      <MenuItem Header="Fertige/abgebrochene Downloads entfernen" Click="DownloadContextClean_OnClick" />
-                      <Separator />
-                      <MenuItem Header="Umbenennen…" Click="DownloadContextRename_OnClick" />
-                      <MenuItem Header="Zielverzeichnis setzen…" Click="DownloadContextSetTargetDirectory_OnClick" />
-                      <MenuItem Header="Powerdownload setzen…" Click="DownloadContextSetPowerDownload_OnClick" />
-                      <MenuItem Header="Powerdownload löschen" Click="DownloadContextClearPowerDownload_OnClick" />
-                      <Separator />
-                      <MenuItem Header="AJFSP-Link kopieren" Click="DownloadContextCopyAjfsp_OnClick" />
-                      <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="DownloadContextCopyAjfspWithSource_OnClick" />
-                      <MenuItem Header="Dateiname kopieren" Click="DownloadContextCopyFilename_OnClick" />
-                      <MenuItem Header="Hash kopieren" Click="DownloadContextCopyHash_OnClick" />
-                      <MenuItem Header="ID kopieren" Click="DownloadContextCopyId_OnClick" />
-                    </ContextMenu>
-                  </Grid.ContextMenu>
-                  <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
-                  <TextBlock Grid.Column="2" Text="{Binding ProgressText}" />
-                  <TextBlock Grid.Column="3" Text="{Binding SourceCountText}" />
-                  <TextBlock Grid.Column="4" Text="{Binding DownloadSpeedText}" />
-                  <TextBlock Grid.Column="5" Text="{Binding PowerDownloadText}" />
-                </Grid>
+                <Border Classes="downloadStatusRow"
+                        Classes.completed="{Binding IsCompletedStatusVisual}"
+                        Classes.aborted="{Binding IsAbortedStatusVisual}"
+                        Classes.paused="{Binding IsPausedStatusVisual}">
+                  <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*"
+                        Margin="8,6"
+                        PointerPressed="DownloadRow_OnPointerPressed"
+                        ContextRequested="DownloadRow_OnContextRequested">
+                    <Grid.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Pausieren" Click="DownloadContextPause_OnClick" />
+                        <MenuItem Header="Fortsetzen" Click="DownloadContextResume_OnClick" />
+                        <MenuItem Header="Download abbrechen…" Click="DownloadContextCancel_OnClick" />
+                        <MenuItem Header="Fertige/abgebrochene Downloads entfernen" Click="DownloadContextClean_OnClick" />
+                        <Separator />
+                        <MenuItem Header="Umbenennen…" Click="DownloadContextRename_OnClick" />
+                        <MenuItem Header="Zielverzeichnis setzen…" Click="DownloadContextSetTargetDirectory_OnClick" />
+                        <MenuItem Header="Powerdownload setzen…" Click="DownloadContextSetPowerDownload_OnClick" />
+                        <MenuItem Header="Powerdownload löschen" Click="DownloadContextClearPowerDownload_OnClick" />
+                        <Separator />
+                        <MenuItem Header="AJFSP-Link kopieren" Click="DownloadContextCopyAjfsp_OnClick" />
+                        <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="DownloadContextCopyAjfspWithSource_OnClick" />
+                        <MenuItem Header="Dateiname kopieren" Click="DownloadContextCopyFilename_OnClick" />
+                        <MenuItem Header="Hash kopieren" Click="DownloadContextCopyHash_OnClick" />
+                        <MenuItem Header="ID kopieren" Click="DownloadContextCopyId_OnClick" />
+                      </ContextMenu>
+                    </Grid.ContextMenu>
+                    <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
+                    <TextBlock Grid.Column="2" Text="{Binding ProgressText}" />
+                    <TextBlock Grid.Column="3" Text="{Binding SourceCountText}" />
+                    <TextBlock Grid.Column="4" Text="{Binding DownloadSpeedText}" />
+                    <TextBlock Grid.Column="5" Text="{Binding PowerDownloadText}" />
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
