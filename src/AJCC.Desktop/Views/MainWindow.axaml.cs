@@ -1236,6 +1236,7 @@ public sealed partial class MainWindow : Window
             _viewModel.CheckCorePortReachabilityAsync,
             _viewModel.ChangeCorePasswordAsync);
         await dialog.ShowDialog<bool>(this);
+        ApplyDownloadStatusColors(_downloadStatusColorConfigurationStore.Load());
     }
 
     private void ConfigureLocalIncomingMappingControls()

@@ -1224,6 +1224,45 @@ public sealed partial class SettingsDialog : Window
         }
     }
 
+    private async void ConfigureDownloadStatusColorsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DownloadStatusColorConfigurationStore store = new();
+        DownloadStatusColorDialog dialog = new(store.Load());
+        if (!await dialog.ShowDialog<bool>(this))
+            return;
+
+        SaveDownloadStatusColors(
+            store,
+            dialog.Configuration,
+            "Download-Statusfarben gespeichert. Sie werden nach dem Schließen der Einstellungen übernommen.");
+    }
+
+    private void ResetDownloadStatusColorsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DownloadStatusColorConfigurationStore store = new();
+        SaveDownloadStatusColors(
+            store,
+            new DownloadStatusColorConfiguration(),
+            "Standardfarben wiederhergestellt. Sie werden nach dem Schließen der Einstellungen übernommen.");
+    }
+
+    private void SaveDownloadStatusColors(
+        DownloadStatusColorConfigurationStore store,
+        DownloadStatusColorConfiguration configuration,
+        string successMessage)
+    {
+        TextBlock? status = this.FindControl<TextBlock>("DownloadStatusColorStatusText");
+        if (!store.TrySave(configuration, out string errorMessage))
+        {
+            if (status is not null)
+                status.Text = "Speichern fehlgeschlagen: " + errorMessage;
+            return;
+        }
+
+        if (status is not null)
+            status.Text = successMessage;
+    }
+
     private async void BrowseVlcButton_OnClick(object? sender, RoutedEventArgs e)
     {
         IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(
