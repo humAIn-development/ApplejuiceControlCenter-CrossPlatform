@@ -125,12 +125,23 @@ public sealed partial class MainWindow : Window
 
     private void ApplyDownloadStatusColors(DownloadStatusColorConfiguration configuration)
     {
-        Resources["DownloadStatusCompletedBackground"] = CreateStatusBrush(configuration.CompletedBackground, "#39FF14");
-        Resources["DownloadStatusCompletedForeground"] = CreateStatusBrush(configuration.CompletedForeground, "#071407");
-        Resources["DownloadStatusAbortedBackground"] = CreateStatusBrush(configuration.AbortedBackground, "#FF2020");
-        Resources["DownloadStatusAbortedForeground"] = CreateStatusBrush(configuration.AbortedForeground, "#FFFFFF");
-        Resources["DownloadStatusPausedBackground"] = CreateStatusBrush(configuration.PausedBackground, "#FF77C8");
-        Resources["DownloadStatusPausedForeground"] = CreateStatusBrush(configuration.PausedForeground, "#1A0010");
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        foreach (DownloadStatusColorRule defaultRule in DownloadStatusColorConfiguration.CreateDefaultRules())
+        {
+            DownloadStatusColorRule rule = configuration.GetRule(defaultRule.Status);
+            string suffix = defaultRule.Status < 0 ? "Other" : defaultRule.Status.ToString();
+            string background = rule.Enabled ? rule.Background : "#00000000";
+            string foreground = rule.Enabled ? rule.Foreground : "#F3F6FA";
+            string selectionBorder = rule.Enabled ? "#FFFFFF" : "#355A86";
+
+            Resources[$"DownloadStatus{suffix}Background"] =
+                CreateStatusBrush(background, defaultRule.Background);
+            Resources[$"DownloadStatus{suffix}Foreground"] =
+                CreateStatusBrush(foreground, "#F3F6FA");
+            Resources[$"DownloadStatus{suffix}SelectionBorder"] =
+                CreateStatusBrush(selectionBorder, "#355A86");
+        }
     }
 
     private static SolidColorBrush CreateStatusBrush(string? value, string fallback)

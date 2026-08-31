@@ -12,6 +12,10 @@
         MinWidth="1000"
         MinHeight="680">
 
+  <Window.Resources>
+    <services:DownloadStatusRuleMatchConverter x:Key="DownloadStatusRuleMatchConverter" />
+  </Window.Resources>
+
   <Window.Styles>
     <Style Selector="TextBlock.connectionDot.offline, TextBlock.connectionState.offline">
       <Setter Property="Foreground" Value="{DynamicResource AjMuted}" />
@@ -38,26 +42,95 @@
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
-    <Style Selector="Border.downloadStatusRow.completed">
-      <Setter Property="Background" Value="{DynamicResource DownloadStatusCompletedBackground}" />
+    <Style Selector="Border.downloadStatusRow.status0">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus0Background}" />
     </Style>
-    <Style Selector="Border.downloadStatusRow.completed TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusCompletedForeground}" />
+    <Style Selector="Border.downloadStatusRow.status0 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus0Foreground}" />
     </Style>
-    <Style Selector="Border.downloadStatusRow.aborted">
-      <Setter Property="Background" Value="{DynamicResource DownloadStatusAbortedBackground}" />
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status0">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus0SelectionBorder}" />
     </Style>
-    <Style Selector="Border.downloadStatusRow.aborted TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusAbortedForeground}" />
+    <Style Selector="Border.downloadStatusRow.status1">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus1Background}" />
     </Style>
-    <Style Selector="Border.downloadStatusRow.paused">
-      <Setter Property="Background" Value="{DynamicResource DownloadStatusPausedBackground}" />
+    <Style Selector="Border.downloadStatusRow.status1 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus1Foreground}" />
     </Style>
-    <Style Selector="Border.downloadStatusRow.paused TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusPausedForeground}" />
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status1">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus1SelectionBorder}" />
     </Style>
-    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.completed, ListBoxItem:selected Border.downloadStatusRow.aborted, ListBoxItem:selected Border.downloadStatusRow.paused">
-      <Setter Property="BorderBrush" Value="#FFFFFF" />
+    <Style Selector="Border.downloadStatusRow.status12">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus12Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status12 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus12Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status12">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus12SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status13">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus13Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status13 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus13Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status13">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus13SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status14">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus14Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status14 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus14Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status14">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus14SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status15">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus15Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status15 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus15Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status15">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus15SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status16">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus16Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status16 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus16Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status16">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus16SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status17">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus17Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status17 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus17Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status17">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus17SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status18">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus18Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status18 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus18Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status18">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus18SelectionBorder}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.other">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatusOtherBackground}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.other TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusOtherForeground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.other">
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatusOtherSelectionBorder}" />
     </Style>
   </Window.Styles>
 
@@ -256,9 +329,16 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjDownload">
                 <Border Classes="downloadStatusRow"
-                        Classes.completed="{Binding IsCompletedStatusVisual}"
-                        Classes.aborted="{Binding IsAbortedStatusVisual}"
-                        Classes.paused="{Binding IsPausedStatusVisual}">
+                        Classes.status0="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=0}"
+                        Classes.status1="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=1}"
+                        Classes.status12="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=12}"
+                        Classes.status13="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=13}"
+                        Classes.status14="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=14}"
+                        Classes.status15="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=15}"
+                        Classes.status16="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=16}"
+                        Classes.status17="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=17}"
+                        Classes.status18="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=18}"
+                        Classes.other="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=-1}">
                   <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*"
                         Margin="8,6"
                         PointerPressed="DownloadRow_OnPointerPressed"
