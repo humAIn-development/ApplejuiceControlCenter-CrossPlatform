@@ -377,6 +377,8 @@
       </TabItem>
 
       <TabItem Header="Ansicht / Oberfläche">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
         <Border Classes="panel" Padding="14" Margin="0,8,0,0">
           <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                 ColumnDefinitions="Auto,*,Auto">
@@ -478,6 +480,7 @@
                        TextWrapping="Wrap" />
           </Grid>
         </Border>
+        </ScrollViewer>
       </TabItem>
     </TabControl>
 
