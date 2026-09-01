@@ -1186,14 +1186,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 shares,
                 YieldShareUpdateAsync).ConfigureAwait(true);
 
-            AjStateUpdater.RebuildShareFilenameLookup(state);
-            bool uploadNamesChanged = AjStateUpdater.EnrichUploadsWithShareFilenames(state);
-
             OnPropertyChanged(nameof(Shares));
             OnPropertyChanged(nameof(ShareCountText));
             OnPropertyChanged(nameof(ShareSizeText));
-            if (uploadNamesChanged)
-                RaiseStateProperties();
             StatusText = $"Share-Dateiliste geladen: {shares.Count:N0} Dateien · {ShareSizeText}";
         }
         catch (Exception ex)

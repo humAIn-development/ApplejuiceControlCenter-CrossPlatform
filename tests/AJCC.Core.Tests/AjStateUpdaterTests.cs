@@ -106,45 +106,4 @@ public sealed class AjStateUpdaterTests
 
         Assert.AreEqual("Known.mkv", state.Uploads[0].Filename);
     }
-
-    [TestMethod]
-    public void Apply_InvalidUploadName_UsesShareFilenameCacheWhenDownloadMissing()
-    {
-        AjState state = new();
-        state.ShareFilenameById[42] = @"D:\Shared\Shared Movie.mkv";
-        ModifiedParseResult result = new();
-        result.Uploads.Add(new AjUpload
-        {
-            Id = 20,
-            ShareId = 42,
-            Filename = "ShareID 42"
-        });
-
-        AjStateUpdater.Apply(state, result);
-
-        Assert.AreEqual(@"D:\Shared\Shared Movie.mkv", state.Uploads[0].Filename);
-    }
-
-    [TestMethod]
-    public void RebuildShareFilenameLookup_AndEnrichUploads_UseOnlyUsableMatchingShares()
-    {
-        AjState state = new();
-        state.Shares.Add(new AjShareFile { Id = 42, Filename = @"D:\Shared\Resolved.mkv" });
-        state.Shares.Add(new AjShareFile { Id = 43, Filename = "12345.data" });
-        state.Shares.Add(new AjShareFile { Id = 0, Filename = "Ignored.mkv" });
-        state.Uploads.Add(new AjUpload { Id = 20, ShareId = 42, Filename = "ShareID 42" });
-        state.Uploads.Add(new AjUpload { Id = 21, ShareId = 42, Filename = "AlreadyGood.mkv" });
-        state.Uploads.Add(new AjUpload { Id = 22, ShareId = 43, Filename = "54321.data" });
-
-        AjStateUpdater.RebuildShareFilenameLookup(state);
-        bool changed = AjStateUpdater.EnrichUploadsWithShareFilenames(state);
-
-        Assert.IsTrue(changed);
-        Assert.AreEqual(1, state.ShareFilenameById.Count);
-        Assert.AreEqual(@"D:\Shared\Resolved.mkv", state.ShareFilenameById[42]);
-        Assert.AreEqual(@"D:\Shared\Resolved.mkv", state.Uploads[0].Filename);
-        Assert.AreEqual("AlreadyGood.mkv", state.Uploads[1].Filename);
-        Assert.AreEqual("54321.data", state.Uploads[2].Filename);
-    }
-
 }
