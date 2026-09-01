@@ -323,6 +323,7 @@
           </Border>
           <ListBox Grid.Row="2"
                    Grid.ColumnSpan="2"
+                   SelectionMode="Multiple"
                    ItemsSource="{Binding Downloads}"
                    SelectedItem="{Binding SelectedDownload}"
                    SelectionChanged="DownloadsList_OnSelectionChanged">
