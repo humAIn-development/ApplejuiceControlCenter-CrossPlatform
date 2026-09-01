@@ -36,6 +36,13 @@ public static class AjStateUpdater
                     item.Filename = downloadFilename;
             }
 
+            if (!IsUsableUploadFilename(item.Filename))
+            {
+                string? shareFilename = GetShareFilenameFallback(state, item.ShareId);
+                if (!string.IsNullOrWhiteSpace(shareFilename))
+                    item.Filename = shareFilename;
+            }
+
             Upsert(state.Uploads, item, item.Id);
         }
 
@@ -61,6 +68,33 @@ public static class AjStateUpdater
     public static void RebuildShareFilenameLookup(AjState state)
     {
         state.ShareFilenameById.Clear();
+
+        foreach (AjShareFile share in state.Shares)
+        {
+            if (share.Id <= 0 || !IsUsableUploadFilename(share.Filename))
+                continue;
+
+            state.ShareFilenameById[share.Id] = share.Filename.Trim();
+        }
+    }
+
+    public static bool EnrichUploadsWithShareFilenames(AjState state)
+    {
+        bool changed = false;
+        foreach (AjUpload upload in state.Uploads)
+        {
+            if (upload.ShareId <= 0 || IsUsableUploadFilename(upload.Filename))
+                continue;
+
+            string? shareFilename = GetShareFilenameFallback(state, upload.ShareId);
+            if (string.IsNullOrWhiteSpace(shareFilename))
+                continue;
+
+            upload.Filename = shareFilename;
+            changed = true;
+        }
+
+        return changed;
     }
 
     public static bool IsUsableUploadFilename(string? filename)
@@ -104,6 +138,20 @@ public static class AjStateUpdater
             string filename = download.Filename.Trim();
             if (IsUsableUploadFilename(filename))
                 return filename;
+        }
+
+        return null;
+    }
+
+    private static string? GetShareFilenameFallback(AjState state, long shareId)
+    {
+        if (shareId <= 0)
+            return null;
+
+        if (state.ShareFilenameById.TryGetValue(shareId, out string? filename)
+            && IsUsableUploadFilename(filename))
+        {
+            return filename.Trim();
         }
 
         return null;
