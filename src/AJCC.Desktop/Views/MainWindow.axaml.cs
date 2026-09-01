@@ -196,18 +196,16 @@ public sealed partial class MainWindow : Window
             _pendingStartupLinkListFiles.Enqueue(file.Trim());
 
         if (_pendingStartupLinks.Count > 0 || _pendingStartupLinkListFiles.Count > 0)
-            _startupImportTimer.Start();
+            _ = ProcessPendingStartupImportsAsync();
     }
 
     private async void StartupImportTimer_OnTick(object? sender, EventArgs e)
+        => await ProcessPendingStartupImportsAsync();
+
+    private async Task ProcessPendingStartupImportsAsync()
     {
-        if (_processingStartupImports
-            || _coreProfileFailoverInProgress
-            || !_viewModel.IsConnected
-            || _viewModel.IsBusy)
-        {
+        if (_processingStartupImports)
             return;
-        }
 
         if (_pendingStartupLinks.Count == 0 && _pendingStartupLinkListFiles.Count == 0)
         {
@@ -215,21 +213,39 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        AjStartupImportRequest request = new();
-        while (_pendingStartupLinks.Count > 0)
-            request.Links.Add(_pendingStartupLinks.Dequeue());
-        while (_pendingStartupLinkListFiles.Count > 0)
-            request.LinkListFiles.Add(_pendingStartupLinkListFiles.Dequeue());
+        if (_coreProfileFailoverInProgress
+            || !_viewModel.IsConnected
+            || _viewModel.IsBusy)
+        {
+            _startupImportTimer.Start();
+            return;
+        }
 
+        _startupImportTimer.Stop();
         _processingStartupImports = true;
         try
         {
-            await _viewModel.ImportStartupRequestAsync(request);
+            while (!_coreProfileFailoverInProgress
+                   && _viewModel.IsConnected
+                   && !_viewModel.IsBusy)
+            {
+                AjStartupImportRequest request = new();
+                if (_pendingStartupLinks.Count > 0)
+                    request.Links.Add(_pendingStartupLinks.Dequeue());
+                else if (_pendingStartupLinkListFiles.Count > 0)
+                    request.LinkListFiles.Add(_pendingStartupLinkListFiles.Dequeue());
+                else
+                    break;
+
+                await _viewModel.ImportStartupRequestAsync(request);
+            }
         }
         finally
         {
             _processingStartupImports = false;
-            if (_pendingStartupLinks.Count == 0 && _pendingStartupLinkListFiles.Count == 0)
+            if (_pendingStartupLinks.Count > 0 || _pendingStartupLinkListFiles.Count > 0)
+                _startupImportTimer.Start();
+            else
                 _startupImportTimer.Stop();
         }
     }
