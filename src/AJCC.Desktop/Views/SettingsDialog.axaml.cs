@@ -1343,6 +1343,11 @@ public sealed partial class SettingsDialog : Window
     private void LoadExternalVlcConfiguration()
     {
         ExternalVlcConfiguration configuration = _externalVlcConfigurationStore.Load();
+        string path = (configuration.ExecutablePath ?? string.Empty).Trim();
+        bool enabled = configuration.Enabled && File.Exists(path);
+
+        if (configuration.Enabled && !enabled)
+            _externalVlcConfigurationStore.TrySave(new ExternalVlcConfiguration(false, path), out _);
 
         _loadingExternalVlcConfiguration = true;
         try
@@ -1350,9 +1355,9 @@ public sealed partial class SettingsDialog : Window
             TextBox? pathInput = this.FindControl<TextBox>("VlcPathTextBox");
             CheckBox? enabledInput = this.FindControl<CheckBox>("VlcEnabledCheckBox");
             if (pathInput is not null)
-                pathInput.Text = configuration.ExecutablePath;
+                pathInput.Text = path;
             if (enabledInput is not null)
-                enabledInput.IsChecked = configuration.Enabled;
+                enabledInput.IsChecked = enabled;
         }
         finally
         {
@@ -1368,9 +1373,24 @@ public sealed partial class SettingsDialog : Window
         CheckBox? enabledInput = this.FindControl<CheckBox>("VlcEnabledCheckBox");
         TextBlock? status = this.FindControl<TextBlock>("VlcStatusText");
 
-        ExternalVlcConfiguration configuration = new(
-            enabledInput?.IsChecked == true,
-            pathInput?.Text ?? string.Empty);
+        string path = (pathInput?.Text ?? string.Empty).Trim();
+        bool requestedEnabled = enabledInput?.IsChecked == true;
+        bool effectiveEnabled = requestedEnabled && File.Exists(path);
+
+        if (requestedEnabled && !effectiveEnabled && enabledInput is not null)
+        {
+            _loadingExternalVlcConfiguration = true;
+            try
+            {
+                enabledInput.IsChecked = false;
+            }
+            finally
+            {
+                _loadingExternalVlcConfiguration = false;
+            }
+        }
+
+        ExternalVlcConfiguration configuration = new(effectiveEnabled, path);
 
         if (!_externalVlcConfigurationStore.TrySave(configuration, out string errorMessage))
         {
@@ -1391,14 +1411,12 @@ public sealed partial class SettingsDialog : Window
             return;
 
         string path = (pathInput?.Text ?? string.Empty).Trim();
-        if (enabledInput?.IsChecked != true)
-            status.Text = "deaktiviert";
-        else if (path.Length == 0)
-            status.Text = "kein VLC-Programm ausgewählt";
-        else if (!File.Exists(path))
+        if (path.Length > 0 && !File.Exists(path))
             status.Text = "VLC-Programm nicht erreichbar";
-        else
+        else if (enabledInput?.IsChecked == true)
             status.Text = "bereit";
+        else
+            status.Text = "deaktiviert";
     }
 
     private void CloseButton_OnClick(object? sender, RoutedEventArgs e)
