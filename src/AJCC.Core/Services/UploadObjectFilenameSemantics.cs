@@ -56,6 +56,61 @@ public static class UploadObjectFilenameSemantics
         return changed;
     }
 
+    public static bool ApplyDownloadFilenameFallbacks(
+        IEnumerable<AjUpload> uploads,
+        IEnumerable<AjDownload> downloads,
+        IDictionary<long, string> cachedByShareId)
+    {
+        ArgumentNullException.ThrowIfNull(uploads);
+        ArgumentNullException.ThrowIfNull(downloads);
+        ArgumentNullException.ThrowIfNull(cachedByShareId);
+
+        Dictionary<long, string> downloadFilenameByShareId = downloads
+            .Where(download => download.ShareId > 0)
+            .Select(download => new
+            {
+                download.ShareId,
+                Filename = GetUsableDownloadFilenameForUploadFallback(download)
+            })
+            .Where(item => AjStateUpdater.IsUsableUploadFilename(item.Filename))
+            .GroupBy(item => item.ShareId)
+            .ToDictionary(group => group.Key, group => group.First().Filename!);
+
+        if (downloadFilenameByShareId.Count == 0)
+            return false;
+
+        bool changed = false;
+        foreach (AjUpload upload in uploads)
+        {
+            if (upload.ShareId <= 0 || AjStateUpdater.IsUsableUploadFilename(upload.Filename))
+                continue;
+
+            if (!downloadFilenameByShareId.TryGetValue(upload.ShareId, out string? filename)
+                || !AjStateUpdater.IsUsableUploadFilename(filename))
+            {
+                continue;
+            }
+
+            string usableFilename = filename.Trim();
+            upload.Filename = usableFilename;
+            cachedByShareId[upload.ShareId] = usableFilename;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static string? GetUsableDownloadFilenameForUploadFallback(AjDownload download)
+    {
+        if (AjStateUpdater.IsUsableUploadFilename(download.DisplayFilename))
+            return download.DisplayFilename.Trim();
+
+        if (AjStateUpdater.IsUsableUploadFilename(download.Filename))
+            return download.Filename.Trim();
+
+        return null;
+    }
+
     public static bool ApplyFilename(IEnumerable<AjUpload> uploads, long shareId, string? filename)
     {
         ArgumentNullException.ThrowIfNull(uploads);

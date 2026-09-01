@@ -108,6 +108,39 @@ public sealed class UploadObjectFilenameSemanticsTests
         Assert.AreEqual("12345.data", uploads[2].Filename);
     }
 
+    [TestMethod]
+    public void ApplyDownloadFilenameFallbacks_UsesMatchingDownloadShareIdAndCachesName()
+    {
+        List<AjUpload> uploads =
+        [
+            new AjUpload { Id = 1, ShareId = 42, Filename = "ShareID 42" },
+            new AjUpload { Id = 2, ShareId = 42, Filename = "AlreadyGood.mkv" },
+            new AjUpload { Id = 3, ShareId = 43, Filename = "12345.data" },
+            new AjUpload { Id = 4, ShareId = 44, Filename = "ShareID 44" }
+        ];
+        List<AjDownload> downloads =
+        [
+            new AjDownload { Id = 10, ShareId = 42, Filename = @"C:\Incoming\Resolved.mkv" },
+            new AjDownload { Id = 11, ShareId = 43, Filename = "12345.data" },
+            new AjDownload { Id = 12, ShareId = 44, Filename = @"Music\Track.flac" }
+        ];
+        Dictionary<long, string> cached = new();
+
+        bool changed = UploadObjectFilenameSemantics.ApplyDownloadFilenameFallbacks(
+            uploads,
+            downloads,
+            cached);
+
+        Assert.IsTrue(changed);
+        Assert.AreEqual("Resolved.mkv", uploads[0].Filename);
+        Assert.AreEqual("AlreadyGood.mkv", uploads[1].Filename);
+        Assert.AreEqual("12345.data", uploads[2].Filename);
+        Assert.AreEqual("Track.flac", uploads[3].Filename);
+        Assert.AreEqual("Resolved.mkv", cached[42]);
+        Assert.AreEqual("Track.flac", cached[44]);
+        Assert.IsFalse(cached.ContainsKey(43));
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
         public HttpMethod? LastMethod { get; private set; }

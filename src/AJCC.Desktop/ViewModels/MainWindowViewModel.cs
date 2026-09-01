@@ -2586,6 +2586,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (client is null || state is null)
             return;
 
+        bool downloadFallbackApplied = UploadObjectFilenameSemantics.ApplyDownloadFilenameFallbacks(
+            state.Uploads,
+            state.Downloads,
+            _uploadObjectFilenameByShareId);
+        if (downloadFallbackApplied)
+            RaiseStateProperties();
+
         if (!state.Uploads.Any(upload =>
                 upload.ShareId > 0 && !AjStateUpdater.IsUsableUploadFilename(upload.Filename)))
         {
@@ -2600,6 +2607,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         if (_uploadObjectNameLookupInProgress)
             return;
 
+        bool downloadFallbackApplied = UploadObjectFilenameSemantics.ApplyDownloadFilenameFallbacks(
+            state.Uploads,
+            state.Downloads,
+            _uploadObjectFilenameByShareId);
         bool cachedApplied = UploadObjectFilenameSemantics.ApplyCachedFilenames(
             state.Uploads,
             _uploadObjectFilenameByShareId);
@@ -2611,7 +2622,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             UploadObjectNameLookupRetryDelay,
             UploadObjectNameLookupMaxPerSweep);
 
-        if (cachedApplied)
+        if (downloadFallbackApplied || cachedApplied)
             RaiseStateProperties();
         if (candidateShareIds.Count == 0)
             return;
