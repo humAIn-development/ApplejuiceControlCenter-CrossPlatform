@@ -1340,11 +1340,22 @@ public sealed partial class SettingsDialog : Window
             SaveExternalVlcConfiguration();
     }
 
+    private static bool IsValidVlcExecutablePath(string path)
+    {
+        string candidate = (path ?? string.Empty).Trim();
+        if (candidate.Length == 0 || !File.Exists(candidate))
+            return false;
+
+        string fileName = Path.GetFileName(candidate);
+        string expectedFileName = OperatingSystem.IsWindows() ? "vlc.exe" : "vlc";
+        return string.Equals(fileName, expectedFileName, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void LoadExternalVlcConfiguration()
     {
         ExternalVlcConfiguration configuration = _externalVlcConfigurationStore.Load();
         string path = (configuration.ExecutablePath ?? string.Empty).Trim();
-        bool enabled = configuration.Enabled && File.Exists(path);
+        bool enabled = configuration.Enabled && IsValidVlcExecutablePath(path);
 
         if (configuration.Enabled && !enabled)
             _externalVlcConfigurationStore.TrySave(new ExternalVlcConfiguration(false, path), out _);
@@ -1375,7 +1386,7 @@ public sealed partial class SettingsDialog : Window
 
         string path = (pathInput?.Text ?? string.Empty).Trim();
         bool requestedEnabled = enabledInput?.IsChecked == true;
-        bool effectiveEnabled = requestedEnabled && File.Exists(path);
+        bool effectiveEnabled = requestedEnabled && IsValidVlcExecutablePath(path);
 
         if (requestedEnabled && !effectiveEnabled && enabledInput is not null)
         {
@@ -1413,6 +1424,8 @@ public sealed partial class SettingsDialog : Window
         string path = (pathInput?.Text ?? string.Empty).Trim();
         if (path.Length > 0 && !File.Exists(path))
             status.Text = "VLC-Programm nicht erreichbar";
+        else if (path.Length > 0 && !IsValidVlcExecutablePath(path))
+            status.Text = "kein gültiges VLC-Programm ausgewählt";
         else if (enabledInput?.IsChecked == true)
             status.Text = "bereit";
         else
