@@ -18,6 +18,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly HostIncomingDirectoryPreparer _incomingDirectoryPreparer = new();
     private readonly LocalIncomingMappingStore _mappingStore = new();
+    private readonly DownloadQueueConfigurationStore _downloadQueueConfigurationStore = new();
     private readonly ServerReconnectRestrictionStore _serverReconnectRestrictionStore = new();
     private readonly ServerReconnectRestrictionState _serverReconnectRestriction = new();
     private readonly DispatcherTimer _serverReconnectRestrictionTimer = new();
@@ -28,6 +29,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan ServerReachabilityProbeFreshness = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan ExternalCorePortTestInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan ExternalCorePortTestTimeout = TimeSpan.FromMilliseconds(2500);
+    private static readonly TimeSpan DownloadQueueAutomationInterval = TimeSpan.FromSeconds(20);
     private const int UploadSpeedHistoryLength = 48;
     private static readonly TimeSpan UploadSpeedHistoryMinimumSampleDistance = TimeSpan.FromMilliseconds(1500);
     private const int UploadObjectNameLookupMaxPerSweep = 12;
@@ -70,6 +72,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private bool _runtimeFullResyncInProgress;
     private DateTime _lastRuntimeFullResyncUtc = DateTime.MinValue;
     private static readonly TimeSpan RuntimeFullResyncCooldown = TimeSpan.FromSeconds(20);
+    private bool _downloadQueueAutomationRunning;
+    private DateTime _lastDownloadQueueAutomationUtc = DateTime.MinValue;
     private bool _disposed;
 
     private readonly record struct UploadSpeedSampleSignature(
@@ -2573,7 +2577,87 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
             RaiseStateProperties();
             QueueUploadObjectNameLookup();
+            _ = ApplyDownloadQueueAutomationIfDueAsync();
         });
+    }
+
+    private async Task ApplyDownloadQueueAutomationIfDueAsync()
+    {
+        if (_downloadQueueAutomationRunning || !IsConnected || IsBusy)
+            return;
+
+        DateTime nowUtc = DateTime.UtcNow;
+        if (_lastDownloadQueueAutomationUtc != DateTime.MinValue
+            && nowUtc - _lastDownloadQueueAutomationUtc < DownloadQueueAutomationInterval)
+        {
+            return;
+        }
+
+        _lastDownloadQueueAutomationUtc = nowUtc;
+        DownloadQueueConfiguration configuration = _downloadQueueConfigurationStore.Load();
+        if (configuration.Limit <= 0)
+            return;
+
+        AppleJuiceCoreClient? client = _client;
+        AjState? state = _state;
+        if (client is null || state is null)
+            return;
+
+        DownloadQueuePlan plan = DownloadQueuePlanningSemantics.BuildPlan(
+            state.Downloads,
+            configuration.Limit);
+        if (plan.ResumeIds.Count == 0 && plan.PauseIds.Count == 0)
+            return;
+
+        _downloadQueueAutomationRunning = true;
+        int resumed = 0;
+        int paused = 0;
+        try
+        {
+            foreach (long downloadId in plan.ResumeIds)
+            {
+                if (!IsConnected
+                    || IsBusy
+                    || !ReferenceEquals(_client, client)
+                    || !ReferenceEquals(_state, state))
+                {
+                    return;
+                }
+
+                await client.ResumeDownloadAsync(downloadId).ConfigureAwait(true);
+                resumed++;
+            }
+
+            foreach (long downloadId in plan.PauseIds)
+            {
+                if (!IsConnected
+                    || IsBusy
+                    || !ReferenceEquals(_client, client)
+                    || !ReferenceEquals(_state, state))
+                {
+                    return;
+                }
+
+                await client.PauseDownloadAsync(downloadId).ConfigureAwait(true);
+                paused++;
+            }
+
+            if ((resumed > 0 || paused > 0)
+                && IsConnected
+                && ReferenceEquals(_client, client)
+                && ReferenceEquals(_state, state))
+            {
+                await RefreshDownloadsFromCoreAsync(client, state).ConfigureAwait(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Download-Queue-Automatik fehlgeschlagen: " + ex.Message;
+        }
+        finally
+        {
+            _downloadQueueAutomationRunning = false;
+        }
     }
 
     private void QueueUploadObjectNameLookup()
