@@ -37,10 +37,12 @@
                   VerticalAlignment="Bottom"
                   Spacing="8">
         <Button Classes="primary"
+                IsDefault="True"
                 MinWidth="110"
                 Content="Speichern"
                 Click="SaveButton_OnClick" />
-        <Button MinWidth="100"
+        <Button IsCancel="True"
+                MinWidth="100"
                 Content="Abbrechen"
                 Click="CancelButton_OnClick" />
       </StackPanel>

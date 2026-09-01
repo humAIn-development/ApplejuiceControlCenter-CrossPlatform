@@ -34,10 +34,12 @@
                 Margin="0,16,0,0">
       <Button x:Name="AcceptButton"
               Classes="primary"
+              IsDefault="True"
               MinWidth="110"
               Content="Übernehmen"
               Click="AcceptButton_OnClick" />
-      <Button MinWidth="96"
+      <Button IsCancel="True"
+              MinWidth="96"
               Content="Zurück"
               Click="CancelButton_OnClick" />
     </StackPanel>

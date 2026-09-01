@@ -113,11 +113,13 @@
               Click="IncomingButton_OnClick" />
       <Button Grid.Column="2"
               Classes="primary"
+              IsDefault="True"
               MinWidth="110"
               Margin="8,0,0,0"
               Content="Übernehmen"
               Click="AcceptButton_OnClick" />
       <Button Grid.Column="3"
+              IsCancel="True"
               MinWidth="96"
               Margin="8,0,0,0"
               Content="Zurück"

@@ -45,9 +45,11 @@
                   Spacing="8">
         <Button x:Name="ConfirmButton"
                 Classes="primary"
+                IsDefault="True"
                 MinWidth="110"
                 Click="ConfirmButton_OnClick" />
         <Button x:Name="CancelButton"
+                IsCancel="True"
                 MinWidth="100"
                 Click="CancelButton_OnClick" />
       </StackPanel>
