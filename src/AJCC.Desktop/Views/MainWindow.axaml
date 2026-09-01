@@ -55,7 +55,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus0Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status0">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus0SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status0 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status1">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus1Background}" />
@@ -64,7 +68,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus1Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status1">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus1SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status1 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status12">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus12Background}" />
@@ -73,7 +81,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus12Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status12">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus12SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status12 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status13">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus13Background}" />
@@ -82,7 +94,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus13Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status13">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus13SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status13 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status14">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus14Background}" />
@@ -91,7 +107,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus14Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status14">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus14SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status14 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status15">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus15Background}" />
@@ -100,7 +120,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus15Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status15">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus15SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status15 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status16">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus16Background}" />
@@ -109,7 +133,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus16Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status16">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus16SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status16 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status17">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus17Background}" />
@@ -118,7 +146,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus17Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status17">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus17SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status17 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.status18">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus18Background}" />
@@ -127,7 +159,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatus18Foreground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status18">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus18SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status18 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
     <Style Selector="Border.downloadStatusRow.other">
       <Setter Property="Background" Value="{DynamicResource DownloadStatusOtherBackground}" />
@@ -136,7 +172,11 @@
       <Setter Property="Foreground" Value="{DynamicResource DownloadStatusOtherForeground}" />
     </Style>
     <Style Selector="ListBoxItem:selected Border.downloadStatusRow.other">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
       <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatusOtherSelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.other TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
     </Style>
   </Window.Styles>
 
