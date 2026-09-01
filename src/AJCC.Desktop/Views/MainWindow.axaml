@@ -42,6 +42,12 @@
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
     <Style Selector="Border.downloadStatusRow.status0">
       <Setter Property="Background" Value="{DynamicResource DownloadStatus0Background}" />
     </Style>
