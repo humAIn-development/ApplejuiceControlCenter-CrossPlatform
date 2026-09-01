@@ -325,7 +325,9 @@
       </Border>
     </Grid>
 
-    <TabControl Grid.Row="2">
+    <TabControl x:Name="MainTabControl"
+                Grid.Row="2"
+                SelectionChanged="MainTabControl_OnSelectionChanged">
       <TabItem Header="Downloads">
         <Grid RowDefinitions="Auto,Auto,2*,Auto,Auto,*"
               ColumnDefinitions="*,320"

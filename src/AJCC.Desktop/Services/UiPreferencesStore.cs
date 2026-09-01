@@ -4,7 +4,10 @@ namespace AJCC.Desktop.Services;
 
 public sealed record UiPreferences(
     bool SuppressCoreProfileSwitchConfirmation,
-    bool AutoLoadShareFilesAtStartup = false);
+    bool AutoLoadShareFilesAtStartup = false)
+{
+    public bool GuiSoundsEnabled { get; init; } = true;
+}
 
 public sealed class UiPreferencesStore
 {

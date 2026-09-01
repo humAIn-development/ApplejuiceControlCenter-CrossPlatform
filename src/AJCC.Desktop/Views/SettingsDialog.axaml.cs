@@ -15,9 +15,12 @@ public sealed partial class SettingsDialog : Window
     private bool _loadingUiPreferences;
     private Func<bool, bool>? _applySuppressCoreSwitchConfirmation;
     private Func<bool, bool>? _applyAutoLoadShareFilesAtStartup;
+    private Func<bool, bool>? _applyGuiSoundsEnabled;
     private string _mappingEndpoint = string.Empty;
     private Action<string>? _mappingChanged;
     private bool _autoLoadShareFilesAtStartup;
+    private bool _guiSoundsEnabled = true;
+    private bool _tabSoundReady;
     private Func<int, Task<int>>? _applyMaxConnectionsAsync;
     private Func<int, Task<int>>? _applyMaxSourcesPerFileAsync;
     private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
@@ -45,20 +48,26 @@ public sealed partial class SettingsDialog : Window
     {
         InitializeComponent();
         LoadExternalVlcConfiguration();
+        Opened += (_, _) => _tabSoundReady = true;
     }
 
     public void ConfigureUiPreferences(
         bool suppressCoreSwitchConfirmation,
         bool autoLoadShareFilesAtStartup,
+        bool guiSoundsEnabled,
         Func<bool, bool>? applySuppressCoreSwitchConfirmation,
-        Func<bool, bool>? applyAutoLoadShareFilesAtStartup)
+        Func<bool, bool>? applyAutoLoadShareFilesAtStartup,
+        Func<bool, bool>? applyGuiSoundsEnabled)
     {
         _applySuppressCoreSwitchConfirmation = applySuppressCoreSwitchConfirmation;
         _applyAutoLoadShareFilesAtStartup = applyAutoLoadShareFilesAtStartup;
+        _applyGuiSoundsEnabled = applyGuiSoundsEnabled;
         _autoLoadShareFilesAtStartup = autoLoadShareFilesAtStartup;
+        _guiSoundsEnabled = guiSoundsEnabled;
 
         CheckBox? suppressInput = this.FindControl<CheckBox>("SuppressCoreSwitchConfirmationCheckBox");
         CheckBox? autoLoadInput = this.FindControl<CheckBox>("AutoLoadShareFilesAtStartupCheckBox");
+        CheckBox? guiSoundsInput = this.FindControl<CheckBox>("GuiSoundsEnabledCheckBox");
 
         _loadingUiPreferences = true;
         try
@@ -67,11 +76,23 @@ public sealed partial class SettingsDialog : Window
                 suppressInput.IsChecked = suppressCoreSwitchConfirmation;
             if (autoLoadInput is not null)
                 autoLoadInput.IsChecked = autoLoadShareFilesAtStartup;
+            if (guiSoundsInput is not null)
+                guiSoundsInput.IsChecked = guiSoundsEnabled;
         }
         finally
         {
             _loadingUiPreferences = false;
         }
+    }
+
+    private void SettingsTabControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!_tabSoundReady
+            || sender is not TabControl tabControl
+            || !ReferenceEquals(e.Source, tabControl))
+            return;
+
+        AudioFeedbackService.PlayButtonTick();
     }
 
     public void ConfigureLocalIncomingMapping(
@@ -1165,6 +1186,33 @@ public sealed partial class SettingsDialog : Window
         try
         {
             input.IsChecked = !requested;
+        }
+        finally
+        {
+            _loadingUiPreferences = false;
+        }
+    }
+
+    private void GuiSoundsEnabledCheckBox_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_loadingUiPreferences
+            || _applyGuiSoundsEnabled is null
+            || sender is not CheckBox input)
+        {
+            return;
+        }
+
+        bool requested = input.IsChecked == true;
+        if (_applyGuiSoundsEnabled(requested))
+        {
+            _guiSoundsEnabled = requested;
+            return;
+        }
+
+        _loadingUiPreferences = true;
+        try
+        {
+            input.IsChecked = _guiSoundsEnabled;
         }
         finally
         {

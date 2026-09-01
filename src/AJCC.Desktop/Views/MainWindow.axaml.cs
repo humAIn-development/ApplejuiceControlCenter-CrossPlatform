@@ -39,8 +39,10 @@ public sealed partial class MainWindow : Window
     private bool _coreProfileFailoverInProgress;
     private bool _suppressCoreProfileSwitchConfirmation;
     private bool _autoLoadShareFilesAtStartup;
+    private bool _guiSoundsEnabled = true;
     private bool _startupShareLoadEnabledForThisProcess;
     private bool _automaticStartupShareLoadHandledThisProcess;
+    private bool _tabSoundReady;
     private int _activeCoreReachabilityFailureCount;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
@@ -82,6 +84,8 @@ public sealed partial class MainWindow : Window
         UiPreferences uiPreferences = _uiPreferencesStore.Load();
         _suppressCoreProfileSwitchConfirmation = uiPreferences.SuppressCoreProfileSwitchConfirmation;
         _autoLoadShareFilesAtStartup = uiPreferences.AutoLoadShareFilesAtStartup;
+        _guiSoundsEnabled = uiPreferences.GuiSoundsEnabled;
+        AudioFeedbackService.Enabled = _guiSoundsEnabled;
         _startupShareLoadEnabledForThisProcess = _autoLoadShareFilesAtStartup;
         _viewModel.CoreConnectionLost += ViewModel_OnCoreConnectionLost;
         LoadCoreProfiles();
@@ -109,7 +113,11 @@ public sealed partial class MainWindow : Window
             MainWindow_OnContextRequested,
             RoutingStrategies.Tunnel,
             handledEventsToo: true);
-        Opened += async (_, _) => await RefreshCoreProfileReachabilityAsync();
+        Opened += async (_, _) =>
+        {
+            _tabSoundReady = true;
+            await RefreshCoreProfileReachabilityAsync();
+        };
         Closed += (_, _) =>
         {
             _startupImportTimer.Stop();
@@ -122,6 +130,16 @@ public sealed partial class MainWindow : Window
 
     private void InitializeComponent()
         => AvaloniaXamlLoader.Load(this);
+
+    private void MainTabControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!_tabSoundReady
+            || sender is not TabControl tabControl
+            || !ReferenceEquals(e.Source, tabControl))
+            return;
+
+        AudioFeedbackService.PlayButtonTick();
+    }
 
     private void ApplyDownloadStatusColors(DownloadStatusColorConfiguration configuration)
     {
@@ -981,7 +999,8 @@ public sealed partial class MainWindow : Window
             if (confirm.SuppressFutureConfirmationRequested)
             {
                 if (_uiPreferencesStore.TrySave(
-                        new UiPreferences(true, _autoLoadShareFilesAtStartup),
+                        new UiPreferences(true, _autoLoadShareFilesAtStartup)
+                        { GuiSoundsEnabled = _guiSoundsEnabled },
                         out string errorMessage))
                 {
                     _suppressCoreProfileSwitchConfirmation = true;
@@ -1084,7 +1103,8 @@ public sealed partial class MainWindow : Window
                     "Der automatische Share-Startload wurde deaktiviert, weil der letzte Start dabei nicht sauber abgeschlossen wurde. "
                     + "AJCC-X lädt die Share-Dateiliste in diesem Programmstart nicht automatisch.";
                 if (!_uiPreferencesStore.TrySave(
-                        new UiPreferences(_suppressCoreProfileSwitchConfirmation, false),
+                        new UiPreferences(_suppressCoreProfileSwitchConfirmation, false)
+                        { GuiSoundsEnabled = _guiSoundsEnabled },
                         out string errorMessage))
                 {
                     message += " Die deaktivierte Einstellung konnte nicht gespeichert werden: " + errorMessage;
@@ -1177,10 +1197,12 @@ public sealed partial class MainWindow : Window
         dialog.ConfigureUiPreferences(
             _suppressCoreProfileSwitchConfirmation,
             _autoLoadShareFilesAtStartup,
+            _guiSoundsEnabled,
             suppress =>
             {
                 if (!_uiPreferencesStore.TrySave(
-                        new UiPreferences(suppress, _autoLoadShareFilesAtStartup),
+                        new UiPreferences(suppress, _autoLoadShareFilesAtStartup)
+                        { GuiSoundsEnabled = _guiSoundsEnabled },
                         out string errorMessage))
                 {
                     _viewModel.SetStatusMessage(
@@ -1200,7 +1222,8 @@ public sealed partial class MainWindow : Window
                 if (!_uiPreferencesStore.TrySave(
                         new UiPreferences(
                             _suppressCoreProfileSwitchConfirmation,
-                            autoLoadShareFilesAtStartup),
+                            autoLoadShareFilesAtStartup)
+                        { GuiSoundsEnabled = _guiSoundsEnabled },
                         out string errorMessage))
                 {
                     _viewModel.SetStatusMessage(
@@ -1215,6 +1238,29 @@ public sealed partial class MainWindow : Window
                     autoLoadShareFilesAtStartup
                         ? "Share-Dateiliste wird beim nächsten Programmstart nach der ersten Core-Verbindung automatisch geladen."
                         : "Share-Dateiliste wird beim Programmstart nicht automatisch geladen.");
+                return true;
+            },
+            guiSoundsEnabled =>
+            {
+                UiPreferences updatedPreferences = new(
+                    _suppressCoreProfileSwitchConfirmation,
+                    _autoLoadShareFilesAtStartup)
+                {
+                    GuiSoundsEnabled = guiSoundsEnabled
+                };
+                if (!_uiPreferencesStore.TrySave(updatedPreferences, out string errorMessage))
+                {
+                    _viewModel.SetStatusMessage(
+                        "Oberflächen-Sound-Option konnte nicht gespeichert werden: " + errorMessage);
+                    return false;
+                }
+
+                _guiSoundsEnabled = guiSoundsEnabled;
+                AudioFeedbackService.Enabled = guiSoundsEnabled;
+                _viewModel.SetStatusMessage(
+                    guiSoundsEnabled
+                        ? "Oberflächen-Sounds aktiviert."
+                        : "Oberflächen-Sounds deaktiviert.");
                 return true;
             });
         dialog.ConfigureCoreSettings(
