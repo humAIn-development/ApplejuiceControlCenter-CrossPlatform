@@ -1864,6 +1864,15 @@ public sealed partial class MainWindow : Window
         selectedItems.Add(share);
     }
 
+    private void SelectDownloadForContext(Control source, AjDownload download)
+    {
+        ListBoxItem? item = source.FindAncestorOfType<ListBoxItem>(includeSelf: true);
+        if (item?.IsSelected == true)
+            return;
+
+        _viewModel.SelectedDownload = download;
+    }
+
     private async void DownloadSearchResultButton_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.DownloadSelectedSearchEntryAsync();
 
@@ -1893,7 +1902,7 @@ public sealed partial class MainWindow : Window
         switch (source.DataContext)
         {
             case AjDownload download:
-                _viewModel.SelectedDownload = download;
+                SelectDownloadForContext(source, download);
                 break;
             case AjUserSource userSource:
                 _selectedDownloadSourceForContext = userSource;
@@ -1991,7 +2000,7 @@ public sealed partial class MainWindow : Window
         switch (item.DataContext)
         {
             case AjDownload download:
-                _viewModel.SelectedDownload = download;
+                SelectDownloadForContext(item, download);
                 isDownloadRow = true;
                 break;
             case AjUserSource userSource:
@@ -2078,8 +2087,8 @@ public sealed partial class MainWindow : Window
 
     private void DownloadRow_OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is Control { DataContext: AjDownload download })
-            _viewModel.SelectedDownload = download;
+        if (sender is Control source && source.DataContext is AjDownload download)
+            SelectDownloadForContext(source, download);
     }
 
     private void SearchResultRow_OnContextRequested(object? sender, ContextRequestedEventArgs e)
