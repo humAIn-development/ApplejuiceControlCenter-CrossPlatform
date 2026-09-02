@@ -1282,10 +1282,15 @@ public sealed partial class SettingsDialog : Window
 
         CheckBox? enabledInput = this.FindControl<CheckBox>("DownloadQueueEnabledCheckBox");
         NumericUpDown? limitInput = this.FindControl<NumericUpDown>("DownloadQueueLimitInput");
+        CheckBox? rotateSourceLessInput = this.FindControl<CheckBox>("DownloadQueueRotateSourceLessCheckBox");
+        ComboBox? sourceLessTimeoutInput = this.FindControl<ComboBox>("DownloadQueueSourceLessTimeoutInput");
         if (enabledInput is not null)
             enabledInput.IsChecked = enabled;
         if (limitInput is not null)
             limitInput.Value = preparedLimit;
+        if (rotateSourceLessInput is not null)
+            rotateSourceLessInput.IsChecked = configuration.RotateSourceLess == true;
+        SelectDownloadQueueSourceLessTimeout(sourceLessTimeoutInput, configuration.SourceLessTimeoutMinutes);
 
         UpdateDownloadQueueStatus(configuration);
     }
@@ -1294,15 +1299,23 @@ public sealed partial class SettingsDialog : Window
     {
         CheckBox? enabledInput = this.FindControl<CheckBox>("DownloadQueueEnabledCheckBox");
         NumericUpDown? limitInput = this.FindControl<NumericUpDown>("DownloadQueueLimitInput");
+        CheckBox? rotateSourceLessInput = this.FindControl<CheckBox>("DownloadQueueRotateSourceLessCheckBox");
+        ComboBox? sourceLessTimeoutInput = this.FindControl<ComboBox>("DownloadQueueSourceLessTimeoutInput");
         decimal rawLimit = limitInput?.Value ?? DownloadQueueConfiguration.Default.PreparedLimit;
         int preparedLimit = Math.Clamp((int)Math.Round(rawLimit), 1, 100);
         bool enabled = enabledInput?.IsChecked == true;
 
         DownloadQueueConfiguration currentConfiguration = _downloadQueueConfigurationStore.Load();
+        bool rotateSourceLess = rotateSourceLessInput?.IsChecked == true;
+        int sourceLessTimeoutMinutes = ReadDownloadQueueSourceLessTimeout(
+            sourceLessTimeoutInput,
+            currentConfiguration.SourceLessTimeoutMinutes);
         DownloadQueueConfiguration configuration = currentConfiguration with
         {
             Limit = enabled ? preparedLimit : 0,
-            PreparedLimit = preparedLimit
+            PreparedLimit = preparedLimit,
+            RotateSourceLess = rotateSourceLess,
+            SourceLessTimeoutMinutes = sourceLessTimeoutMinutes
         };
         TextBlock? status = this.FindControl<TextBlock>("DownloadQueueStatusText");
 
@@ -1315,6 +1328,7 @@ public sealed partial class SettingsDialog : Window
 
         if (limitInput is not null)
             limitInput.Value = preparedLimit;
+        SelectDownloadQueueSourceLessTimeout(sourceLessTimeoutInput, sourceLessTimeoutMinutes);
         UpdateDownloadQueueStatus(configuration);
     }
 
@@ -1324,9 +1338,43 @@ public sealed partial class SettingsDialog : Window
         if (status is null)
             return;
 
+        string sourceLessText = configuration.RotateSourceLess == true
+            ? $"0-Quellen-Rotation {configuration.SourceLessTimeoutMinutes:N0} Min."
+            : "0-Quellen-Rotation aus";
         status.Text = configuration.Limit > 0
-            ? $"aktiv · maximal {configuration.Limit:N0} Downloads gleichzeitig"
-            : $"deaktiviert · vorbereitetes Limit {configuration.PreparedLimit:N0}";
+            ? $"aktiv · maximal {configuration.Limit:N0} Downloads gleichzeitig · {sourceLessText}"
+            : $"deaktiviert · vorbereitetes Limit {configuration.PreparedLimit:N0} · {sourceLessText}";
+    }
+
+    private static void SelectDownloadQueueSourceLessTimeout(ComboBox? input, int minutes)
+    {
+        if (input is null)
+            return;
+
+        int normalized = Math.Clamp(minutes <= 0 ? 15 : minutes, 5, 60);
+        foreach (object? rawItem in input.Items)
+        {
+            if (rawItem is ComboBoxItem item
+                && int.TryParse(item.Tag?.ToString(), out int candidate)
+                && candidate == normalized)
+            {
+                input.SelectedItem = item;
+                return;
+            }
+        }
+
+        input.SelectedIndex = normalized <= 5 ? 0 : normalized <= 15 ? 1 : normalized <= 30 ? 2 : 3;
+    }
+
+    private static int ReadDownloadQueueSourceLessTimeout(ComboBox? input, int fallbackMinutes)
+    {
+        if (input?.SelectedItem is ComboBoxItem item
+            && int.TryParse(item.Tag?.ToString(), out int minutes))
+        {
+            return Math.Clamp(minutes, 5, 60);
+        }
+
+        return Math.Clamp(fallbackMinutes <= 0 ? 15 : fallbackMinutes, 5, 60);
     }
 
     private async void ConfigureDownloadStatusColorsButton_OnClick(object? sender, RoutedEventArgs e)

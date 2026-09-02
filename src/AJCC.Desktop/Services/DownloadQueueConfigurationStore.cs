@@ -8,13 +8,17 @@ namespace AJCC.Desktop.Services;
 public sealed record DownloadQueueConfiguration(
     int Limit,
     int PreparedLimit,
-    Dictionary<string, string>? Priorities = null)
+    Dictionary<string, string>? Priorities = null,
+    bool? RotateSourceLess = null,
+    int SourceLessTimeoutMinutes = 15)
 {
     public static DownloadQueueConfiguration Default { get; } =
         new(
             0,
             DownloadQueuePlanningSemantics.DefaultLimit,
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            true,
+            15);
 }
 
 public sealed class DownloadQueueConfigurationStore
@@ -88,6 +92,11 @@ public sealed class DownloadQueueConfigurationStore
                 DownloadQueuePlanningSemantics.MinimumLimit,
                 DownloadQueuePlanningSemantics.MaximumLimit);
 
+        bool rotateSourceLess = configuration.RotateSourceLess ?? true;
+        int sourceLessTimeoutMinutes = configuration.SourceLessTimeoutMinutes <= 0
+            ? 15
+            : Math.Clamp(configuration.SourceLessTimeoutMinutes, 5, 60);
+
         Dictionary<string, string> priorities = (configuration.Priorities
                 ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
             .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
@@ -101,7 +110,12 @@ public sealed class DownloadQueueConfigurationStore
                 group => group.Last().Value,
                 StringComparer.OrdinalIgnoreCase);
 
-        return new DownloadQueueConfiguration(limit, preparedLimit, priorities);
+        return new DownloadQueueConfiguration(
+            limit,
+            preparedLimit,
+            priorities,
+            rotateSourceLess,
+            sourceLessTimeoutMinutes);
     }
 
     private static string BuildDefaultSettingsPath()
