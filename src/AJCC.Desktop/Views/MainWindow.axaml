@@ -287,6 +287,12 @@
                   Padding="8,2"
                   Click="OfficialProjectWebsiteButton_OnClick"
                   ToolTip.Tip="Öffnet die offizielle Applejuice-Control-Center-Webseite im Standardbrowser." />
+          <Button Content="Feedback"
+                  HorizontalAlignment="Left"
+                  Margin="0,4,0,0"
+                  Padding="8,2"
+                  Click="FeedbackButton_OnClick"
+                  ToolTip.Tip="Feedback direkt aus AJCC-X senden." />
         </StackPanel>
       </Border>
 

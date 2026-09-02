@@ -1276,6 +1276,57 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void FeedbackButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string createdUtc = DateTimeOffset.UtcNow.ToString("O");
+            string connectionState = _viewModel.IsConnected ? "connected" : "offline";
+            string ajccVersion = typeof(MainWindow).Assembly.GetName().Version?.ToString() ?? "unknown";
+            string coreVersion = string.IsNullOrWhiteSpace(_viewModel.CoreVersion)
+                ? "unknown"
+                : _viewModel.CoreVersion;
+            string systemVersion = $"{Environment.OSVersion} · .NET {Environment.Version}";
+
+            string technicalContext =
+                "AJCC-X FirstLight feedback context" + Environment.NewLine +
+                $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                $"AJCCVersion={ajccVersion}" + Environment.NewLine +
+                $"CoreVersion={coreVersion}" + Environment.NewLine +
+                $"System={systemVersion}" + Environment.NewLine +
+                $"ConnectionState={connectionState}" + Environment.NewLine +
+                $"IsBusy={_viewModel.IsBusy}" + Environment.NewLine;
+
+            DiagnosticPackageContent packageContent = new(
+                Summary:
+                    "AJCC-X FirstLight anonymized feedback diagnostics" + Environment.NewLine +
+                    $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                    $"ConnectionState={connectionState}" + Environment.NewLine +
+                    "StartupLogTails=bounded" + Environment.NewLine,
+                DeveloperLog: StartupDiagnostics.ReadRecentLogTails(),
+                StateSnapshot:
+                    $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                    $"IsConnected={_viewModel.IsConnected}" + Environment.NewLine +
+                    $"IsBusy={_viewModel.IsBusy}" + Environment.NewLine);
+
+            FeedbackDialog dialog = new(
+                ajccVersion,
+                coreVersion,
+                systemVersion,
+                technicalContext,
+                DiagnosticPackageBuilder.CreateZip(packageContent));
+
+            bool sent = await dialog.ShowDialog<bool>(this);
+            if (sent)
+                _viewModel.SetStatusMessage("Feedback wurde gesendet. Danke.");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.WriteException("IntegratedFeedback", ex);
+            _viewModel.SetStatusMessage("Feedbackdialog konnte nicht geöffnet werden: " + ex.Message);
+        }
+    }
+
     private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         SettingsDialog dialog = new();
