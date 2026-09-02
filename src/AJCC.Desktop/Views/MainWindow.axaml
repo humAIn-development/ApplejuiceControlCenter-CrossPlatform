@@ -281,6 +281,12 @@
           <TextBlock Classes="metricLabel" Text="Core" />
           <TextBlock Classes="metricValue" Text="{Binding CoreNick}" />
           <TextBlock Classes="muted" Text="{Binding CoreVersion}" FontSize="12" />
+          <Button Content="Website"
+                  HorizontalAlignment="Left"
+                  Margin="0,4,0,0"
+                  Padding="8,2"
+                  Click="OfficialProjectWebsiteButton_OnClick"
+                  ToolTip.Tip="Öffnet die offizielle Applejuice-Control-Center-Webseite im Standardbrowser." />
         </StackPanel>
       </Border>
 

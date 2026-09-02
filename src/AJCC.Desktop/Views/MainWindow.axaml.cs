@@ -1261,6 +1261,21 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OfficialProjectWebsiteButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        const string officialProjectUrl = "https://applejuice-control-center.de.cool/";
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(officialProjectUrl) { UseShellExecute = true });
+            _viewModel.SetStatusMessage("Offizielle Projektseite im Standardbrowser geöffnet.");
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SetStatusMessage("Offizielle Projektseite konnte nicht geöffnet werden: " + ex.Message);
+        }
+    }
+
     private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         SettingsDialog dialog = new();
