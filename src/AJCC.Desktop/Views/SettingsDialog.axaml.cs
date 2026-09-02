@@ -10,6 +10,7 @@ namespace AJCC.Desktop.Views;
 public sealed partial class SettingsDialog : Window
 {
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
+    private readonly DownloadQueueConfigurationStore _downloadQueueConfigurationStore = new();
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private bool _loadingExternalVlcConfiguration;
     private bool _loadingUiPreferences;
@@ -48,6 +49,7 @@ public sealed partial class SettingsDialog : Window
     {
         InitializeComponent();
         LoadExternalVlcConfiguration();
+        LoadDownloadQueueConfiguration();
         Opened += (_, _) => _tabSoundReady = true;
     }
 
@@ -1270,6 +1272,58 @@ public sealed partial class SettingsDialog : Window
         {
             _loadingUiPreferences = false;
         }
+    }
+
+    private void LoadDownloadQueueConfiguration()
+    {
+        DownloadQueueConfiguration configuration = _downloadQueueConfigurationStore.Load();
+        bool enabled = configuration.Limit > 0;
+        int preparedLimit = enabled ? configuration.Limit : configuration.PreparedLimit;
+
+        CheckBox? enabledInput = this.FindControl<CheckBox>("DownloadQueueEnabledCheckBox");
+        NumericUpDown? limitInput = this.FindControl<NumericUpDown>("DownloadQueueLimitInput");
+        if (enabledInput is not null)
+            enabledInput.IsChecked = enabled;
+        if (limitInput is not null)
+            limitInput.Value = preparedLimit;
+
+        UpdateDownloadQueueStatus(configuration);
+    }
+
+    private void SaveDownloadQueueConfigurationButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        CheckBox? enabledInput = this.FindControl<CheckBox>("DownloadQueueEnabledCheckBox");
+        NumericUpDown? limitInput = this.FindControl<NumericUpDown>("DownloadQueueLimitInput");
+        decimal rawLimit = limitInput?.Value ?? DownloadQueueConfiguration.Default.PreparedLimit;
+        int preparedLimit = Math.Clamp((int)Math.Round(rawLimit), 1, 100);
+        bool enabled = enabledInput?.IsChecked == true;
+
+        DownloadQueueConfiguration configuration = new(
+            enabled ? preparedLimit : 0,
+            preparedLimit);
+        TextBlock? status = this.FindControl<TextBlock>("DownloadQueueStatusText");
+
+        if (!_downloadQueueConfigurationStore.TrySave(configuration, out string errorMessage))
+        {
+            if (status is not null)
+                status.Text = "Download-Queue konnte nicht gespeichert werden: " + errorMessage;
+            return;
+        }
+
+        if (limitInput is not null)
+            limitInput.Value = preparedLimit;
+        UpdateDownloadQueueStatus(configuration);
+    }
+
+    private void UpdateDownloadQueueStatus(DownloadQueueConfiguration configuration)
+    {
+        TextBlock? status = this.FindControl<TextBlock>("DownloadQueueStatusText");
+        if (status is null)
+            return;
+
+        status.Text = configuration.Limit > 0
+            ? $"aktiv · maximal {configuration.Limit:N0} Downloads gleichzeitig"
+            : $"deaktiviert · vorbereitetes Limit {configuration.PreparedLimit:N0}";
     }
 
     private async void ConfigureDownloadStatusColorsButton_OnClick(object? sender, RoutedEventArgs e)
