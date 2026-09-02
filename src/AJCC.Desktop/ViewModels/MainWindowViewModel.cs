@@ -74,6 +74,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan RuntimeFullResyncCooldown = TimeSpan.FromSeconds(20);
     private bool _downloadQueueAutomationRunning;
     private DateTime _lastDownloadQueueAutomationUtc = DateTime.MinValue;
+    private DateTime _downloadQueueAutomationSuspendedUntilUtc = DateTime.MinValue;
+    private DateTime _lastDownloadQueueAutomationSuspendedStatusUtc = DateTime.MinValue;
     private readonly Dictionary<long, DateTime> _downloadQueueNoSourceSinceUtc = new();
     private readonly Dictionary<long, DateTime> _downloadQueueSourceLessDeferredUntilUtc = new();
     private AjState? _downloadQueueSourceLessRuntimeState;
@@ -2820,6 +2822,19 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         DateTime nowUtc = DateTime.UtcNow;
+        if (nowUtc < _downloadQueueAutomationSuspendedUntilUtc)
+        {
+            if (_lastDownloadQueueAutomationSuspendedStatusUtc == DateTime.MinValue
+                || nowUtc - _lastDownloadQueueAutomationSuspendedStatusUtc >= TimeSpan.FromSeconds(30))
+            {
+                _lastDownloadQueueAutomationSuspendedStatusUtc = nowUtc;
+                StatusText =
+                    "Download-Queue-Automatik pausiert: Core antwortet momentan langsam/beschäftigt.";
+            }
+
+            return;
+        }
+
         if (_lastDownloadQueueAutomationUtc != DateTime.MinValue
             && nowUtc - _lastDownloadQueueAutomationUtc < DownloadQueueAutomationInterval)
         {
@@ -3407,10 +3422,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void PollingOnConnectionDegraded(int errors, string message)
-        => Dispatcher.UIThread.Post(() => StatusText = $"Core-Verbindung gestört ({errors}/6): {message}");
+        => Dispatcher.UIThread.Post(() =>
+        {
+            _downloadQueueAutomationSuspendedUntilUtc = DateTime.UtcNow.AddSeconds(60);
+            StatusText =
+                $"Core-Verbindung gestört ({errors}/6): {message} Download-Queue-Automatik pausiert vorübergehend.";
+        });
 
     private void PollingOnConnectionRestored(int errors)
-        => Dispatcher.UIThread.Post(() => StatusText = $"Core-Verbindung wiederhergestellt nach {errors} Fehlversuch(en).");
+        => Dispatcher.UIThread.Post(() =>
+        {
+            _downloadQueueAutomationSuspendedUntilUtc = DateTime.MinValue;
+            _lastDownloadQueueAutomationSuspendedStatusUtc = DateTime.MinValue;
+            StatusText =
+                $"Core-Verbindung wiederhergestellt nach {errors} Fehlversuch(en). Download-Queue-Automatik wieder freigegeben.";
+        });
 
     private void PollingOnConnectionLost(string message)
         => Dispatcher.UIThread.Post(() =>
