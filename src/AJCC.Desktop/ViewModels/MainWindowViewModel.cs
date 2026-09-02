@@ -2875,10 +2875,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                     && !IsDownloadQueueSourceLessDeferred(download, queueNowUtc, rotateSourceLess)))
             .ToList();
 
+        IReadOnlyList<long>? listOrder = string.Equals(
+            configuration.OrderMode,
+            "ListOrder",
+            StringComparison.OrdinalIgnoreCase)
+            ? Downloads.Select(download => download.Id).ToList()
+            : null;
+
         DownloadQueuePlan plan = DownloadQueuePlanningSemantics.BuildPlan(
             planningDownloads,
             configuration.Limit,
-            priorities: configuration.Priorities);
+            priorities: configuration.Priorities,
+            listOrder: listOrder);
         List<long> pauseIds = forceDeferredIds
             .Concat(plan.PauseIds)
             .Distinct()

@@ -512,27 +512,41 @@
             <StackPanel Grid.Row="14"
                         Grid.Column="1"
                         Grid.ColumnSpan="2"
-                        Orientation="Horizontal"
                         Spacing="8"
                         Margin="0,10,0,0">
-              <CheckBox x:Name="DownloadQueueRotateSourceLessCheckBox"
-                        Content="0-Quellen rotieren"
-                        VerticalAlignment="Center"
-                        ToolTip.Tip="Aktive Queue-Downloads ohne Quellen werden nach dem eingestellten Zeitraum pausiert und für denselben Zeitraum zurückgestellt." />
-              <TextBlock Text="nach"
-                         Margin="8,0,0,0"
-                         VerticalAlignment="Center" />
-              <ComboBox x:Name="DownloadQueueSourceLessTimeoutInput"
-                        Width="72"
-                        SelectedIndex="1"
-                        ToolTip.Tip="Zeitraum bis ein aktiver Queue-Download ohne Quellen zurückgestellt wird.">
-                <ComboBoxItem Content="5" Tag="5" />
-                <ComboBoxItem Content="15" Tag="15" />
-                <ComboBoxItem Content="30" Tag="30" />
-                <ComboBoxItem Content="60" Tag="60" />
-              </ComboBox>
-              <TextBlock Text="Min."
-                         VerticalAlignment="Center" />
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8">
+                <TextBlock Text="Reihenfolge"
+                           VerticalAlignment="Center" />
+                <ComboBox x:Name="DownloadQueueOrderModeInput"
+                          Width="180"
+                          SelectedIndex="0"
+                          ToolTip.Tip="Automatisch verwendet Fortschritt, aktive Quellen und Quellenzahl. Listenreihenfolge folgt der aktuell sichtbaren Sortierung der Downloadliste; individuelle Queue-Prioritäten haben weiterhin Vorrang.">
+                  <ComboBoxItem Content="Automatisch" Tag="Automatic" />
+                  <ComboBoxItem Content="Listenreihenfolge" Tag="ListOrder" />
+                </ComboBox>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8">
+                <CheckBox x:Name="DownloadQueueRotateSourceLessCheckBox"
+                          Content="0-Quellen rotieren"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="Aktive Queue-Downloads ohne Quellen werden nach dem eingestellten Zeitraum pausiert und für denselben Zeitraum zurückgestellt." />
+                <TextBlock Text="nach"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center" />
+                <ComboBox x:Name="DownloadQueueSourceLessTimeoutInput"
+                          Width="72"
+                          SelectedIndex="1"
+                          ToolTip.Tip="Zeitraum bis ein aktiver Queue-Download ohne Quellen zurückgestellt wird.">
+                  <ComboBoxItem Content="5" Tag="5" />
+                  <ComboBoxItem Content="15" Tag="15" />
+                  <ComboBoxItem Content="30" Tag="30" />
+                  <ComboBoxItem Content="60" Tag="60" />
+                </ComboBox>
+                <TextBlock Text="Min."
+                           VerticalAlignment="Center" />
+              </StackPanel>
             </StackPanel>
             <Button Grid.Row="15"
                     Grid.Column="1"

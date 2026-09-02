@@ -10,7 +10,8 @@ public sealed record DownloadQueueConfiguration(
     int PreparedLimit,
     Dictionary<string, string>? Priorities = null,
     bool? RotateSourceLess = null,
-    int SourceLessTimeoutMinutes = 15)
+    int SourceLessTimeoutMinutes = 15,
+    string OrderMode = "Automatic")
 {
     public static DownloadQueueConfiguration Default { get; } =
         new(
@@ -18,7 +19,8 @@ public sealed record DownloadQueueConfiguration(
             DownloadQueuePlanningSemantics.DefaultLimit,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
             true,
-            15);
+            15,
+            "Automatic");
 }
 
 public sealed class DownloadQueueConfigurationStore
@@ -96,6 +98,12 @@ public sealed class DownloadQueueConfigurationStore
         int sourceLessTimeoutMinutes = configuration.SourceLessTimeoutMinutes <= 0
             ? 15
             : Math.Clamp(configuration.SourceLessTimeoutMinutes, 5, 60);
+        string orderMode = string.Equals(
+            configuration.OrderMode,
+            "ListOrder",
+            StringComparison.OrdinalIgnoreCase)
+            ? "ListOrder"
+            : "Automatic";
 
         Dictionary<string, string> priorities = (configuration.Priorities
                 ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
@@ -115,7 +123,8 @@ public sealed class DownloadQueueConfigurationStore
             preparedLimit,
             priorities,
             rotateSourceLess,
-            sourceLessTimeoutMinutes);
+            sourceLessTimeoutMinutes,
+            orderMode);
     }
 
     private static string BuildDefaultSettingsPath()

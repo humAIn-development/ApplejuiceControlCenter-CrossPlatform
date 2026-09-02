@@ -1282,12 +1282,14 @@ public sealed partial class SettingsDialog : Window
 
         CheckBox? enabledInput = this.FindControl<CheckBox>("DownloadQueueEnabledCheckBox");
         NumericUpDown? limitInput = this.FindControl<NumericUpDown>("DownloadQueueLimitInput");
+        ComboBox? orderModeInput = this.FindControl<ComboBox>("DownloadQueueOrderModeInput");
         CheckBox? rotateSourceLessInput = this.FindControl<CheckBox>("DownloadQueueRotateSourceLessCheckBox");
         ComboBox? sourceLessTimeoutInput = this.FindControl<ComboBox>("DownloadQueueSourceLessTimeoutInput");
         if (enabledInput is not null)
             enabledInput.IsChecked = enabled;
         if (limitInput is not null)
             limitInput.Value = preparedLimit;
+        SelectDownloadQueueOrderMode(orderModeInput, configuration.OrderMode);
         if (rotateSourceLessInput is not null)
             rotateSourceLessInput.IsChecked = configuration.RotateSourceLess == true;
         SelectDownloadQueueSourceLessTimeout(sourceLessTimeoutInput, configuration.SourceLessTimeoutMinutes);
@@ -1299,6 +1301,7 @@ public sealed partial class SettingsDialog : Window
     {
         CheckBox? enabledInput = this.FindControl<CheckBox>("DownloadQueueEnabledCheckBox");
         NumericUpDown? limitInput = this.FindControl<NumericUpDown>("DownloadQueueLimitInput");
+        ComboBox? orderModeInput = this.FindControl<ComboBox>("DownloadQueueOrderModeInput");
         CheckBox? rotateSourceLessInput = this.FindControl<CheckBox>("DownloadQueueRotateSourceLessCheckBox");
         ComboBox? sourceLessTimeoutInput = this.FindControl<ComboBox>("DownloadQueueSourceLessTimeoutInput");
         decimal rawLimit = limitInput?.Value ?? DownloadQueueConfiguration.Default.PreparedLimit;
@@ -1306,6 +1309,7 @@ public sealed partial class SettingsDialog : Window
         bool enabled = enabledInput?.IsChecked == true;
 
         DownloadQueueConfiguration currentConfiguration = _downloadQueueConfigurationStore.Load();
+        string orderMode = ReadDownloadQueueOrderMode(orderModeInput);
         bool rotateSourceLess = rotateSourceLessInput?.IsChecked == true;
         int sourceLessTimeoutMinutes = ReadDownloadQueueSourceLessTimeout(
             sourceLessTimeoutInput,
@@ -1314,6 +1318,7 @@ public sealed partial class SettingsDialog : Window
         {
             Limit = enabled ? preparedLimit : 0,
             PreparedLimit = preparedLimit,
+            OrderMode = orderMode,
             RotateSourceLess = rotateSourceLess,
             SourceLessTimeoutMinutes = sourceLessTimeoutMinutes
         };
@@ -1328,6 +1333,7 @@ public sealed partial class SettingsDialog : Window
 
         if (limitInput is not null)
             limitInput.Value = preparedLimit;
+        SelectDownloadQueueOrderMode(orderModeInput, orderMode);
         SelectDownloadQueueSourceLessTimeout(sourceLessTimeoutInput, sourceLessTimeoutMinutes);
         UpdateDownloadQueueStatus(configuration);
     }
@@ -1338,13 +1344,46 @@ public sealed partial class SettingsDialog : Window
         if (status is null)
             return;
 
+        string orderText = string.Equals(
+            configuration.OrderMode,
+            "ListOrder",
+            StringComparison.OrdinalIgnoreCase)
+            ? "Listenreihenfolge"
+            : "automatisch";
         string sourceLessText = configuration.RotateSourceLess == true
             ? $"0-Quellen-Rotation {configuration.SourceLessTimeoutMinutes:N0} Min."
             : "0-Quellen-Rotation aus";
         status.Text = configuration.Limit > 0
-            ? $"aktiv · maximal {configuration.Limit:N0} Downloads gleichzeitig · {sourceLessText}"
-            : $"deaktiviert · vorbereitetes Limit {configuration.PreparedLimit:N0} · {sourceLessText}";
+            ? $"aktiv · maximal {configuration.Limit:N0} Downloads gleichzeitig · {orderText} · {sourceLessText}"
+            : $"deaktiviert · vorbereitetes Limit {configuration.PreparedLimit:N0} · {orderText} · {sourceLessText}";
     }
+
+    private static void SelectDownloadQueueOrderMode(ComboBox? input, string? orderMode)
+    {
+        if (input is null)
+            return;
+
+        string normalized = string.Equals(orderMode, "ListOrder", StringComparison.OrdinalIgnoreCase)
+            ? "ListOrder"
+            : "Automatic";
+        foreach (object? rawItem in input.Items)
+        {
+            if (rawItem is ComboBoxItem item
+                && string.Equals(item.Tag?.ToString(), normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                input.SelectedItem = item;
+                return;
+            }
+        }
+
+        input.SelectedIndex = 0;
+    }
+
+    private static string ReadDownloadQueueOrderMode(ComboBox? input)
+        => input?.SelectedItem is ComboBoxItem item
+            && string.Equals(item.Tag?.ToString(), "ListOrder", StringComparison.OrdinalIgnoreCase)
+            ? "ListOrder"
+            : "Automatic";
 
     private static void SelectDownloadQueueSourceLessTimeout(ComboBox? input, int minutes)
     {
