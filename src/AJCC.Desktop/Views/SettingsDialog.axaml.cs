@@ -1298,9 +1298,12 @@ public sealed partial class SettingsDialog : Window
         int preparedLimit = Math.Clamp((int)Math.Round(rawLimit), 1, 100);
         bool enabled = enabledInput?.IsChecked == true;
 
-        DownloadQueueConfiguration configuration = new(
-            enabled ? preparedLimit : 0,
-            preparedLimit);
+        DownloadQueueConfiguration currentConfiguration = _downloadQueueConfigurationStore.Load();
+        DownloadQueueConfiguration configuration = currentConfiguration with
+        {
+            Limit = enabled ? preparedLimit : 0,
+            PreparedLimit = preparedLimit
+        };
         TextBlock? status = this.FindControl<TextBlock>("DownloadQueueStatusText");
 
         if (!_downloadQueueConfigurationStore.TrySave(configuration, out string errorMessage))
