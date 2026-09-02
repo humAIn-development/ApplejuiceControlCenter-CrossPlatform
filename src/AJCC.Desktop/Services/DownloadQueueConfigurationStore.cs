@@ -1,12 +1,20 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using AJCC.Core.Services;
 
 namespace AJCC.Desktop.Services;
 
-public sealed record DownloadQueueConfiguration(int Limit, int PreparedLimit)
+public sealed record DownloadQueueConfiguration(
+    int Limit,
+    int PreparedLimit,
+    Dictionary<string, string>? Priorities = null)
 {
     public static DownloadQueueConfiguration Default { get; } =
-        new(0, DownloadQueuePlanningSemantics.DefaultLimit);
+        new(
+            0,
+            DownloadQueuePlanningSemantics.DefaultLimit,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 }
 
 public sealed class DownloadQueueConfigurationStore
@@ -80,7 +88,20 @@ public sealed class DownloadQueueConfigurationStore
                 DownloadQueuePlanningSemantics.MinimumLimit,
                 DownloadQueuePlanningSemantics.MaximumLimit);
 
-        return new DownloadQueueConfiguration(limit, preparedLimit);
+        Dictionary<string, string> priorities = (configuration.Priorities
+                ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+            .Select(pair => new KeyValuePair<string, string>(
+                pair.Key.Trim(),
+                DownloadQueuePlanningSemantics.NormalizePriority(pair.Value)))
+            .Where(pair => pair.Value.Length > 0)
+            .GroupBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last().Value,
+                StringComparer.OrdinalIgnoreCase);
+
+        return new DownloadQueueConfiguration(limit, preparedLimit, priorities);
     }
 
     private static string BuildDefaultSettingsPath()

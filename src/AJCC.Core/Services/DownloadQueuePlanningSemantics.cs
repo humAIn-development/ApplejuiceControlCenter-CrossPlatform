@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using AJCC.Core.Models;
 
@@ -17,11 +18,15 @@ public static class DownloadQueuePlanningSemantics
     public const int DefaultLimit = 5;
     public const int MaximumLimit = 100;
     public const int DefaultCommandCap = 5;
+    public const string PriorityHigh = "High";
+    public const string PriorityLow = "Low";
+    public const string PriorityExcluded = "Excluded";
 
     public static DownloadQueuePlan BuildPlan(
         IEnumerable<AjDownload> downloads,
         int configuredLimit,
-        int commandCap = DefaultCommandCap)
+        int commandCap = DefaultCommandCap,
+        IReadOnlyDictionary<string, string>? priorities = null)
     {
         ArgumentNullException.ThrowIfNull(downloads);
 
@@ -32,33 +37,68 @@ public static class DownloadQueuePlanningSemantics
         if (limit == 0)
             return new DownloadQueuePlan(0, Array.Empty<long>(), Array.Empty<long>(), Array.Empty<long>());
 
-        List<AjDownload> eligible = downloads
+        List<AjDownload> nonTerminal = downloads
             .Where(download => !IsTerminal(download))
-            .OrderByDescending(download => download.ProgressPercent)
+            .ToList();
+
+        int excludedActiveCount = nonTerminal
+            .Where(download => GetPriority(download, priorities) == PriorityExcluded)
+            .Count(download => !IsPaused(download));
+        int managedLimit = Math.Max(0, limit - excludedActiveCount);
+
+        List<AjDownload> managed = nonTerminal
+            .Where(download => GetPriority(download, priorities) != PriorityExcluded)
+            .OrderBy(download => GetPriorityRank(download, priorities))
+            .ThenByDescending(download => download.ProgressPercent)
             .ThenByDescending(download => download.ActiveSourceCount)
             .ThenByDescending(download => download.SourceCount)
             .ThenBy(download => download.Id)
             .ToList();
 
-        List<long> shouldRunIds = eligible
-            .Take(limit)
+        List<long> shouldRunIds = managed
+            .Take(managedLimit)
             .Select(download => download.Id)
             .ToList();
         HashSet<long> shouldRun = shouldRunIds.ToHashSet();
 
         int actionLimit = Math.Max(0, commandCap);
-        List<long> resumeIds = eligible
+        List<long> resumeIds = managed
             .Where(download => shouldRun.Contains(download.Id) && IsPaused(download))
             .Take(actionLimit)
             .Select(download => download.Id)
             .ToList();
-        List<long> pauseIds = eligible
+        List<long> pauseIds = managed
             .Where(download => !shouldRun.Contains(download.Id) && !IsPaused(download))
             .Take(actionLimit)
             .Select(download => download.Id)
             .ToList();
 
-        return new DownloadQueuePlan(eligible.Count, shouldRunIds, resumeIds, pauseIds);
+        return new DownloadQueuePlan(nonTerminal.Count, shouldRunIds, resumeIds, pauseIds);
+    }
+
+    public static string GetPriorityKey(AjDownload download)
+    {
+        ArgumentNullException.ThrowIfNull(download);
+
+        string hash = (download.Hash ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(hash))
+            return "hash:" + hash.ToLowerInvariant();
+
+        if (download.ShareId > 0)
+            return "share:" + download.ShareId.ToString(CultureInfo.InvariantCulture);
+
+        return "id:" + download.Id.ToString(CultureInfo.InvariantCulture);
+    }
+
+    public static string NormalizePriority(string? priority)
+    {
+        if (string.Equals(priority, PriorityHigh, StringComparison.OrdinalIgnoreCase))
+            return PriorityHigh;
+        if (string.Equals(priority, PriorityLow, StringComparison.OrdinalIgnoreCase))
+            return PriorityLow;
+        if (string.Equals(priority, PriorityExcluded, StringComparison.OrdinalIgnoreCase))
+            return PriorityExcluded;
+        return string.Empty;
     }
 
     public static bool IsTerminal(AjDownload download)
@@ -89,4 +129,27 @@ public static class DownloadQueuePlanningSemantics
         return statusText.Contains("Pausiert", StringComparison.OrdinalIgnoreCase)
             || statusText.Contains("Paused", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string GetPriority(
+        AjDownload download,
+        IReadOnlyDictionary<string, string>? priorities)
+    {
+        if (priorities is null
+            || !priorities.TryGetValue(GetPriorityKey(download), out string? priority))
+        {
+            return string.Empty;
+        }
+
+        return NormalizePriority(priority);
+    }
+
+    private static int GetPriorityRank(
+        AjDownload download,
+        IReadOnlyDictionary<string, string>? priorities)
+        => GetPriority(download, priorities) switch
+        {
+            PriorityHigh => 0,
+            PriorityLow => 2,
+            _ => 1
+        };
 }
