@@ -41,6 +41,27 @@
           <TextBlock Classes="muted" FontSize="11" Text="nicht freigegeben" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="4">
+          <Grid Width="18" Height="16"
+                ToolTip.Tip="Nicht freigegeben; enthält freigegebene Unterordner">
+            <Canvas Width="16" Height="16">
+              <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
+                       Fill="#D94A3A" Stroke="#8A241C" StrokeThickness="0.8" />
+              <Path Data="M8,4 C7.5,2.7 8.4,1.7 9.6,1.1"
+                    Stroke="#6B3D16" StrokeThickness="1.2" />
+              <Ellipse Canvas.Left="9.1" Canvas.Top="1.5" Width="4.2" Height="2.5"
+                       Fill="#F06A5A" Stroke="#8A241C" StrokeThickness="0.45" />
+            </Canvas>
+            <Ellipse Width="5.2" Height="5.2"
+                     HorizontalAlignment="Right"
+                     VerticalAlignment="Bottom"
+                     Margin="0,0,1,1"
+                     Fill="#5FBF4A"
+                     Stroke="#2A7A28"
+                     StrokeThickness="0.6" />
+          </Grid>
+          <TextBlock Classes="muted" FontSize="11" Text="enthält Freigabe" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="4">
           <Grid Width="18" Height="16">
             <Canvas Width="16" Height="16">
               <Ellipse Canvas.Left="3.2" Canvas.Top="4.6" Width="9.8" Height="10.2"
@@ -105,12 +126,13 @@
         </TreeView.ContextMenu>
         <TreeView.ItemTemplate>
           <TreeDataTemplate ItemsSource="{Binding Children}">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+            <Grid ColumnDefinitions="Auto,*,Auto"
                   Margin="4,3"
                   PointerPressed="DirectoryItem_OnPointerPressed"
                   RightTapped="DirectoryItem_OnRightTapped">
               <Grid Width="22" Height="18"
-                    Margin="0,0,6,0">
+                    Margin="0,0,6,0"
+                    ToolTip.Tip="{Binding ShareStatus}">
                 <Canvas Width="16" Height="16"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
@@ -137,6 +159,14 @@
                          HorizontalAlignment="Right"
                          VerticalAlignment="Bottom"
                          Margin="0,0,1,1"
+                         Fill="#5FBF4A"
+                         Stroke="#2A7A28"
+                         StrokeThickness="0.6"
+                         IsVisible="{Binding HasSharedDescendant}" />
+                <Ellipse Width="5.2" Height="5.2"
+                         HorizontalAlignment="Right"
+                         VerticalAlignment="Bottom"
+                         Margin="0,0,1,1"
                          Fill="#D7A51E"
                          Stroke="#8A6210"
                          StrokeThickness="0.6"
@@ -146,11 +176,6 @@
                          Text="{Binding Name}"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Column="2"
-                         Margin="12,0,0,0"
-                         Foreground="#5FBF4A"
-                         IsVisible="{Binding HasSharedDescendant}"
-                         Text="●" />
-              <TextBlock Grid.Column="3"
                          Classes="muted"
                          Margin="6,0,0,0"
                          Text="{Binding ShareStatus}" />
