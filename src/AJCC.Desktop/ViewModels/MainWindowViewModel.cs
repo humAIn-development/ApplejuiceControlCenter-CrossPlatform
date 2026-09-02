@@ -74,6 +74,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan RuntimeFullResyncCooldown = TimeSpan.FromSeconds(20);
     private bool _downloadQueueAutomationRunning;
     private DateTime _lastDownloadQueueAutomationUtc = DateTime.MinValue;
+    private readonly Dictionary<long, DateTime> _downloadQueueNoSourceSinceUtc = new();
+    private readonly Dictionary<long, DateTime> _downloadQueueSourceLessDeferredUntilUtc = new();
+    private AjState? _downloadQueueSourceLessRuntimeState;
+    private bool? _downloadQueueRotateSourceLessSetting;
+    private int _downloadQueueSourceLessTimeoutMinutesSetting = 15;
     private bool _disposed;
 
     private readonly record struct UploadSpeedSampleSignature(
@@ -2581,6 +2586,122 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         });
     }
 
+    private void PrepareDownloadQueueSourceLessRuntime(
+        AjState state,
+        DownloadQueueConfiguration configuration)
+    {
+        bool rotateSourceLess = configuration.RotateSourceLess == true;
+        int timeoutMinutes = Math.Clamp(
+            configuration.SourceLessTimeoutMinutes <= 0 ? 15 : configuration.SourceLessTimeoutMinutes,
+            5,
+            60);
+
+        if (!ReferenceEquals(_downloadQueueSourceLessRuntimeState, state)
+            || _downloadQueueRotateSourceLessSetting != rotateSourceLess
+            || _downloadQueueSourceLessTimeoutMinutesSetting != timeoutMinutes)
+        {
+            _downloadQueueNoSourceSinceUtc.Clear();
+            _downloadQueueSourceLessDeferredUntilUtc.Clear();
+        }
+
+        _downloadQueueSourceLessRuntimeState = state;
+        _downloadQueueRotateSourceLessSetting = rotateSourceLess;
+        _downloadQueueSourceLessTimeoutMinutesSetting = timeoutMinutes;
+    }
+
+    private void CleanupDownloadQueueSourceLessRuntimeState(IReadOnlyCollection<AjDownload> downloads)
+    {
+        HashSet<long> activeIds = downloads.Select(download => download.Id).ToHashSet();
+
+        foreach (long id in _downloadQueueNoSourceSinceUtc.Keys.Where(id => !activeIds.Contains(id)).ToList())
+            _downloadQueueNoSourceSinceUtc.Remove(id);
+        foreach (long id in _downloadQueueSourceLessDeferredUntilUtc.Keys.Where(id => !activeIds.Contains(id)).ToList())
+            _downloadQueueSourceLessDeferredUntilUtc.Remove(id);
+    }
+
+    private static bool IsDownloadExcludedFromQueueAutomation(
+        AjDownload download,
+        DownloadQueueConfiguration configuration)
+    {
+        if (configuration.Priorities is null
+            || !configuration.Priorities.TryGetValue(
+                DownloadQueuePlanningSemantics.GetPriorityKey(download),
+                out string? priority))
+        {
+            return false;
+        }
+
+        return DownloadQueuePlanningSemantics.NormalizePriority(priority)
+            == DownloadQueuePlanningSemantics.PriorityExcluded;
+    }
+
+    private bool IsDownloadQueueSourceLessDeferred(
+        AjDownload download,
+        DateTime nowUtc,
+        bool rotateSourceLess)
+    {
+        if (!rotateSourceLess || download.SourceCount > 0)
+        {
+            _downloadQueueNoSourceSinceUtc.Remove(download.Id);
+            _downloadQueueSourceLessDeferredUntilUtc.Remove(download.Id);
+            return false;
+        }
+
+        if (!_downloadQueueSourceLessDeferredUntilUtc.TryGetValue(download.Id, out DateTime deferredUntilUtc))
+        {
+            if (DownloadQueuePlanningSemantics.IsPaused(download))
+                _downloadQueueNoSourceSinceUtc.Remove(download.Id);
+            return false;
+        }
+
+        if (nowUtc < deferredUntilUtc)
+            return true;
+
+        _downloadQueueSourceLessDeferredUntilUtc.Remove(download.Id);
+        _downloadQueueNoSourceSinceUtc.Remove(download.Id);
+        return false;
+    }
+
+    private bool ShouldDeferActiveSourceLessDownload(
+        AjDownload download,
+        DateTime nowUtc,
+        bool rotateSourceLess,
+        int timeoutMinutes)
+    {
+        if (!rotateSourceLess
+            || DownloadQueuePlanningSemantics.IsPaused(download)
+            || download.SourceCount > 0)
+        {
+            _downloadQueueNoSourceSinceUtc.Remove(download.Id);
+            if (!rotateSourceLess || download.SourceCount > 0)
+                _downloadQueueSourceLessDeferredUntilUtc.Remove(download.Id);
+            return false;
+        }
+
+        if (_downloadQueueSourceLessDeferredUntilUtc.TryGetValue(download.Id, out DateTime deferredUntilUtc))
+        {
+            if (nowUtc < deferredUntilUtc)
+                return true;
+
+            _downloadQueueSourceLessDeferredUntilUtc.Remove(download.Id);
+            _downloadQueueNoSourceSinceUtc.Remove(download.Id);
+        }
+
+        if (!_downloadQueueNoSourceSinceUtc.TryGetValue(download.Id, out DateTime sourceLessSinceUtc))
+        {
+            _downloadQueueNoSourceSinceUtc[download.Id] = nowUtc;
+            return false;
+        }
+
+        TimeSpan timeout = TimeSpan.FromMinutes(Math.Clamp(timeoutMinutes, 5, 60));
+        if (nowUtc - sourceLessSinceUtc < timeout)
+            return false;
+
+        _downloadQueueNoSourceSinceUtc.Remove(download.Id);
+        _downloadQueueSourceLessDeferredUntilUtc[download.Id] = nowUtc + timeout;
+        return true;
+    }
+
     private async Task ApplyDownloadQueueAutomationIfDueAsync()
     {
         if (_downloadQueueAutomationRunning || !IsConnected || IsBusy)
@@ -2596,18 +2717,62 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _lastDownloadQueueAutomationUtc = nowUtc;
         DownloadQueueConfiguration configuration = _downloadQueueConfigurationStore.Load();
         if (configuration.Limit <= 0)
+        {
+            _downloadQueueNoSourceSinceUtc.Clear();
+            _downloadQueueSourceLessDeferredUntilUtc.Clear();
+            _downloadQueueSourceLessRuntimeState = null;
             return;
+        }
 
         AppleJuiceCoreClient? client = _client;
         AjState? state = _state;
         if (client is null || state is null)
             return;
 
+        PrepareDownloadQueueSourceLessRuntime(state, configuration);
+
+        List<AjDownload> nonTerminal = state.Downloads
+            .Where(download => !DownloadQueuePlanningSemantics.IsTerminal(download))
+            .ToList();
+        CleanupDownloadQueueSourceLessRuntimeState(nonTerminal);
+
+        bool rotateSourceLess = configuration.RotateSourceLess == true;
+        int sourceLessTimeoutMinutes = Math.Clamp(
+            configuration.SourceLessTimeoutMinutes <= 0 ? 15 : configuration.SourceLessTimeoutMinutes,
+            5,
+            60);
+        DateTime queueNowUtc = DateTime.UtcNow;
+
+        List<long> forceDeferredIds = nonTerminal
+            .Where(download => !IsDownloadExcludedFromQueueAutomation(download, configuration))
+            .Where(download => !DownloadQueuePlanningSemantics.IsPaused(download))
+            .Where(download => ShouldDeferActiveSourceLessDownload(
+                download,
+                queueNowUtc,
+                rotateSourceLess,
+                sourceLessTimeoutMinutes))
+            .OrderBy(download => download.Id)
+            .Select(download => download.Id)
+            .ToList();
+        HashSet<long> forceDeferred = forceDeferredIds.ToHashSet();
+
+        List<AjDownload> planningDownloads = nonTerminal
+            .Where(download =>
+                IsDownloadExcludedFromQueueAutomation(download, configuration)
+                || (!forceDeferred.Contains(download.Id)
+                    && !IsDownloadQueueSourceLessDeferred(download, queueNowUtc, rotateSourceLess)))
+            .ToList();
+
         DownloadQueuePlan plan = DownloadQueuePlanningSemantics.BuildPlan(
-            state.Downloads,
+            planningDownloads,
             configuration.Limit,
             priorities: configuration.Priorities);
-        if (plan.ResumeIds.Count == 0 && plan.PauseIds.Count == 0)
+        List<long> pauseIds = forceDeferredIds
+            .Concat(plan.PauseIds)
+            .Distinct()
+            .Take(DownloadQueuePlanningSemantics.DefaultCommandCap)
+            .ToList();
+        if (plan.ResumeIds.Count == 0 && pauseIds.Count == 0)
             return;
 
         _downloadQueueAutomationRunning = true;
@@ -2629,7 +2794,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 resumed++;
             }
 
-            foreach (long downloadId in plan.PauseIds)
+            foreach (long downloadId in pauseIds)
             {
                 if (!IsConnected
                     || IsBusy
