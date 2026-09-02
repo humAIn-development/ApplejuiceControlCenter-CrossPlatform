@@ -298,7 +298,90 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string SelectedDownloadText => SelectedDownload is null ? "Kein Download ausgewählt" : SelectedDownload.DisplayFilename;
     public string SelectedSearchEntryText => SelectedSearchEntry is null ? "Kein Treffer ausgewählt" : SelectedSearchEntry.Filename;
 
-    public IEnumerable<AjDownload> Downloads => _state is null ? Array.Empty<AjDownload>() : _state.Downloads;
+    private string _downloadSortColumn = string.Empty;
+    private bool _downloadSortDescending;
+
+    public IEnumerable<AjDownload> Downloads
+    {
+        get
+        {
+            if (_state is null)
+                return Array.Empty<AjDownload>();
+
+            IEnumerable<AjDownload> source = _state.Downloads;
+            if (string.IsNullOrEmpty(_downloadSortColumn))
+                return source;
+
+            IOrderedEnumerable<AjDownload> ordered = _downloadSortColumn switch
+            {
+                "file" => _downloadSortDescending
+                    ? source.OrderByDescending(download => download.DisplayFilename, NaturalStringComparer.Instance)
+                    : source.OrderBy(download => download.DisplayFilename, NaturalStringComparer.Instance),
+                "status" => _downloadSortDescending
+                    ? source.OrderByDescending(download => download.DownloadStatusSortKey)
+                    : source.OrderBy(download => download.DownloadStatusSortKey),
+                "progress" => _downloadSortDescending
+                    ? source.OrderByDescending(download => download.ProgressPercent)
+                    : source.OrderBy(download => download.ProgressPercent),
+                "sources" => _downloadSortDescending
+                    ? source.OrderByDescending(download => download.SourceCount)
+                    : source.OrderBy(download => download.SourceCount),
+                "speed" => _downloadSortDescending
+                    ? source.OrderByDescending(download => download.DownloadSpeed)
+                    : source.OrderBy(download => download.DownloadSpeed),
+                "power" => _downloadSortDescending
+                    ? source.OrderByDescending(download => download.PowerDownload)
+                    : source.OrderBy(download => download.PowerDownload),
+                _ => source.OrderBy(download => download.Id)
+            };
+
+            return ordered.ThenBy(download => download.Id);
+        }
+    }
+
+    public string DownloadFileSortHeader => BuildDownloadSortHeader("Datei", "file");
+    public string DownloadStatusSortHeader => BuildDownloadSortHeader("Status", "status");
+    public string DownloadProgressSortHeader => BuildDownloadSortHeader("Fortschritt", "progress");
+    public string DownloadSourcesSortHeader => BuildDownloadSortHeader("Quellen", "sources");
+    public string DownloadSpeedSortHeader => BuildDownloadSortHeader("Geschwindigkeit", "speed");
+    public string DownloadPowerSortHeader => BuildDownloadSortHeader("Powerdownload", "power");
+
+    public void SortDownloadsBy(string column)
+    {
+        if (column != "file"
+            && column != "status"
+            && column != "progress"
+            && column != "sources"
+            && column != "speed"
+            && column != "power")
+        {
+            return;
+        }
+
+        if (string.Equals(_downloadSortColumn, column, StringComparison.Ordinal))
+        {
+            _downloadSortDescending = !_downloadSortDescending;
+        }
+        else
+        {
+            _downloadSortColumn = column;
+            _downloadSortDescending = false;
+        }
+
+        OnPropertyChanged(nameof(Downloads));
+        OnPropertyChanged(nameof(DownloadFileSortHeader));
+        OnPropertyChanged(nameof(DownloadStatusSortHeader));
+        OnPropertyChanged(nameof(DownloadProgressSortHeader));
+        OnPropertyChanged(nameof(DownloadSourcesSortHeader));
+        OnPropertyChanged(nameof(DownloadSpeedSortHeader));
+        OnPropertyChanged(nameof(DownloadPowerSortHeader));
+    }
+
+    private string BuildDownloadSortHeader(string label, string column)
+        => string.Equals(_downloadSortColumn, column, StringComparison.Ordinal)
+            ? $"{label} {(_downloadSortDescending ? "▼" : "▲")}"
+            : label;
+
     public IEnumerable<AjUserSource> SelectedDownloadSources
         => _state is null || SelectedDownload is null
             ? Array.Empty<AjUserSource>()

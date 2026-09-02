@@ -361,12 +361,35 @@
 
           <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="tableHeader">
             <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*">
-              <TextBlock Text="Datei" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="2" Text="Fortschritt" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="3" Text="Quellen" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="4" Text="Geschwindigkeit" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="5" Text="Powerdownload" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding DownloadFileSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadFileSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Dateiname sortieren" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding DownloadStatusSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadStatusSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Status sortieren" />
+              <TextBlock Grid.Column="2"
+                         Text="{Binding DownloadProgressSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadProgressSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Fortschritt sortieren" />
+              <TextBlock Grid.Column="3"
+                         Text="{Binding DownloadSourcesSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadSourcesSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Quellen sortieren" />
+              <TextBlock Grid.Column="4"
+                         Text="{Binding DownloadSpeedSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadSpeedSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Geschwindigkeit sortieren" />
+              <TextBlock Grid.Column="5"
+                         Text="{Binding DownloadPowerSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadPowerSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Powerdownload sortieren" />
             </Grid>
           </Border>
           <ListBox x:Name="DownloadsList"

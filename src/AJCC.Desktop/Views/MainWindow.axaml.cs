@@ -142,6 +142,63 @@ public sealed partial class MainWindow : Window
         AudioFeedbackService.PlayButtonTick();
     }
 
+    private void DownloadFileSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        => ApplyDownloadSort("file", e);
+
+    private void DownloadStatusSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        => ApplyDownloadSort("status", e);
+
+    private void DownloadProgressSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        => ApplyDownloadSort("progress", e);
+
+    private void DownloadSourcesSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        => ApplyDownloadSort("sources", e);
+
+    private void DownloadSpeedSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        => ApplyDownloadSort("speed", e);
+
+    private void DownloadPowerSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        => ApplyDownloadSort("power", e);
+
+    private void ApplyDownloadSort(string column, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        ListBox? downloadsList = this.FindControl<ListBox>("DownloadsList");
+        HashSet<long> selectedIds = downloadsList?.SelectedItems?
+            .OfType<AjDownload>()
+            .Select(download => download.Id)
+            .ToHashSet()
+            ?? new HashSet<long>();
+
+        _viewModel.SortDownloadsBy(column);
+        e.Handled = true;
+
+        if (downloadsList is null || selectedIds.Count == 0)
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (downloadsList.SelectedItems is not { } selectedItems)
+                return;
+
+            HashSet<long> currentIds = selectedItems
+                .OfType<AjDownload>()
+                .Select(download => download.Id)
+                .ToHashSet();
+            if (currentIds.SetEquals(selectedIds))
+                return;
+
+            selectedItems.Clear();
+            foreach (AjDownload download in _viewModel.Downloads)
+            {
+                if (selectedIds.Contains(download.Id))
+                    selectedItems.Add(download);
+            }
+        });
+    }
+
     private void ApplyDownloadStatusColors(DownloadStatusColorConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
