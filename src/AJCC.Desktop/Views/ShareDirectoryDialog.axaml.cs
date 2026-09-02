@@ -735,6 +735,7 @@ public sealed partial class ShareDirectoryDialog : Window
         public string FullPath { get; }
         public bool CanOpen { get; }
         public bool IsPlaceholder { get; }
+        public bool IsVisibleInTree => !IsPlaceholder;
         public bool IsLoaded { get; set; }
         public bool IsLoading { get; private set; }
         public ObservableCollection<ShareDirectoryTreeNode> Children { get; } = new();

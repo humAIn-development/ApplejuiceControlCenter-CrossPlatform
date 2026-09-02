@@ -106,6 +106,8 @@
           <Style Selector="TreeViewItem">
             <Setter Property="IsExpanded"
                     Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsVisible"
+                    Value="{Binding IsVisibleInTree}" />
           </Style>
         </TreeView.Styles>
         <TreeView.ContextMenu>
