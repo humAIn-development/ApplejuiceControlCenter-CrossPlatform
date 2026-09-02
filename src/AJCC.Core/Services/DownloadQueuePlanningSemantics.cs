@@ -26,7 +26,8 @@ public static class DownloadQueuePlanningSemantics
         IEnumerable<AjDownload> downloads,
         int configuredLimit,
         int commandCap = DefaultCommandCap,
-        IReadOnlyDictionary<string, string>? priorities = null)
+        IReadOnlyDictionary<string, string>? priorities = null,
+        IReadOnlyList<long>? listOrder = null)
     {
         ArgumentNullException.ThrowIfNull(downloads);
 
@@ -46,9 +47,12 @@ public static class DownloadQueuePlanningSemantics
             .Count(download => !IsPaused(download));
         int managedLimit = Math.Max(0, limit - excludedActiveCount);
 
+        Dictionary<long, int> listOrderRanks = BuildListOrderRanks(listOrder);
+
         List<AjDownload> managed = nonTerminal
             .Where(download => GetPriority(download, priorities) != PriorityExcluded)
             .OrderBy(download => GetPriorityRank(download, priorities))
+            .ThenBy(download => listOrderRanks.TryGetValue(download.Id, out int index) ? index : int.MaxValue)
             .ThenByDescending(download => download.ProgressPercent)
             .ThenByDescending(download => download.ActiveSourceCount)
             .ThenByDescending(download => download.SourceCount)
@@ -116,6 +120,22 @@ public static class DownloadQueuePlanningSemantics
             || statusText.Contains("Canceled", StringComparison.OrdinalIgnoreCase)
             || statusText.Contains("Complete", StringComparison.OrdinalIgnoreCase)
             || statusText.Contains("Done", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<long, int> BuildListOrderRanks(IReadOnlyList<long>? listOrder)
+    {
+        Dictionary<long, int> ranks = new();
+        if (listOrder is null)
+            return ranks;
+
+        for (int index = 0; index < listOrder.Count; index++)
+        {
+            long downloadId = listOrder[index];
+            if (!ranks.ContainsKey(downloadId))
+                ranks[downloadId] = index;
+        }
+
+        return ranks;
     }
 
     public static bool IsPaused(AjDownload download)

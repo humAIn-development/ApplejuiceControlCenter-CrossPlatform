@@ -138,6 +138,65 @@ public sealed class DownloadQueuePlanningSemanticsTests
     }
 
     [TestMethod]
+    public void BuildPlan_UsesListOrderWithinSamePriorityGroup()
+    {
+        AjDownload firstInList = Download(
+            1,
+            status: 18,
+            ready: 100,
+            activeSources: 0,
+            sources: 1);
+        AjDownload automaticFavorite = Download(
+            2,
+            status: 0,
+            ready: 950,
+            activeSources: 5,
+            sources: 8);
+        AjDownload secondInList = Download(
+            3,
+            status: 18,
+            ready: 200,
+            activeSources: 1,
+            sources: 2);
+
+        DownloadQueuePlan plan = DownloadQueuePlanningSemantics.BuildPlan(
+            [automaticFavorite, secondInList, firstInList],
+            configuredLimit: 2,
+            commandCap: int.MaxValue,
+            listOrder: [firstInList.Id, secondInList.Id, automaticFavorite.Id]);
+
+        CollectionAssert.AreEqual(new long[] { 1, 3 }, plan.ShouldRunIds.ToArray());
+        CollectionAssert.AreEqual(new long[] { 1, 3 }, plan.ResumeIds.ToArray());
+        CollectionAssert.AreEqual(new long[] { 2 }, plan.PauseIds.ToArray());
+    }
+
+    [TestMethod]
+    public void BuildPlan_PriorityGroupsTakePrecedenceOverListOrder()
+    {
+        AjDownload high = Download(1, status: 18, ready: 100, activeSources: 0, sources: 1, hash: "HIGH");
+        AjDownload normal = Download(2, status: 18, ready: 500, activeSources: 2, sources: 4);
+        AjDownload low = Download(3, status: 0, ready: 950, activeSources: 5, sources: 8, hash: "LOW");
+        Dictionary<string, string> priorities = new(StringComparer.OrdinalIgnoreCase)
+        {
+            [DownloadQueuePlanningSemantics.GetPriorityKey(high)] =
+                DownloadQueuePlanningSemantics.PriorityHigh,
+            [DownloadQueuePlanningSemantics.GetPriorityKey(low)] =
+                DownloadQueuePlanningSemantics.PriorityLow
+        };
+
+        DownloadQueuePlan plan = DownloadQueuePlanningSemantics.BuildPlan(
+            [low, normal, high],
+            configuredLimit: 2,
+            commandCap: int.MaxValue,
+            priorities: priorities,
+            listOrder: [low.Id, normal.Id, high.Id]);
+
+        CollectionAssert.AreEqual(new long[] { 1, 2 }, plan.ShouldRunIds.ToArray());
+        CollectionAssert.AreEqual(new long[] { 1, 2 }, plan.ResumeIds.ToArray());
+        CollectionAssert.AreEqual(new long[] { 3 }, plan.PauseIds.ToArray());
+    }
+
+    [TestMethod]
     public void BuildPlan_ExcludedActiveDownloadConsumesCapacityButReceivesNoCommands()
     {
         AjDownload excluded = Download(1, status: 0, ready: 950, activeSources: 4, sources: 8, hash: "EX");
