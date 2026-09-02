@@ -27,6 +27,7 @@ public sealed partial class MainWindow : Window
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
     private readonly UiPreferencesStore _uiPreferencesStore = new();
     private readonly DownloadStatusColorConfigurationStore _downloadStatusColorConfigurationStore = new();
+    private readonly DownloadQueueConfigurationStore _downloadQueueConfigurationStore = new();
     private readonly CoreProfileStore _coreProfileStore = new();
     private readonly ObservableCollection<CoreProfileEntry> _coreProfiles = new();
     private readonly Dictionary<string, string> _coreProfileSessionPasswords = new(StringComparer.OrdinalIgnoreCase);
@@ -1870,7 +1871,81 @@ public sealed partial class MainWindow : Window
         if (item?.IsSelected == true)
             return;
 
+        ListBox? downloadsList = this.FindControl<ListBox>("DownloadsList");
+        if (downloadsList?.SelectedItems is { } selectedItems)
+        {
+            selectedItems.Clear();
+            selectedItems.Add(download);
+        }
+
         _viewModel.SelectedDownload = download;
+    }
+
+    private List<AjDownload> GetSelectedDownloadsForQueuePriority()
+    {
+        ListBox? downloadsList = this.FindControl<ListBox>("DownloadsList");
+        List<AjDownload> downloads = downloadsList?.SelectedItems?
+            .OfType<AjDownload>()
+            .Where(download => !DownloadQueuePlanningSemantics.IsTerminal(download))
+            .GroupBy(download => download.Id)
+            .Select(group => group.First())
+            .ToList()
+            ?? new List<AjDownload>();
+
+        if (downloads.Count == 0
+            && _viewModel.SelectedDownload is { } selected
+            && !DownloadQueuePlanningSemantics.IsTerminal(selected))
+        {
+            downloads.Add(selected);
+        }
+
+        return downloads;
+    }
+
+    private static string GetConfiguredDownloadQueuePriority(
+        AjDownload download,
+        DownloadQueueConfiguration configuration)
+    {
+        if (configuration.Priorities is not null
+            && configuration.Priorities.TryGetValue(
+                DownloadQueuePlanningSemantics.GetPriorityKey(download),
+                out string? priority))
+        {
+            return DownloadQueuePlanningSemantics.NormalizePriority(priority);
+        }
+
+        return string.Empty;
+    }
+
+    private void ConfigureDownloadQueuePriorityMenu(
+        MenuItem parent,
+        IReadOnlyList<AjDownload> downloads)
+    {
+        DownloadQueueConfiguration configuration = _downloadQueueConfigurationStore.Load();
+        string[] priorities = downloads
+            .Select(download => GetConfiguredDownloadQueuePriority(download, configuration))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        string commonPriority = priorities.Length == 1 ? priorities[0] : "__mixed__";
+
+        foreach (object? rawItem in parent.Items)
+        {
+            if (rawItem is not MenuItem item)
+                continue;
+
+            string header = item.Header?.ToString() ?? string.Empty;
+            string baseHeader = header.StartsWith("✓ ", StringComparison.Ordinal) ? header[2..] : header;
+            string itemPriority = baseHeader switch
+            {
+                "Hoch" => DownloadQueuePlanningSemantics.PriorityHigh,
+                "Niedrig" => DownloadQueuePlanningSemantics.PriorityLow,
+                "Von Automatik ausschließen" => DownloadQueuePlanningSemantics.PriorityExcluded,
+                _ => string.Empty
+            };
+            item.Header = string.Equals(itemPriority, commonPriority, StringComparison.OrdinalIgnoreCase)
+                ? "✓ " + baseHeader
+                : baseHeader;
+        }
     }
 
     private async void DownloadSearchResultButton_OnClick(object? sender, RoutedEventArgs e)
@@ -2047,6 +2122,8 @@ public sealed partial class MainWindow : Window
         bool canSetTargetDirectory = _viewModel.CanSetTargetDirectorySelectedDownload;
         bool canSetPowerDownload = _viewModel.CanSetPowerDownloadSelectedDownload;
         bool canShowPartList = _viewModel.CanShowSelectedDownloadPartList;
+        List<AjDownload> queueDownloads = GetSelectedDownloadsForQueuePriority();
+        bool canConfigureQueue = queueDownloads.Count > 0;
         bool hasControlActions = canPause || canResume || canCancel || canClean;
         bool hasMetadataActions = canRename || canSetTargetDirectory || canSetPowerDownload || canShowPartList;
         int separatorIndex = 0;
@@ -2062,6 +2139,7 @@ public sealed partial class MainWindow : Window
                     "Fortsetzen" => canResume,
                     "Download abbrechen…" => canCancel,
                     "Fertige/abgebrochene Downloads entfernen" => canClean,
+                    "Queue-Priorität" => canConfigureQueue,
                     "Umbenennen…" => canRename,
                     "Zielverzeichnis setzen…" => canSetTargetDirectory,
                     "Powerdownload setzen…" => canSetPowerDownload,
@@ -2069,6 +2147,9 @@ public sealed partial class MainWindow : Window
                     "Partliste anzeigen…" => canShowPartList,
                     _ => true
                 };
+                if (header == "Queue-Priorität" && canConfigureQueue)
+                    ConfigureDownloadQueuePriorityMenu(item, queueDownloads);
+
                 continue;
             }
 
@@ -2076,8 +2157,8 @@ public sealed partial class MainWindow : Window
             {
                 separator.IsVisible = separatorIndex switch
                 {
-                    0 => hasControlActions && hasMetadataActions,
-                    1 => hasControlActions || hasMetadataActions,
+                    0 => (hasControlActions || canConfigureQueue) && hasMetadataActions,
+                    1 => hasControlActions || canConfigureQueue || hasMetadataActions,
                     _ => true
                 };
                 separatorIndex++;
@@ -2170,6 +2251,63 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadContextClearPowerDownload_OnClick(object? sender, RoutedEventArgs e)
         => await _viewModel.ClearSelectedDownloadPowerDownloadAsync();
+
+    private async void DownloadContextQueuePriorityHigh_OnClick(object? sender, RoutedEventArgs e)
+        => await SetSelectedDownloadQueuePriorityAsync(DownloadQueuePlanningSemantics.PriorityHigh);
+
+    private async void DownloadContextQueuePriorityNormal_OnClick(object? sender, RoutedEventArgs e)
+        => await SetSelectedDownloadQueuePriorityAsync(string.Empty);
+
+    private async void DownloadContextQueuePriorityLow_OnClick(object? sender, RoutedEventArgs e)
+        => await SetSelectedDownloadQueuePriorityAsync(DownloadQueuePlanningSemantics.PriorityLow);
+
+    private async void DownloadContextQueuePriorityExcluded_OnClick(object? sender, RoutedEventArgs e)
+        => await SetSelectedDownloadQueuePriorityAsync(DownloadQueuePlanningSemantics.PriorityExcluded);
+
+    private async Task SetSelectedDownloadQueuePriorityAsync(string priority)
+    {
+        List<AjDownload> downloads = GetSelectedDownloadsForQueuePriority();
+        if (downloads.Count == 0)
+            return;
+
+        DownloadQueueConfiguration configuration = _downloadQueueConfigurationStore.Load();
+        Dictionary<string, string> priorities = configuration.Priorities is null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(
+                configuration.Priorities,
+                StringComparer.OrdinalIgnoreCase);
+        string normalizedPriority = DownloadQueuePlanningSemantics.NormalizePriority(priority);
+
+        foreach (AjDownload download in downloads)
+        {
+            string key = DownloadQueuePlanningSemantics.GetPriorityKey(download);
+            if (normalizedPriority.Length == 0)
+                priorities.Remove(key);
+            else
+                priorities[key] = normalizedPriority;
+        }
+
+        DownloadQueueConfiguration updated = configuration with { Priorities = priorities };
+        if (!_downloadQueueConfigurationStore.TrySave(updated, out string errorMessage))
+        {
+            _viewModel.SetStatusMessage(
+                "Download-Queue-Priorität konnte nicht gespeichert werden: " + errorMessage);
+            return;
+        }
+
+        string priorityText = normalizedPriority switch
+        {
+            DownloadQueuePlanningSemantics.PriorityHigh => "hoch",
+            DownloadQueuePlanningSemantics.PriorityLow => "niedrig",
+            DownloadQueuePlanningSemantics.PriorityExcluded => "von der Automatik ausgeschlossen",
+            _ => "normal"
+        };
+        _viewModel.SetStatusMessage(
+            $"Download-Queue: Priorität für {downloads.Count:N0} Download(s) auf '{priorityText}' gesetzt.");
+
+        if (updated.Limit > 0)
+            await _viewModel.ReevaluateDownloadQueueAutomationAsync();
+    }
 
     private async void DownloadContextShowPartList_OnClick(object? sender, RoutedEventArgs e)
     {

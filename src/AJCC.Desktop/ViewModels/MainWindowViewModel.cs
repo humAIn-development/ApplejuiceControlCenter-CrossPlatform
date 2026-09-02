@@ -2605,7 +2605,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         DownloadQueuePlan plan = DownloadQueuePlanningSemantics.BuildPlan(
             state.Downloads,
-            configuration.Limit);
+            configuration.Limit,
+            priorities: configuration.Priorities);
         if (plan.ResumeIds.Count == 0 && plan.PauseIds.Count == 0)
             return;
 
@@ -2658,6 +2659,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         {
             _downloadQueueAutomationRunning = false;
         }
+    }
+
+    public Task ReevaluateDownloadQueueAutomationAsync()
+    {
+        _lastDownloadQueueAutomationUtc = DateTime.MinValue;
+        return ApplyDownloadQueueAutomationIfDueAsync();
     }
 
     private void QueueUploadObjectNameLookup()

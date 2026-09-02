@@ -369,7 +369,8 @@
               <TextBlock Grid.Column="5" Text="Powerdownload" FontWeight="SemiBold" />
             </Grid>
           </Border>
-          <ListBox Grid.Row="2"
+          <ListBox x:Name="DownloadsList"
+                   Grid.Row="2"
                    Grid.ColumnSpan="2"
                    SelectionMode="Multiple"
                    ItemsSource="{Binding Downloads}"
@@ -398,6 +399,13 @@
                         <MenuItem Header="Fortsetzen" Click="DownloadContextResume_OnClick" />
                         <MenuItem Header="Download abbrechen…" Click="DownloadContextCancel_OnClick" />
                         <MenuItem Header="Fertige/abgebrochene Downloads entfernen" Click="DownloadContextClean_OnClick" />
+                        <MenuItem Header="Queue-Priorität"
+                                  ToolTip.Tip="Prioritätsgruppe der Download-Queue. Ausschließen verhindert automatische Pause-/Fortsetzen-Kommandos.">
+                          <MenuItem Header="Hoch" Click="DownloadContextQueuePriorityHigh_OnClick" />
+                          <MenuItem Header="Normal (Standard)" Click="DownloadContextQueuePriorityNormal_OnClick" />
+                          <MenuItem Header="Niedrig" Click="DownloadContextQueuePriorityLow_OnClick" />
+                          <MenuItem Header="Von Automatik ausschließen" Click="DownloadContextQueuePriorityExcluded_OnClick" />
+                        </MenuItem>
                         <Separator />
                         <MenuItem Header="Umbenennen…" Click="DownloadContextRename_OnClick" />
                         <MenuItem Header="Zielverzeichnis setzen…" Click="DownloadContextSetTargetDirectory_OnClick" />
