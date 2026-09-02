@@ -2161,13 +2161,25 @@ public sealed partial class MainWindow : Window
                 continue;
 
             if (isDownloadRow)
+            {
                 ConfigureDownloadContextMenu(menu);
+                menu.Opened -= DownloadContextMenu_OnOpened;
+                menu.Opened += DownloadContextMenu_OnOpened;
+                menu.Closed -= DownloadContextMenu_OnClosed;
+                menu.Closed += DownloadContextMenu_OnClosed;
+            }
 
             menu.Open(contextHost);
             e.Handled = true;
             return;
         }
     }
+
+    private void DownloadContextMenu_OnOpened(object? sender, EventArgs e)
+        => _viewModel.BeginDownloadListRefreshDeferral();
+
+    private void DownloadContextMenu_OnClosed(object? sender, EventArgs e)
+        => _viewModel.EndDownloadListRefreshDeferral();
 
     private void ConfigureDownloadContextMenu(ContextMenu menu)
     {

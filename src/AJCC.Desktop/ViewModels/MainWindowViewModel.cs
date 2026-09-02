@@ -79,6 +79,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private AjState? _downloadQueueSourceLessRuntimeState;
     private bool? _downloadQueueRotateSourceLessSetting;
     private int _downloadQueueSourceLessTimeoutMinutesSetting = 15;
+    private bool _downloadListRefreshDeferred;
+    private bool _downloadListRefreshPending;
     private bool _disposed;
 
     private readonly record struct UploadSpeedSampleSignature(
@@ -368,7 +370,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             _downloadSortDescending = false;
         }
 
-        OnPropertyChanged(nameof(Downloads));
+        RequestDownloadsRefresh();
         OnPropertyChanged(nameof(DownloadFileSortHeader));
         OnPropertyChanged(nameof(DownloadStatusSortHeader));
         OnPropertyChanged(nameof(DownloadProgressSortHeader));
@@ -381,6 +383,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         => string.Equals(_downloadSortColumn, column, StringComparison.Ordinal)
             ? $"{label} {(_downloadSortDescending ? "▼" : "▲")}"
             : label;
+
+    public void BeginDownloadListRefreshDeferral()
+        => _downloadListRefreshDeferred = true;
+
+    public void EndDownloadListRefreshDeferral()
+    {
+        if (!_downloadListRefreshDeferred)
+            return;
+
+        _downloadListRefreshDeferred = false;
+        if (!_downloadListRefreshPending)
+            return;
+
+        _downloadListRefreshPending = false;
+        OnPropertyChanged(nameof(Downloads));
+    }
+
+    private void RequestDownloadsRefresh()
+    {
+        if (_downloadListRefreshDeferred)
+        {
+            _downloadListRefreshPending = true;
+            return;
+        }
+
+        OnPropertyChanged(nameof(Downloads));
+    }
 
     public IEnumerable<AjUserSource> SelectedDownloadSources
         => _state is null || SelectedDownload is null
@@ -3638,7 +3667,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         UpdateServerCoreStates();
         if (_state is { } state)
             SearchExistingDownloadSemantics.Apply(state.Searches, state.Downloads);
-        OnPropertyChanged(nameof(Downloads));
+        RequestDownloadsRefresh();
         OnPropertyChanged(nameof(SelectedDownloadSources));
         OnPropertyChanged(nameof(SelectedDownloadSourcesText));
         OnPropertyChanged(nameof(Uploads));
