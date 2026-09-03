@@ -6,6 +6,19 @@ FirstLight is the first real cross-platform desktop shell on top of the validate
 
 The productive Windows/WPF AJCC remains untouched.
 
+## Current checkpoint — 2026-09-03
+
+FirstLight has grown substantially beyond the initial vertical slice documented chronologically below.
+
+- validated source head: `f4a8a8d1e4f72b74c9f1703bb30b1b6216e925aa`
+- CI #504 / run `33730438961`: Restore, Build and AJCC.Core.Tests successful on Ubuntu, macOS and Windows
+- the controlled productive-semantic reverse backfill is complete down to the earliest reliably documented boundary: versioned productive history through v0.1.52 plus the documented pre-import `AnonymousDiagnosticsExportPrivacyFix` state
+- major productive workflows are represented across Core connection/bootstrap/polling, Core profiles/failover, downloads, uploads, search, servers, shares, Core settings/readback, Core-side directory browsing, Share-directory draft/descendant semantics, AJFSP/AJL, Incoming mapping, external VLC safety, diagnostic ZIP export and integrated feedback
+- Core passwords remain transient and are deliberately not persisted; safe desktop/UI preferences are persisted separately
+- the expensive live-load checks for Queue Priority Ranking, 0-source Queue rotation and ListOrder pause/resume are intentionally waived for FirstLight rather than manufacturing suitable network/load conditions
+
+The sections below retain the chronological development record. Where an older section describes an earlier “current” or “not yet included” state, this checkpoint supersedes that status statement.
+
 ## Branch model
 
 - base: `foundation/v0.0.1-foundation`
@@ -222,17 +235,17 @@ Validated heads:
 - `d65d00538c247ffce659beebc01790960d7bacfd` — confirmed download cancellation + cancel transport regression test, workflow `31931907875`, all three OSes green
 - `7a992a93d6d2a15e796bc6e48d440bd26bcac8e6` — portable rename + Core-relative target-directory slice and regression tests, workflow `31933020732`, all three OSes green
 
-## Intentionally not included yet
+## Current scope boundaries
+
+The following items remain intentionally outside the current FirstLight checkpoint or require a separate explicit product decision:
 
 - installer / packaging
 - tray integration
-- OS credential stores
-- protocol/file associations
-- persisted desktop settings
+- OS-level protocol/file-association registration
 - light-theme/theme switching
-- Core-side directory browser/tree UI
-- remote Core directory creation
-- advanced server actions
-- full productive-WPF feature parity
+- remote Core directory creation; FirstLight can browse Core directories but does not pretend that the GUI host can create arbitrary directories on a remote Core
+- OS credential-store integration while Core-password persistence remains deliberately absent
+- mechanical recreation of WPF/DataGrid-only layout persistence where the Avalonia surface exposes no equivalent user-resizable/reorderable state
+- synthetic live-load validation of Queue Priority Ranking, 0-source Queue rotation and ListOrder pause/resume; these optional checks are waived for FirstLight because provoking suitable runtime conditions costs disproportionate time
 
-FirstLight exists to prove and expand the UI-to-Core boundary in controlled vertical slices.
+FirstLight now serves as the first usable cross-platform AJCC client branch and as the validated migration surface for productive AJCC semantics. Packaging, release promotion and any merge to `main` remain separate explicit decisions.
