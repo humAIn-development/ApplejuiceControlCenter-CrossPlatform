@@ -101,7 +101,11 @@ $baseSha = ([string]$payload.base_sha).ToLowerInvariant()
 $description = [string]$payload.description
 $commitMessage = [string]$payload.commit_message
 $expectedFiles = @($payload.expected_files | ForEach-Object { ([string]$_).Replace("\", "/") })
-$testProjects = @($payload.test_projects | ForEach-Object { [string]$_ })
+$testProjects = @()
+$testProjectsProperty = $payload.PSObject.Properties["test_projects"]
+if ($null -ne $testProjectsProperty) {
+    $testProjects = @($testProjectsProperty.Value | ForEach-Object { [string]$_ })
+}
 $patchShaExpected = ([string]$payload.patch_sha256).ToLowerInvariant()
 if ([string]$payload.schema -eq "AJCC_REMOTE_PATCH_V3") {
     $chunkProperty = $payload.PSObject.Properties["patch_gzip_base64_chunks"]
