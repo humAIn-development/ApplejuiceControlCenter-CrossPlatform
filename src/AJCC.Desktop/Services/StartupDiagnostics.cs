@@ -6,6 +6,7 @@ namespace AJCC.Desktop.Services;
 internal static class StartupDiagnostics
 {
     private static readonly object Sync = new();
+    private const long MaxDiagnosticLogBytes = 4L * 1024 * 1024;
     private static string _phase = "Process.constructed";
 
     public static void SetPhase(string phase)
@@ -145,13 +146,19 @@ internal static class StartupDiagnostics
     {
         string folder = GetDiagnosticsFolder();
         Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, "startup-diagnostics.log");
 
         lock (Sync)
         {
-            File.AppendAllText(
-                Path.Combine(folder, "startup-diagnostics.log"),
-                content,
-                Encoding.UTF8);
+            if (File.Exists(path) && new FileInfo(path).Length >= MaxDiagnosticLogBytes)
+            {
+                File.WriteAllText(
+                    path,
+                    "[older startup diagnostics truncated]" + Environment.NewLine,
+                    Encoding.UTF8);
+            }
+
+            File.AppendAllText(path, content, Encoding.UTF8);
         }
     }
 
