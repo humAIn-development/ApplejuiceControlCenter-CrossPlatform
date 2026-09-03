@@ -51,7 +51,7 @@ public sealed class ExternalVlcConfigurationStore
             string json = JsonSerializer.Serialize(
                 normalized,
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
+            AtomicTextFile.WriteAllText(_settingsPath, json);
             return true;
         }
         catch (Exception ex)

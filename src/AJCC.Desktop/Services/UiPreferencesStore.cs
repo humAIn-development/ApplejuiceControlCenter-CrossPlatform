@@ -72,7 +72,7 @@ public sealed class UiPreferencesStore
             string json = JsonSerializer.Serialize(
                 preferencesToSave,
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
+            AtomicTextFile.WriteAllText(_settingsPath, json);
             return true;
         }
         catch (Exception ex)

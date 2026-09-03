@@ -122,7 +122,7 @@ public sealed class CoreProfileStore
             string json = JsonSerializer.Serialize(
                 snapshot,
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
+            AtomicTextFile.WriteAllText(_settingsPath, json);
             return true;
         }
         catch (Exception ex)

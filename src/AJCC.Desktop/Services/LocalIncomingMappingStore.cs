@@ -52,7 +52,7 @@ public sealed class LocalIncomingMappingStore
                 Directory.CreateDirectory(directory);
 
             string json = JsonSerializer.Serialize(mappings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
+            AtomicTextFile.WriteAllText(_settingsPath, json);
             return true;
         }
         catch (Exception ex)

@@ -80,7 +80,7 @@ public sealed class ServerReconnectRestrictionStore
             string json = JsonSerializer.Serialize(
                 snapshots,
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
+            AtomicTextFile.WriteAllText(_settingsPath, json);
             return true;
         }
         catch (Exception ex)

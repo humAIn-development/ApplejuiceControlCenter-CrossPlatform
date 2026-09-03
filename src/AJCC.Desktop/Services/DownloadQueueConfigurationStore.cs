@@ -68,7 +68,7 @@ public sealed class DownloadQueueConfigurationStore
             string json = JsonSerializer.Serialize(
                 Normalize(configuration),
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
+            AtomicTextFile.WriteAllText(_settingsPath, json);
             return true;
         }
         catch (Exception ex)
