@@ -93,6 +93,7 @@ public static partial class ShareSnapshotService
             await using (GZipStream gzipStream =
                 new(fileStream, CompressionLevel.Optimal, leaveOpen: false))
             {
+                RestrictSnapshotFileBestEffort(temporaryPath);
                 await JsonSerializer.SerializeAsync(
                     gzipStream,
                     snapshot,
@@ -100,6 +101,7 @@ public static partial class ShareSnapshotService
             }
 
             File.Move(temporaryPath, storagePath, overwrite: true);
+            RestrictSnapshotFileBestEffort(storagePath);
         }
         catch
         {
@@ -140,6 +142,24 @@ public static partial class ShareSnapshotService
             root = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         return Path.Combine(root, "AJCC-X", "share-snapshots");
+    }
+
+    private static void RestrictSnapshotFileBestEffort(string path)
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        try
+        {
+            File.SetUnixFileMode(
+                path,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+        catch
+        {
+            // Privacy hardening must not make snapshot persistence unusable
+            // on unusual filesystems.
+        }
     }
 
     private static string NormalizeCoreHost(string? coreHost)

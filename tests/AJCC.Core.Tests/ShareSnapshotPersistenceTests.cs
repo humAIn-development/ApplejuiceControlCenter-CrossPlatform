@@ -31,6 +31,12 @@ public sealed class ShareSnapshotPersistenceTests
             string storagePath =
                 ShareSnapshotService.GetStoragePath("corehost", 9851, root);
             Assert.IsTrue(File.Exists(storagePath));
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.AreEqual(
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite,
+                    File.GetUnixFileMode(storagePath));
+            }
 
             byte[] bytes = await File.ReadAllBytesAsync(storagePath);
             Assert.IsTrue(bytes.Length >= 2);
