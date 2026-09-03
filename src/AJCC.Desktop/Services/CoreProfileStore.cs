@@ -147,6 +147,12 @@ public sealed class CoreProfileStore
         }
     }
 
+    public static bool EndpointEquals(string? left, string? right)
+        => string.Equals(
+            TryNormalizeEndpoint(left),
+            TryNormalizeEndpoint(right),
+            StringComparison.Ordinal);
+
     public static string RebuildEndpointHostAndPort(
         string existingEndpoint,
         string? host,
@@ -180,7 +186,7 @@ public sealed class CoreProfileStore
     {
         List<CoreProfileEntry> normalized = new();
         HashSet<string> usedIds = new(StringComparer.OrdinalIgnoreCase);
-        HashSet<string> usedEndpoints = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> usedEndpoints = new(StringComparer.Ordinal);
 
         foreach (CoreProfileEntry? profile in snapshot.Profiles ?? new List<CoreProfileEntry>())
         {

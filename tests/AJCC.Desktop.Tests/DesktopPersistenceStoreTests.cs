@@ -68,6 +68,100 @@ public sealed class DesktopPersistenceStoreTests
     }
 
     [TestMethod]
+    public void CoreProfileStore_EndpointIdentity_PreservesCaseSensitiveBasePaths()
+    {
+        Assert.IsTrue(CoreProfileStore.EndpointEquals(
+            "https://Example.test/CoreA/",
+            "https://example.test/CoreA/"));
+        Assert.IsFalse(CoreProfileStore.EndpointEquals(
+            "https://example.test/CoreA/",
+            "https://example.test/corea/"));
+
+        string root = CreateTempDirectory();
+        try
+        {
+            string path = Path.Combine(root, "core-profiles.json");
+            CoreProfileStore store = new(path);
+            CoreProfileEntry upper = new()
+            {
+                Id = "upper",
+                Name = "Upper",
+                Endpoint = "https://example.test/CoreA/"
+            };
+            CoreProfileEntry lower = new()
+            {
+                Id = "lower",
+                Name = "Lower",
+                Endpoint = "https://example.test/corea/"
+            };
+
+            Assert.IsTrue(store.TrySave(new[] { upper, lower }, upper.Id, out string error), error);
+
+            CoreProfileStoreSnapshot loaded = store.Load();
+            Assert.AreEqual(2, loaded.Profiles.Count);
+            CollectionAssert.AreEquivalent(
+                new[] { "https://example.test/CoreA/", "https://example.test/corea/" },
+                loaded.Profiles.Select(profile => profile.Endpoint).ToArray());
+        }
+        finally
+        {
+            DeleteTempDirectory(root);
+        }
+    }
+
+    [TestMethod]
+    public void EndpointSpecificStores_SeparateCaseSensitiveBasePaths()
+    {
+        const string upperEndpoint = "https://example.test/CoreA/";
+        const string lowerEndpoint = "https://example.test/corea/";
+
+        string root = CreateTempDirectory();
+        try
+        {
+            string incomingPath = Path.Combine(root, "core-incoming-mappings.json");
+            LocalIncomingMappingStore incomingStore = new(incomingPath);
+            Assert.IsTrue(incomingStore.TrySave(upperEndpoint, "/mnt/upper", out string upperError), upperError);
+            Assert.IsTrue(incomingStore.TrySave(lowerEndpoint, "/mnt/lower", out string lowerError), lowerError);
+            Assert.AreEqual("/mnt/upper", incomingStore.Get(upperEndpoint));
+            Assert.AreEqual("/mnt/lower", incomingStore.Get(lowerEndpoint));
+
+            string reconnectPath = Path.Combine(root, "server-reconnect-restrictions.json");
+            ServerReconnectRestrictionStore reconnectStore = new(reconnectPath);
+            Assert.IsTrue(
+                reconnectStore.TrySave(
+                    upperEndpoint,
+                    new ServerReconnectRestrictionSnapshot(DateTimeOffset.UtcNow.AddMinutes(10), true, 111),
+                    out string upperReconnectError),
+                upperReconnectError);
+            Assert.IsTrue(
+                reconnectStore.TrySave(
+                    lowerEndpoint,
+                    new ServerReconnectRestrictionSnapshot(DateTimeOffset.UtcNow.AddMinutes(20), true, 222),
+                    out string lowerReconnectError),
+                lowerReconnectError);
+
+            Assert.IsTrue(
+                reconnectStore.TryLoad(
+                    upperEndpoint,
+                    out ServerReconnectRestrictionSnapshot upperSnapshot,
+                    out string upperLoadError),
+                upperLoadError);
+            Assert.IsTrue(
+                reconnectStore.TryLoad(
+                    lowerEndpoint,
+                    out ServerReconnectRestrictionSnapshot lowerSnapshot,
+                    out string lowerLoadError),
+                lowerLoadError);
+            Assert.AreEqual(111L, upperSnapshot.TargetServerId);
+            Assert.AreEqual(222L, lowerSnapshot.TargetServerId);
+        }
+        finally
+        {
+            DeleteTempDirectory(root);
+        }
+    }
+
+    [TestMethod]
     public void UiPreferencesStore_SavePreservesDownloadSortState()
     {
         string root = CreateTempDirectory();

@@ -102,10 +102,9 @@ public sealed partial class CoreProfileManagerDialog : Window
     {
         int candidatePort = 9851;
         while (_profiles.Any(profile =>
-                   string.Equals(
-                       CoreProfileStore.TryNormalizeEndpoint(profile.Endpoint),
-                       $"http://127.0.0.1:{candidatePort}/",
-                       StringComparison.OrdinalIgnoreCase)))
+                   CoreProfileStore.EndpointEquals(
+                       profile.Endpoint,
+                       $"http://127.0.0.1:{candidatePort}/")))
         {
             candidatePort++;
         }
@@ -241,10 +240,7 @@ public sealed partial class CoreProfileManagerDialog : Window
 
         bool duplicateEndpoint = _profiles.Any(other =>
             !ReferenceEquals(other, row.Profile)
-            && string.Equals(
-                CoreProfileStore.TryNormalizeEndpoint(other.Endpoint),
-                endpoint,
-                StringComparison.OrdinalIgnoreCase));
+            && CoreProfileStore.EndpointEquals(other.Endpoint, endpoint));
         if (duplicateEndpoint)
         {
             if (validation is not null)

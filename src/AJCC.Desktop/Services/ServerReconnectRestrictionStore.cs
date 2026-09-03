@@ -93,14 +93,14 @@ public sealed class ServerReconnectRestrictionStore
     private Dictionary<string, StoredSnapshot> Load()
     {
         if (!File.Exists(_settingsPath))
-            return new Dictionary<string, StoredSnapshot>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, StoredSnapshot>(StringComparer.Ordinal);
 
         string json = File.ReadAllText(_settingsPath);
         Dictionary<string, StoredSnapshot>? raw =
             JsonSerializer.Deserialize<Dictionary<string, StoredSnapshot>>(json);
         return raw is null
-            ? new Dictionary<string, StoredSnapshot>(StringComparer.OrdinalIgnoreCase)
-            : new Dictionary<string, StoredSnapshot>(raw, StringComparer.OrdinalIgnoreCase);
+            ? new Dictionary<string, StoredSnapshot>(StringComparer.Ordinal)
+            : new Dictionary<string, StoredSnapshot>(raw, StringComparer.Ordinal);
     }
 
     private static string NormalizeEndpointKey(string? endpointText)

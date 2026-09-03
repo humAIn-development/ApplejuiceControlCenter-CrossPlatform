@@ -65,13 +65,13 @@ public sealed class LocalIncomingMappingStore
     private Dictionary<string, string> Load()
     {
         if (!File.Exists(_settingsPath))
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, string>(StringComparer.Ordinal);
 
         string json = File.ReadAllText(_settingsPath);
         Dictionary<string, string>? raw = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
         return raw is null
-            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            : new Dictionary<string, string>(raw, StringComparer.OrdinalIgnoreCase);
+            ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : new Dictionary<string, string>(raw, StringComparer.Ordinal);
     }
 
     private static string NormalizeEndpointKey(string? endpointText)

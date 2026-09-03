@@ -363,10 +363,7 @@ public sealed partial class MainWindow : Window
             CoreProfileEntry? selected = _coreProfiles.FirstOrDefault(profile =>
                     string.Equals(profile.Id, _defaultCoreProfileId, StringComparison.OrdinalIgnoreCase))
                 ?? _coreProfiles.FirstOrDefault(profile =>
-                    string.Equals(
-                        profile.Endpoint,
-                        CoreProfileStore.TryNormalizeEndpoint(_viewModel.EndpointText),
-                        StringComparison.OrdinalIgnoreCase))
+                    CoreProfileStore.EndpointEquals(profile.Endpoint, _viewModel.EndpointText))
                 ?? _coreProfiles.FirstOrDefault();
 
             if (selected is not null)
@@ -541,14 +538,8 @@ public sealed partial class MainWindow : Window
     }
 
     private CoreProfileEntry? FindCoreProfileByEndpoint(string? endpointText)
-    {
-        string normalized = CoreProfileStore.TryNormalizeEndpoint(endpointText);
-        return _coreProfiles.FirstOrDefault(profile =>
-            string.Equals(
-                CoreProfileStore.TryNormalizeEndpoint(profile.Endpoint),
-                normalized,
-                StringComparison.OrdinalIgnoreCase));
-    }
+        => _coreProfiles.FirstOrDefault(profile =>
+            CoreProfileStore.EndpointEquals(profile.Endpoint, endpointText));
 
     private List<CoreProfileEntry> BuildCoreFailoverCandidates(CoreProfileEntry failedProfile)
     {
@@ -746,7 +737,7 @@ public sealed partial class MainWindow : Window
         }
 
         CoreProfileEntry? existing = _coreProfiles.FirstOrDefault(profile =>
-            string.Equals(profile.Endpoint, endpoint, StringComparison.OrdinalIgnoreCase));
+            CoreProfileStore.EndpointEquals(profile.Endpoint, endpoint));
         string initialName = existing?.Name ?? parsedEndpoint.Host;
 
         CoreProfileSaveDialog dialog = new(initialName);
@@ -801,7 +792,7 @@ public sealed partial class MainWindow : Window
         string endpoint = dialog.Endpoint;
         bool duplicateEndpoint = _coreProfiles.Any(other =>
             !ReferenceEquals(other, profile)
-            && string.Equals(other.Endpoint, endpoint, StringComparison.OrdinalIgnoreCase));
+            && CoreProfileStore.EndpointEquals(other.Endpoint, endpoint));
         if (duplicateEndpoint)
         {
             _viewModel.SetStatusMessage("Für diesen Core-Endpunkt existiert bereits ein anderes Profil.");
@@ -912,10 +903,7 @@ public sealed partial class MainWindow : Window
             : string.Empty;
         CoreProfileEntry? activeProfile = _viewModel.IsConnected
             ? _coreProfiles.FirstOrDefault(profile =>
-                string.Equals(
-                    CoreProfileStore.TryNormalizeEndpoint(profile.Endpoint),
-                    activeEndpoint,
-                    StringComparison.OrdinalIgnoreCase))
+                CoreProfileStore.EndpointEquals(profile.Endpoint, activeEndpoint))
             : null;
 
         Dictionary<string, string> previousEndpoints = _coreProfiles.ToDictionary(
@@ -945,10 +933,7 @@ public sealed partial class MainWindow : Window
                 string.Equals(profile.Id, cachedProfileId, StringComparison.OrdinalIgnoreCase));
             if (updatedProfile is null
                 || !previousEndpoints.TryGetValue(cachedProfileId, out string? previousEndpoint)
-                || !string.Equals(
-                    previousEndpoint,
-                    CoreProfileStore.TryNormalizeEndpoint(updatedProfile.Endpoint),
-                    StringComparison.OrdinalIgnoreCase))
+                || !CoreProfileStore.EndpointEquals(previousEndpoint, updatedProfile.Endpoint))
             {
                 _coreProfileSessionPasswords.Remove(cachedProfileId);
             }
@@ -999,10 +984,7 @@ public sealed partial class MainWindow : Window
             string.Equals(profile.Id, activeProfile?.Id, StringComparison.OrdinalIgnoreCase));
         bool activeEndpointChanged = _viewModel.IsConnected
             && changedActiveProfile is not null
-            && !string.Equals(
-                CoreProfileStore.TryNormalizeEndpoint(changedActiveProfile.Endpoint),
-                activeEndpoint,
-                StringComparison.OrdinalIgnoreCase);
+            && !CoreProfileStore.EndpointEquals(changedActiveProfile.Endpoint, activeEndpoint);
 
         _viewModel.SetStatusMessage(
             activeEndpointChanged
@@ -1028,7 +1010,7 @@ public sealed partial class MainWindow : Window
 
         string activeEndpoint = CoreProfileStore.TryNormalizeEndpoint(_viewModel.EndpointText);
         string targetEndpoint = CoreProfileStore.TryNormalizeEndpoint(profile.Endpoint);
-        if (string.Equals(activeEndpoint, targetEndpoint, StringComparison.OrdinalIgnoreCase))
+        if (CoreProfileStore.EndpointEquals(activeEndpoint, targetEndpoint))
         {
             _viewModel.SetStatusMessage($"Core-Profil ist bereits aktiv: {profile.Name}.");
             return;
