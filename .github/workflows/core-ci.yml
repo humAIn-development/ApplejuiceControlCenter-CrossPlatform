@@ -9,6 +9,7 @@ on:
       - "src/AJCC.Core/**"
       - "src/AJCC.Desktop/**"
       - "tests/AJCC.Core.Tests/**"
+      - "tests/AJCC.Desktop.Tests/**"
       - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
       - ".github/workflows/core-ci.yml"
@@ -17,6 +18,7 @@ on:
       - "src/AJCC.Core/**"
       - "src/AJCC.Desktop/**"
       - "tests/AJCC.Core.Tests/**"
+      - "tests/AJCC.Desktop.Tests/**"
       - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
       - ".github/workflows/core-ci.yml"
@@ -26,7 +28,7 @@ permissions:
 
 jobs:
   build-test:
-    name: Build + Core tests (${{ matrix.os }})
+    name: Build + tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -55,3 +57,6 @@ jobs:
 
       - name: Test Core
         run: dotnet test tests/AJCC.Core.Tests/AJCC.Core.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Test Desktop services
+        run: dotnet test tests/AJCC.Desktop.Tests/AJCC.Desktop.Tests.csproj --configuration Release --no-build --verbosity normal
