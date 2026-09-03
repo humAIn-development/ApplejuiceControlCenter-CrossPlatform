@@ -49,7 +49,7 @@ jobs:
         run: dotnet restore ApplejuiceControlCenter-CrossPlatform.sln
 
       - name: Build
-        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore
+        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore /p:GitBranch="${{ github.ref_name }}" /p:GitCommit="${{ github.sha }}" /p:CiRunId="${{ github.run_id }}" /p:CiRunNumber="${{ github.run_number }}"
 
       - name: Test Core
         run: dotnet test tests/AJCC.Core.Tests/AJCC.Core.Tests.csproj --configuration Release --no-build --verbosity normal

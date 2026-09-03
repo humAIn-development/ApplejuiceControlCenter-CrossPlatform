@@ -1219,6 +1219,7 @@ public sealed partial class MainWindow : Window
                 Summary:
                     "AJCC-X FirstLight anonymized diagnostic export" + Environment.NewLine +
                     $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                    $"AJCCVersion={AppBuildInfo.DiagnosticVersion}" + Environment.NewLine +
                     $"ConnectionState={connectionState}" + Environment.NewLine +
                     "StartupLogTails=bounded" + Environment.NewLine,
                 DeveloperLog: StartupDiagnostics.ReadRecentLogTails(),
@@ -1282,7 +1283,7 @@ public sealed partial class MainWindow : Window
         {
             string createdUtc = DateTimeOffset.UtcNow.ToString("O");
             string connectionState = _viewModel.IsConnected ? "connected" : "offline";
-            string ajccVersion = typeof(MainWindow).Assembly.GetName().Version?.ToString() ?? "unknown";
+            string ajccVersion = AppBuildInfo.DiagnosticVersion;
             string coreVersion = string.IsNullOrWhiteSpace(_viewModel.CoreVersion)
                 ? "unknown"
                 : _viewModel.CoreVersion;
@@ -1301,6 +1302,7 @@ public sealed partial class MainWindow : Window
                 Summary:
                     "AJCC-X FirstLight anonymized feedback diagnostics" + Environment.NewLine +
                     $"CreatedUtc={createdUtc}" + Environment.NewLine +
+                    $"AJCCVersion={ajccVersion}" + Environment.NewLine +
                     $"ConnectionState={connectionState}" + Environment.NewLine +
                     "StartupLogTails=bounded" + Environment.NewLine,
                 DeveloperLog: StartupDiagnostics.ReadRecentLogTails(),
