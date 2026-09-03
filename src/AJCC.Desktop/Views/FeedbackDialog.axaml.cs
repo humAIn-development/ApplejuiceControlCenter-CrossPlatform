@@ -85,6 +85,8 @@ public sealed partial class FeedbackDialog : Window
                 ? categories[selectedIndex]
                 : "OTHER";
 
+            bool includeTechnicalData =
+                this.FindControl<CheckBox>("IncludeTechnicalDataBox")?.IsChecked == true;
             Dictionary<string, string> fields = new(StringComparer.Ordinal)
             {
                 ["category"] = category,
@@ -96,7 +98,7 @@ public sealed partial class FeedbackDialog : Window
                 ["title"] = title,
                 ["description"] = description,
                 ["steps"] = ReadText("StepsBox"),
-                ["technical_context"] = this.FindControl<CheckBox>("IncludeTechnicalDataBox")?.IsChecked == true
+                ["technical_context"] = includeTechnicalData
                     ? _technicalContext
                     : string.Empty
             };
@@ -105,7 +107,7 @@ public sealed partial class FeedbackDialog : Window
             foreach ((string key, string value) in fields)
                 content.Add(new StringContent(value ?? string.Empty, Encoding.UTF8), key);
 
-            if (_diagnosticsZip.Length > 0)
+            if (includeTechnicalData && _diagnosticsZip.Length > 0)
             {
                 ByteArrayContent diagnostics = new(_diagnosticsZip);
                 content.Add(diagnostics, "diagnostics", "AJCC-X-diagnostics.zip");

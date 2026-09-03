@@ -14,7 +14,7 @@
                  FontSize="20"
                  FontWeight="SemiBold" />
       <TextBlock Classes="muted"
-                 Text="Feedback direkt aus AJCC-X senden. Ein anonymisiertes Diagnose-ZIP wird automatisch angehängt."
+                 Text="Feedback direkt aus AJCC-X senden. Technischer Kontext und anonymisiertes Diagnose-ZIP können optional mitgesendet werden."
                  TextWrapping="Wrap" />
 
       <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
@@ -61,8 +61,8 @@
                MaxLength="8000" />
 
       <CheckBox x:Name="IncludeTechnicalDataBox"
-                IsChecked="True"
-                Content="Technischen Kontext mitsenden" />
+                IsChecked="False"
+                Content="Technischen Kontext und anonymisiertes Diagnose-ZIP mitsenden" />
 
       <TextBox x:Name="TechnicalDataBox"
                IsReadOnly="True"
