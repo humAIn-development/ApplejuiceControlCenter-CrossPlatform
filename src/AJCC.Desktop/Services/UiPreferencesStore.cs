@@ -7,6 +7,8 @@ public sealed record UiPreferences(
     bool AutoLoadShareFilesAtStartup = false)
 {
     public bool GuiSoundsEnabled { get; init; } = true;
+    public string? DownloadSortColumn { get; init; }
+    public bool DownloadSortDescending { get; init; }
 }
 
 public sealed class UiPreferencesStore
@@ -49,12 +51,26 @@ public sealed class UiPreferencesStore
 
         try
         {
+            UiPreferences preferencesToSave = preferences;
+            if (preferences.DownloadSortColumn is null)
+            {
+                UiPreferences existingPreferences = Load();
+                if (!string.IsNullOrWhiteSpace(existingPreferences.DownloadSortColumn))
+                {
+                    preferencesToSave = preferences with
+                    {
+                        DownloadSortColumn = existingPreferences.DownloadSortColumn,
+                        DownloadSortDescending = existingPreferences.DownloadSortDescending
+                    };
+                }
+            }
+
             string? directory = Path.GetDirectoryName(_settingsPath);
             if (!string.IsNullOrWhiteSpace(directory))
                 Directory.CreateDirectory(directory);
 
             string json = JsonSerializer.Serialize(
-                preferences,
+                preferencesToSave,
                 new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_settingsPath, json);
             return true;

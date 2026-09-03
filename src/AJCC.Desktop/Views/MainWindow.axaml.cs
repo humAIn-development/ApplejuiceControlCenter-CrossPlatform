@@ -86,6 +86,9 @@ public sealed partial class MainWindow : Window
         _suppressCoreProfileSwitchConfirmation = uiPreferences.SuppressCoreProfileSwitchConfirmation;
         _autoLoadShareFilesAtStartup = uiPreferences.AutoLoadShareFilesAtStartup;
         _guiSoundsEnabled = uiPreferences.GuiSoundsEnabled;
+        _viewModel.RestoreDownloadSort(
+            uiPreferences.DownloadSortColumn,
+            uiPreferences.DownloadSortDescending);
         AudioFeedbackService.Enabled = _guiSoundsEnabled;
         _startupShareLoadEnabledForThisProcess = _autoLoadShareFilesAtStartup;
         _viewModel.CoreConnectionLost += ViewModel_OnCoreConnectionLost;
@@ -173,6 +176,20 @@ public sealed partial class MainWindow : Window
             ?? new HashSet<long>();
 
         _viewModel.SortDownloadsBy(column);
+        UiPreferences sortPreferences = new(
+            _suppressCoreProfileSwitchConfirmation,
+            _autoLoadShareFilesAtStartup)
+        {
+            GuiSoundsEnabled = _guiSoundsEnabled,
+            DownloadSortColumn = _viewModel.DownloadSortColumn,
+            DownloadSortDescending = _viewModel.DownloadSortDescending
+        };
+        if (!_uiPreferencesStore.TrySave(sortPreferences, out string sortErrorMessage))
+        {
+            _viewModel.SetStatusMessage(
+                "Download-Sortierung ist aktiv, konnte aber nicht gespeichert werden: " + sortErrorMessage);
+        }
+
         e.Handled = true;
 
         if (downloadsList is null || selectedIds.Count == 0)

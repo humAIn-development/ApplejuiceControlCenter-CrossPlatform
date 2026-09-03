@@ -305,6 +305,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _downloadSortColumn = string.Empty;
     private bool _downloadSortDescending;
 
+    public string DownloadSortColumn => _downloadSortColumn;
+    public bool DownloadSortDescending => _downloadSortDescending;
+
     public IEnumerable<AjDownload> Downloads
     {
         get
@@ -373,6 +376,29 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         RequestDownloadsRefresh();
+        NotifyDownloadSortHeaders();
+    }
+
+    public void RestoreDownloadSort(string? column, bool descending)
+    {
+        if (column != "file"
+            && column != "status"
+            && column != "progress"
+            && column != "sources"
+            && column != "speed"
+            && column != "power")
+        {
+            return;
+        }
+
+        _downloadSortColumn = column!;
+        _downloadSortDescending = descending;
+        RequestDownloadsRefresh();
+        NotifyDownloadSortHeaders();
+    }
+
+    private void NotifyDownloadSortHeaders()
+    {
         OnPropertyChanged(nameof(DownloadFileSortHeader));
         OnPropertyChanged(nameof(DownloadStatusSortHeader));
         OnPropertyChanged(nameof(DownloadProgressSortHeader));
