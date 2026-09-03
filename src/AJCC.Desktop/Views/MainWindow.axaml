@@ -591,23 +591,21 @@
                      FontWeight="SemiBold"
                      Margin="4,10,0,6" />
           <Border Grid.Row="4" Classes="tableHeader">
-            <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.5*">
+            <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Nutzer" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="2" Text="Status" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="3" Text="Fortschritt" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="4" Text="Letzte Verbindung" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Fortschritt" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Letzte Verbindung" FontWeight="SemiBold" />
             </Grid>
           </Border>
           <ListBox Grid.Row="5" ItemsSource="{Binding InactiveUploads}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjUpload">
-                <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.2*,1.5*" Margin="8,6">
+                <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*" Margin="8,6">
                   <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="2" Text="{Binding StatusText}" />
-                  <TextBlock Grid.Column="3" Text="{Binding ProgressPercentText}" />
-                  <TextBlock Grid.Column="4" Text="{Binding LastConnectionText}" />
+                  <TextBlock Grid.Column="2" Text="{Binding ProgressPercentText}" />
+                  <TextBlock Grid.Column="3" Text="{Binding LastConnectionText}" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
