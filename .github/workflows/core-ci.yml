@@ -39,6 +39,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
@@ -49,7 +51,7 @@ jobs:
         run: dotnet restore ApplejuiceControlCenter-CrossPlatform.sln
 
       - name: Build
-        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore /p:GitBranch="${{ github.ref_name }}" /p:GitCommit="${{ github.sha }}" /p:CiRunId="${{ github.run_id }}" /p:CiRunNumber="${{ github.run_number }}"
+        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore /p:GitBranch="${{ github.head_ref || github.ref_name }}" /p:GitCommit="${{ github.event.pull_request.head.sha || github.sha }}" /p:CiRunId="${{ github.run_id }}" /p:CiRunNumber="${{ github.run_number }}"
 
       - name: Test Core
         run: dotnet test tests/AJCC.Core.Tests/AJCC.Core.Tests.csproj --configuration Release --no-build --verbosity normal
