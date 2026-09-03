@@ -51,7 +51,7 @@ internal sealed class AjSingleInstanceService : IDisposable
                 ".",
                 PipeName,
                 PipeDirection.Out,
-                PipeOptions.Asynchronous);
+                PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             using CancellationTokenSource cts = new(timeoutMs);
             await pipe.ConnectAsync(cts.Token).ConfigureAwait(false);
 
@@ -94,7 +94,7 @@ internal sealed class AjSingleInstanceService : IDisposable
                     PipeDirection.In,
                     1,
                     PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                 await pipe.WaitForConnectionAsync(token).ConfigureAwait(false);
 
                 using StreamReader reader = new(pipe, Encoding.UTF8);
