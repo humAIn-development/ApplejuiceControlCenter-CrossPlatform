@@ -29,7 +29,7 @@ FirstLight now covers the major productive AJCC workflows, including Core connec
 
 Core passwords remain transient and are deliberately not persisted. UI preferences that are safe to persist are stored under the AJCC-X settings area.
 
-The controlled historical reverse backfill has reached the earliest reliably documented productive boundary. The current validated runtime/test head is `3f7b135a431aed30d6a40d1321670fb05ad31819`; CI #517 / run `33736965594` passed Restore, Release Build, 230 Core tests and 3 headless Desktop-service tests on Ubuntu, macOS and Windows. The release build remains warning-free, CI identifies the exact PR source head, persistent Desktop JSON settings use atomic replacement, and persisted startup arguments are privacy-sanitized.
+The controlled historical reverse backfill has reached the earliest reliably documented productive boundary. The current validated runtime/test head is `1f71298c8fc0cb5e85f8d45994cb23a6c6fd1d5f`; CI #522 / run `33739383122` passed Restore, Release Build, 230 Core tests and 3 headless Desktop-service tests on Ubuntu, macOS and Windows. The release build remains warning-free, CI identifies the exact PR source head, persistent Desktop JSON settings use atomic replacement, persisted startup arguments are privacy-sanitized, single-instance import IPC is restricted to the current OS user, and feedback technical context plus the anonymized diagnostics ZIP require an explicit opt-in that defaults to off.
 
 Installer/packaging and merge-to-`main` are separate later decisions and are not implied by the current FirstLight checkpoint.
 

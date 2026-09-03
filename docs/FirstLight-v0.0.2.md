@@ -10,9 +10,9 @@ The productive Windows/WPF AJCC remains untouched.
 
 FirstLight has grown substantially beyond the initial vertical slice documented chronologically below.
 
-- validated runtime/test head: `3f7b135a431aed30d6a40d1321670fb05ad31819`
-- CI #517 / run `33736965594`: Restore, warning-free Release Build, 230 AJCC.Core tests and 3 headless AJCC.Desktop service tests successful on Ubuntu, macOS and Windows
-- release hardening now includes exact PR-head checkout/build metadata, privacy-sanitized and 4 MiB-bounded startup diagnostics, atomic persistent Desktop JSON writes and a cross-platform Desktop-service test gate
+- validated runtime/test head: `1f71298c8fc0cb5e85f8d45994cb23a6c6fd1d5f`
+- CI #522 / run `33739383122`: Restore, warning-free Release Build, 230 AJCC.Core tests and 3 headless AJCC.Desktop service tests successful on Ubuntu, macOS and Windows
+- release hardening now includes exact PR-head checkout/build metadata, privacy-sanitized and 4 MiB-bounded startup diagnostics, atomic persistent Desktop JSON writes, a cross-platform Desktop-service test gate, current-user-only single-instance import IPC and explicit opt-in (default off) for feedback technical context plus the anonymized diagnostics ZIP
 - the controlled productive-semantic reverse backfill is complete down to the earliest reliably documented boundary: versioned productive history through v0.1.52 plus the documented pre-import `AnonymousDiagnosticsExportPrivacyFix` state
 - major productive workflows are represented across Core connection/bootstrap/polling, Core profiles/failover, downloads, uploads, search, servers, shares, Core settings/readback, Core-side directory browsing, Share-directory draft/descendant semantics, AJFSP/AJL, Incoming mapping, external VLC safety, diagnostic ZIP export and integrated feedback
 - Core passwords remain transient and are deliberately not persisted; safe desktop/UI preferences are persisted separately
@@ -236,6 +236,8 @@ Validated heads:
 - `d65d00538c247ffce659beebc01790960d7bacfd` — confirmed download cancellation + cancel transport regression test, workflow `31931907875`, all three OSes green
 - `7a992a93d6d2a15e796bc6e48d440bd26bcac8e6` — portable rename + Core-relative target-directory slice and regression tests, workflow `31933020732`, all three OSes green
 - `3f7b135a431aed30d6a40d1321670fb05ad31819` — release-hardening checkpoint with exact-head CI, atomic Desktop settings and 230 Core + 3 Desktop-service tests, workflow `33736965594`, all three OSes green
+- `947373ab9f336ce4d9623db3cb3409c75ab30d4f` — single-instance import IPC restricted to the current OS user, CI #520 / workflow `33738389010`, all three OSes green
+- `1f71298c8fc0cb5e85f8d45994cb23a6c6fd1d5f` — feedback technical context and anonymized diagnostics ZIP require explicit opt-in, default off, CI #522 / workflow `33739383122`, all three OSes green
 
 ## Current scope boundaries
 
