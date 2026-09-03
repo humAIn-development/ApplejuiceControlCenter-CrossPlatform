@@ -1,12 +1,15 @@
 using System.IO.Pipes;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace AJCC.Desktop.Services;
 
 internal sealed class AjSingleInstanceService : IDisposable
 {
-    private const string MutexName = "ApplejuiceControlCenter.CrossPlatform.SingleInstance.v1";
-    private const string PipeName = "ApplejuiceControlCenter.CrossPlatform.ImportPipe.v1";
+    private const string MutexNameBase = "ApplejuiceControlCenter.CrossPlatform.SingleInstance.v1";
+    private const string PipeNameBase = "ApplejuiceControlCenter.CrossPlatform.ImportPipe.v1";
+    private static readonly string MutexName = BuildUserScopedName(MutexNameBase);
+    private static readonly string PipeName = BuildUserScopedName(PipeNameBase);
 
     private readonly Mutex _mutex;
     private readonly bool _ownsMutex;
@@ -124,6 +127,37 @@ internal sealed class AjSingleInstanceService : IDisposable
                 }
             }
         }
+    }
+
+    private static string BuildUserScopedName(string baseName)
+    {
+        string userScopeRoot =
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrWhiteSpace(userScopeRoot))
+        {
+            userScopeRoot =
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        }
+
+        return BuildUserScopedName(baseName, Environment.UserName, userScopeRoot);
+    }
+
+    internal static string BuildUserScopedName(
+        string baseName,
+        string? userName,
+        string? userScopeRoot)
+    {
+        if (string.IsNullOrWhiteSpace(baseName))
+            throw new ArgumentException("IPC-Basisname fehlt.", nameof(baseName));
+
+        string identity =
+            (userName ?? string.Empty).Trim()
+            + "\n"
+            + (userScopeRoot ?? string.Empty).Trim();
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        string token =
+            Convert.ToHexString(hash.AsSpan(0, 12)).ToLowerInvariant();
+        return baseName.Trim() + "." + token;
     }
 
     private static string EncodeArguments(IEnumerable<string> args)
