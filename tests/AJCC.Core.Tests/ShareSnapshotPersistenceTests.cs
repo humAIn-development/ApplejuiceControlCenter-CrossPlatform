@@ -81,6 +81,58 @@ public sealed class ShareSnapshotPersistenceTests
     }
 
     [TestMethod]
+    public async Task EndpointIdentity_SeparatesReverseProxyBaselines()
+    {
+        string root = CreateTemporaryRoot();
+        try
+        {
+            const string endpointA = "https://Example.test:9851/core-a/";
+            const string endpointAEquivalent = "https://example.test:9851/core-a/";
+            const string endpointB = "https://example.test:9851/core-b/";
+            const string endpointOtherScheme = "http://example.test:9851/core-a/";
+
+            string first = ShareSnapshotService.GetStoragePath(endpointA, root);
+            string same = ShareSnapshotService.GetStoragePath(endpointAEquivalent, root);
+            string otherBasePath = ShareSnapshotService.GetStoragePath(endpointB, root);
+            string otherScheme = ShareSnapshotService.GetStoragePath(endpointOtherScheme, root);
+            string legacy = ShareSnapshotService.GetStoragePath("example.test", 9851, root);
+
+            Assert.AreEqual(first, same);
+            Assert.AreNotEqual(first, otherBasePath);
+            Assert.AreNotEqual(first, otherScheme);
+            Assert.AreNotEqual(first, legacy);
+
+            ShareSnapshotDocument snapshot = ShareSnapshotService.CreateSnapshot(
+                "example.test",
+                9851,
+                new[] { new ShareSnapshotSourceFile("/share/file.bin", 10) },
+                Array.Empty<ShareSnapshotSourceRoot>());
+
+            await ShareSnapshotService.SaveAsync(snapshot, root, endpointA);
+
+            ShareSnapshotLoadResult loadedA = await ShareSnapshotService.LoadAsync(
+                "example.test",
+                9851,
+                root,
+                endpointA);
+            ShareSnapshotLoadResult loadedB = await ShareSnapshotService.LoadAsync(
+                "example.test",
+                9851,
+                root,
+                endpointB);
+
+            Assert.IsNotNull(loadedA.Snapshot);
+            Assert.AreEqual(first, loadedA.StoragePath);
+            Assert.IsNull(loadedB.Snapshot);
+            Assert.AreEqual(otherBasePath, loadedB.StoragePath);
+        }
+        finally
+        {
+            DeleteTemporaryRoot(root);
+        }
+    }
+
+    [TestMethod]
     public async Task LoadAsync_MissingBaselineReturnsEmptyResultWithoutError()
     {
         string root = CreateTemporaryRoot();

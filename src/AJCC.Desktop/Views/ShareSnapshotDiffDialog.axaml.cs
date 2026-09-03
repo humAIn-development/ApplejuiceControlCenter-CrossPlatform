@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using AJCC.Core.Models;
+using AJCC.Core.Protocol;
 using AJCC.Core.Services;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
@@ -16,6 +17,7 @@ public sealed partial class ShareSnapshotDiffDialog : Window
 
     private ShareSnapshotComparisonReport _report = new();
     private ShareSnapshotDocument _currentSnapshot = new();
+    private string _coreEndpoint = string.Empty;
     private string _loadErrorMessage = string.Empty;
 
     public ShareSnapshotDiffDialog()
@@ -26,11 +28,13 @@ public sealed partial class ShareSnapshotDiffDialog : Window
     public ShareSnapshotDiffDialog(
         ShareSnapshotComparisonReport report,
         ShareSnapshotDocument currentSnapshot,
+        string coreEndpoint,
         string? loadErrorMessage = null)
         : this()
     {
         _report = report ?? throw new ArgumentNullException(nameof(report));
         _currentSnapshot = currentSnapshot ?? throw new ArgumentNullException(nameof(currentSnapshot));
+        _coreEndpoint = CoreEndpoint.Parse(coreEndpoint).BaseUri.AbsoluteUri;
         _loadErrorMessage = loadErrorMessage ?? string.Empty;
 
         Populate();
@@ -158,7 +162,9 @@ public sealed partial class ShareSnapshotDiffDialog : Window
                 button.Content = "Vergleichsbasis wird gespeichert…";
             }
 
-            await ShareSnapshotService.SaveAsync(_currentSnapshot);
+            await ShareSnapshotService.SaveAsync(
+                _currentSnapshot,
+                coreEndpoint: _coreEndpoint);
             Close(true);
         }
         catch (Exception ex)

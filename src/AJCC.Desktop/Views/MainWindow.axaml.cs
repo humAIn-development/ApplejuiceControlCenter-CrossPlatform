@@ -1671,7 +1671,8 @@ public sealed partial class MainWindow : Window
 
             ShareSnapshotLoadResult loadResult = await ShareSnapshotService.LoadAsync(
                 endpoint.Host,
-                endpoint.BaseUri.Port);
+                endpoint.BaseUri.Port,
+                coreEndpoint: endpoint.BaseUri.AbsoluteUri);
 
             ShareSnapshotComparisonReport report = await Task.Run(() =>
                 ShareSnapshotService.Compare(
@@ -1682,6 +1683,7 @@ public sealed partial class MainWindow : Window
             ShareSnapshotDiffDialog dialog = new(
                 report,
                 currentSnapshot,
+                endpoint.BaseUri.AbsoluteUri,
                 loadResult.ErrorMessage);
 
             bool baselineSaved = await dialog.ShowDialog<bool>(this);

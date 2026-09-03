@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AJCC.Core.Models;
+using AJCC.Core.Protocol;
 
 namespace AJCC.Core.Services;
 
@@ -18,9 +19,12 @@ public static partial class ShareSnapshotService
     public static async Task<ShareSnapshotLoadResult> LoadAsync(
         string coreHost,
         int corePort,
-        string? storageRoot = null)
+        string? storageRoot = null,
+        string? coreEndpoint = null)
     {
-        string storagePath = GetStoragePath(coreHost, corePort, storageRoot);
+        string storagePath = string.IsNullOrWhiteSpace(coreEndpoint)
+            ? GetStoragePath(coreHost, corePort, storageRoot)
+            : GetStoragePath(coreEndpoint, storageRoot);
         if (!File.Exists(storagePath))
         {
             return new ShareSnapshotLoadResult
@@ -70,12 +74,14 @@ public static partial class ShareSnapshotService
 
     public static async Task SaveAsync(
         ShareSnapshotDocument snapshot,
-        string? storageRoot = null)
+        string? storageRoot = null,
+        string? coreEndpoint = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        string storagePath =
-            GetStoragePath(snapshot.CoreHost, snapshot.CorePort, storageRoot);
+        string storagePath = string.IsNullOrWhiteSpace(coreEndpoint)
+            ? GetStoragePath(snapshot.CoreHost, snapshot.CorePort, storageRoot)
+            : GetStoragePath(coreEndpoint, storageRoot);
         string? folder = Path.GetDirectoryName(storagePath);
         if (string.IsNullOrWhiteSpace(folder))
         {
@@ -118,6 +124,20 @@ public static partial class ShareSnapshotService
 
             throw;
         }
+    }
+
+    public static string GetStoragePath(
+        string coreEndpoint,
+        string? storageRoot = null)
+    {
+        string folder = string.IsNullOrWhiteSpace(storageRoot)
+            ? BuildDefaultSnapshotFolder()
+            : Path.GetFullPath(storageRoot);
+
+        string identity = CoreEndpoint.Parse(coreEndpoint).BaseUri.AbsoluteUri;
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        string token = Convert.ToHexString(hash.AsSpan(0, 10)).ToLowerInvariant();
+        return Path.Combine(folder, $"share-snapshot-{token}.json.gz");
     }
 
     public static string GetStoragePath(
