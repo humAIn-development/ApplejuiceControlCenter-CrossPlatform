@@ -224,14 +224,13 @@ public sealed partial class CoreProfileManagerDialog : Window
             return false;
         }
 
-        string hostForUri = host.Contains(":", StringComparison.Ordinal)
-            && !host.StartsWith("[", StringComparison.Ordinal)
-            ? $"[{host}]"
-            : host;
         string endpoint;
         try
         {
-            endpoint = CoreProfileStore.NormalizeEndpoint($"http://{hostForUri}:{port}/");
+            endpoint = CoreProfileStore.RebuildEndpointHostAndPort(
+                row.Profile.Endpoint,
+                host,
+                port);
         }
         catch (Exception ex)
         {

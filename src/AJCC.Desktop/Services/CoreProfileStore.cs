@@ -147,6 +147,35 @@ public sealed class CoreProfileStore
         }
     }
 
+    public static string RebuildEndpointHostAndPort(
+        string existingEndpoint,
+        string? host,
+        int port)
+    {
+        if (port <= 0 || port > 65535)
+            throw new ArgumentOutOfRangeException(nameof(port));
+
+        string normalizedHost = (host ?? string.Empty).Trim();
+        if (normalizedHost.Length == 0)
+            throw new ArgumentException("Core-IP / Host fehlt.", nameof(host));
+
+        if (normalizedHost.Length > 2
+            && normalizedHost.StartsWith("[", StringComparison.Ordinal)
+            && normalizedHost.EndsWith("]", StringComparison.Ordinal))
+        {
+            normalizedHost = normalizedHost[1..^1];
+        }
+
+        CoreEndpoint existing = CoreEndpoint.Parse(existingEndpoint);
+        UriBuilder builder = new(existing.BaseUri)
+        {
+            Host = normalizedHost,
+            Port = port
+        };
+
+        return NormalizeEndpoint(builder.Uri.AbsoluteUri);
+    }
+
     private static CoreProfileStoreSnapshot Normalize(CoreProfileStoreSnapshot snapshot)
     {
         List<CoreProfileEntry> normalized = new();

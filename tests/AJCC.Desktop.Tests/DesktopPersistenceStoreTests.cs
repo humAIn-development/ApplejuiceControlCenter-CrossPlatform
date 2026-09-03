@@ -50,6 +50,24 @@ public sealed class DesktopPersistenceStoreTests
     }
 
     [TestMethod]
+    public void CoreProfileStore_RebuildEndpointHostAndPort_PreservesSchemeAndBasePath()
+    {
+        const string existing = "https://Example.test:9851/CoreA/";
+
+        string unchanged = CoreProfileStore.RebuildEndpointHostAndPort(
+            existing,
+            "example.test",
+            9851);
+        string moved = CoreProfileStore.RebuildEndpointHostAndPort(
+            existing,
+            "proxy.example",
+            9951);
+
+        Assert.AreEqual("https://example.test:9851/CoreA/", unchanged);
+        Assert.AreEqual("https://proxy.example:9951/CoreA/", moved);
+    }
+
+    [TestMethod]
     public void UiPreferencesStore_SavePreservesDownloadSortState()
     {
         string root = CreateTempDirectory();
