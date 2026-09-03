@@ -456,7 +456,16 @@
                     </Grid.ContextMenu>
                     <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
-                    <TextBlock Grid.Column="2" Text="{Binding ProgressText}" />
+                    <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                      <controls:AppleProgressBar Percent="{Binding ProgressPercent}"
+                                                 Height="14"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 ToolTip.Tip="{Binding ProgressText}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ProgressText}"
+                                 VerticalAlignment="Center" />
+                    </Grid>
                     <TextBlock Grid.Column="3" Text="{Binding SourceCountText}" />
                     <TextBlock Grid.Column="4" Text="{Binding DownloadSpeedText}" />
                     <TextBlock Grid.Column="5" Text="{Binding PowerDownloadText}" />
@@ -573,7 +582,16 @@
                   <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding StatusText}" />
-                  <TextBlock Grid.Column="3" Text="{Binding ProgressPercentText}" />
+                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                    <controls:AppleProgressBar Percent="{Binding ProgressPercent}"
+                                               Height="14"
+                                               Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               ToolTip.Tip="{Binding ProgressPercentText}" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding ProgressPercentText}"
+                               VerticalAlignment="Center" />
+                  </Grid>
                   <TextBlock Grid.Column="4" Text="{Binding SpeedText}" />
                   <controls:UploadSpeedSparkline Grid.Column="5"
                                                  Values="{Binding SpeedHistory}"
@@ -604,7 +622,16 @@
                 <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*" Margin="8,6">
                   <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Grid.Column="2" Text="{Binding ProgressPercentText}" />
+                  <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                    <controls:AppleProgressBar Percent="{Binding ProgressPercent}"
+                                               Height="14"
+                                               Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               ToolTip.Tip="{Binding ProgressPercentText}" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding ProgressPercentText}"
+                               VerticalAlignment="Center" />
+                  </Grid>
                   <TextBlock Grid.Column="3" Text="{Binding LastConnectionText}" />
                 </Grid>
               </DataTemplate>
