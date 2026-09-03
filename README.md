@@ -18,6 +18,7 @@ Build one AJCC desktop client for Windows, Linux and macOS while keeping the App
 - `src/AJCC.Desktop` — Avalonia desktop UI for Windows, Linux and macOS
 - `src/AJCC.Platform` — reserved boundary for platform-specific integration that cannot remain portable
 - `tests/AJCC.Core.Tests` — regression tests for the platform-neutral Core layer
+- `tests/AJCC.Desktop.Tests` — headless cross-platform tests for persistent Desktop services
 - `docs` — architecture, migration, compatibility and milestone notes
 
 `AJCC.Core` must not depend on WPF, WinForms, the Windows registry, Win32 UI APIs or Avalonia.
@@ -28,7 +29,7 @@ FirstLight now covers the major productive AJCC workflows, including Core connec
 
 Core passwords remain transient and are deliberately not persisted. UI preferences that are safe to persist are stored under the AJCC-X settings area.
 
-The controlled historical reverse backfill has reached the earliest reliably documented productive boundary. The current validated branch head is `f4a8a8d1e4f72b74c9f1703bb30b1b6216e925aa`; CI #504 / run `33730438961` passed Restore, Build and AJCC.Core.Tests on Ubuntu, macOS and Windows.
+The controlled historical reverse backfill has reached the earliest reliably documented productive boundary. The current validated runtime/test head is `3f7b135a431aed30d6a40d1321670fb05ad31819`; CI #517 / run `33736965594` passed Restore, Release Build, 230 Core tests and 3 headless Desktop-service tests on Ubuntu, macOS and Windows. The release build remains warning-free, CI identifies the exact PR source head, persistent Desktop JSON settings use atomic replacement, and persisted startup arguments are privacy-sanitized.
 
 Installer/packaging and merge-to-`main` are separate later decisions and are not implied by the current FirstLight checkpoint.
 

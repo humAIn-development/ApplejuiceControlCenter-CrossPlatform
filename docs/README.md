@@ -6,7 +6,7 @@ This directory holds architecture, migration, protocol and platform notes for th
 
 - `FirstLight-v0.0.2.md` — chronological FirstLight development record, Core/UI boundary decisions, compatibility rules, live-validation history and the current v0.0.2 checkpoint
 
-AJCC-X is currently on **v0.0.2 — FirstLight**. The controlled productive-semantic reverse backfill has reached the earliest reliably documented boundary; further work proceeds from current product parity and release hardening rather than invented older version labels.
+AJCC-X is currently on **v0.0.2 — FirstLight**. The controlled productive-semantic reverse backfill has reached the earliest reliably documented boundary. Release hardening now validates the exact PR source head on Ubuntu, Windows and macOS with a warning-free Release build, 230 Core tests and 3 headless Desktop-service persistence tests per operating system.
 
 ## Foundation documents
 
