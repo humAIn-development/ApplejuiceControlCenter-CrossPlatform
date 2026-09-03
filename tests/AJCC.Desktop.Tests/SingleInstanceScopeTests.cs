@@ -17,18 +17,21 @@ public sealed class SingleInstanceScopeTests
             "BuildUserScopedName",
             BindingFlags.Static | BindingFlags.NonPublic,
             binder: null,
-            types: new[] { typeof(string), typeof(string), typeof(string) },
+            types: new[] { typeof(string), typeof(string), typeof(string), typeof(string) },
             modifiers: null)!;
 
         const string baseName = "AJCC.Instance";
-        string first = Invoke(method, baseName, "alice", "/home/alice");
-        string same = Invoke(method, baseName, "alice", "/home/alice");
-        string otherUser = Invoke(method, baseName, "bob", "/home/bob");
-        string otherScope = Invoke(method, baseName, "alice", "/srv/alice");
+        string first = Invoke(method, baseName, "alice", "/home/alice", "windows-standard");
+        string same = Invoke(method, baseName, "alice", "/home/alice", "windows-standard");
+        string otherUser = Invoke(method, baseName, "bob", "/home/bob", "windows-standard");
+        string otherScope = Invoke(method, baseName, "alice", "/srv/alice", "windows-standard");
+        string otherSecurityScope =
+            Invoke(method, baseName, "alice", "/home/alice", "windows-privileged");
 
         Assert.AreEqual(first, same);
         Assert.AreNotEqual(first, otherUser);
         Assert.AreNotEqual(first, otherScope);
+        Assert.AreNotEqual(first, otherSecurityScope);
         Assert.IsTrue(first.StartsWith(baseName + ".", StringComparison.Ordinal));
         Assert.IsFalse(first.Contains("alice", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(first.Contains("/home/alice", StringComparison.Ordinal));
@@ -41,8 +44,9 @@ public sealed class SingleInstanceScopeTests
         MethodInfo method,
         string baseName,
         string userName,
-        string userScopeRoot)
+        string userScopeRoot,
+        string securityScope)
         => (string)method.Invoke(
             null,
-            new object?[] { baseName, userName, userScopeRoot })!;
+            new object?[] { baseName, userName, userScopeRoot, securityScope })!;
 }

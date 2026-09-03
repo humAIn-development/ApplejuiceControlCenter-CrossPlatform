@@ -139,13 +139,22 @@ internal sealed class AjSingleInstanceService : IDisposable
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         }
 
-        return BuildUserScopedName(baseName, Environment.UserName, userScopeRoot);
+        string securityScope = OperatingSystem.IsWindows()
+            ? (Environment.IsPrivilegedProcess ? "windows-privileged" : "windows-standard")
+            : "user";
+
+        return BuildUserScopedName(
+            baseName,
+            Environment.UserName,
+            userScopeRoot,
+            securityScope);
     }
 
     internal static string BuildUserScopedName(
         string baseName,
         string? userName,
-        string? userScopeRoot)
+        string? userScopeRoot,
+        string? securityScope)
     {
         if (string.IsNullOrWhiteSpace(baseName))
             throw new ArgumentException("IPC-Basisname fehlt.", nameof(baseName));
@@ -153,7 +162,9 @@ internal sealed class AjSingleInstanceService : IDisposable
         string identity =
             (userName ?? string.Empty).Trim()
             + "\n"
-            + (userScopeRoot ?? string.Empty).Trim();
+            + (userScopeRoot ?? string.Empty).Trim()
+            + "\n"
+            + (securityScope ?? string.Empty).Trim();
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
         string token =
             Convert.ToHexString(hash.AsSpan(0, 12)).ToLowerInvariant();
