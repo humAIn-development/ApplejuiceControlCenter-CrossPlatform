@@ -12,7 +12,10 @@ internal static class AtomicTextFile
         string fullPath = Path.GetFullPath(path);
         string? directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(directory))
+        {
             Directory.CreateDirectory(directory);
+            LocalDataPermissions.RestrictDirectoryBestEffort(directory);
+        }
 
         string temporaryPath = fullPath + ".tmp";
         try
@@ -24,14 +27,17 @@ internal static class AtomicTextFile
                 FileShare.None,
                 bufferSize: 4096,
                 FileOptions.WriteThrough))
-            using (StreamWriter writer = new(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
             {
+                LocalDataPermissions.RestrictFileBestEffort(temporaryPath);
+                using StreamWriter writer =
+                    new(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 writer.Write(content);
                 writer.Flush();
                 stream.Flush(flushToDisk: true);
             }
 
             File.Move(temporaryPath, fullPath, overwrite: true);
+            LocalDataPermissions.RestrictFileBestEffort(fullPath);
         }
         catch
         {

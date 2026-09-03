@@ -146,6 +146,7 @@ internal static class StartupDiagnostics
     {
         string folder = GetDiagnosticsFolder();
         Directory.CreateDirectory(folder);
+        LocalDataPermissions.RestrictDirectoryBestEffort(folder);
         string path = Path.Combine(folder, "startup-diagnostics.log");
 
         lock (Sync)
@@ -159,6 +160,7 @@ internal static class StartupDiagnostics
             }
 
             File.AppendAllText(path, content, Encoding.UTF8);
+            LocalDataPermissions.RestrictFileBestEffort(path);
         }
     }
 
@@ -166,13 +168,16 @@ internal static class StartupDiagnostics
     {
         string folder = GetDiagnosticsFolder();
         Directory.CreateDirectory(folder);
+        LocalDataPermissions.RestrictDirectoryBestEffort(folder);
 
         lock (Sync)
         {
+            string path = Path.Combine(folder, "startup-error.log");
             File.WriteAllText(
-                Path.Combine(folder, "startup-error.log"),
+                path,
                 content,
                 Encoding.UTF8);
+            LocalDataPermissions.RestrictFileBestEffort(path);
         }
     }
 

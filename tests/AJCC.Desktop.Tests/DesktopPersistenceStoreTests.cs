@@ -27,6 +27,16 @@ public sealed class DesktopPersistenceStoreTests
             Assert.IsTrue(store.TrySave(new[] { profile }, profile.Id, out string error), error);
             Assert.IsFalse(File.Exists(path + ".tmp"));
 
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.AreEqual(
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite,
+                    File.GetUnixFileMode(path));
+                Assert.AreEqual(
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+                    File.GetUnixFileMode(root));
+            }
+
             CoreProfileStoreSnapshot loaded = store.Load();
             Assert.AreEqual(1, loaded.Profiles.Count);
             Assert.AreEqual("core-one", loaded.DefaultProfileId);
