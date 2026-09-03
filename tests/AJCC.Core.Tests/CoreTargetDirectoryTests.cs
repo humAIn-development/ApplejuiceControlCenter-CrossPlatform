@@ -25,7 +25,7 @@ public sealed class CoreTargetDirectoryTests
         Assert.IsTrue(result.Changed);
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("/tmp/foo")]
     [DataRow("\\server\\share")]
     [DataRow("C:\\Incoming\\foo")]
@@ -55,7 +55,7 @@ public sealed class CoreTargetDirectoryTests
         Assert.IsTrue(result.Changed);
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("C:\\AJMULTI\\Core1\\incoming", '\\')]
     [DataRow("/home/user/applejuice/incoming", '/')]
     public void Separator_IsDerivedFromCorePath(string path, char expected)
@@ -83,7 +83,7 @@ public sealed class CoreTargetDirectoryTests
         Assert.IsTrue(result.Changed);
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("/home/user/applejuice/incoming/Serie")]
     [DataRow(@"C:\AJMULTI\Core1\incoming\Serie")]
     public void ExistingCoreDirectory_RejectsAbsolutePath(string value)

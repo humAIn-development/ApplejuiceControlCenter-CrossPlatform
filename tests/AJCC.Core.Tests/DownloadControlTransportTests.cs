@@ -49,7 +49,7 @@ public sealed class DownloadControlTransportTests
         Assert.IsFalse(query.Contains("secret", StringComparison.Ordinal));
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("Serien/Staffel 01", "Serien/Staffel+01")]
     [DataRow("Serien\\Staffel 01", "Serien\\Staffel+01")]
     public async Task SetTargetDir_PreservesDirectorySeparatorsForOldCore(string target, string expectedEncodedTarget)

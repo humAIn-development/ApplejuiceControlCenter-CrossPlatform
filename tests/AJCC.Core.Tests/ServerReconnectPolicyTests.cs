@@ -86,7 +86,7 @@ public sealed class ServerReconnectPolicyTests
         Assert.AreEqual(ServerReconnectPolicy.RestrictionWindow, result.RecommendedWait);
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("you have to wait 30 minutes until reconnect")]
     [DataRow("WAIT before RECONNECT")]
     [DataRow("reconnect in 12 minuten")]
@@ -103,7 +103,7 @@ public sealed class ServerReconnectPolicyTests
         Assert.IsFalse(ServerReconnectPolicy.LooksLikeRestrictionResponse(null));
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("reconnect in 12 minutes", 12)]
     [DataRow("noch 7 minuten bis reconnect", 7)]
     [DataRow("wait 45 minutes until reconnect", 30)]

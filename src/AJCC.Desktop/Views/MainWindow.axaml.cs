@@ -74,7 +74,12 @@ public sealed partial class MainWindow : Window
         int SourceCandidateCount,
         int SourceErrorCount);
 
-    public MainWindow(AjStartupImportRequest? startupRequest = null)
+    public MainWindow()
+        : this(null)
+    {
+    }
+
+    public MainWindow(AjStartupImportRequest? startupRequest)
     {
         InitializeComponent();
         ApplyDownloadStatusColors(_downloadStatusColorConfigurationStore.Load());

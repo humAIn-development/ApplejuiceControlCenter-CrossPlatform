@@ -772,7 +772,7 @@
                   <TextBox Grid.Column="1"
                            MinWidth="180"
                            Text="{Binding SearchResultFilterText}"
-                           Watermark="Dateiname, Checksum, Quelle, Größe oder ID" />
+                           PlaceholderText="Dateiname, Checksum, Quelle, Größe oder ID" />
                   <Button Grid.Column="2"
                           MinWidth="34"
                           Margin="6,0,8,0"
