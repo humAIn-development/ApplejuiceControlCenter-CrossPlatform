@@ -1,4 +1,5 @@
 using System.Text;
+using AJCC.Core.Services;
 
 namespace AJCC.Desktop.Services;
 
@@ -23,7 +24,11 @@ internal static class StartupDiagnostics
                 $"Phase={_phase} {message}";
 
             if (args is not null)
-                line += " Args=" + string.Join(" | ", args);
+            {
+                line += " Args=" + string.Join(
+                    " | ",
+                    args.Select(static arg => DiagnosticPrivacySanitizer.Sanitize(arg ?? string.Empty)));
+            }
 
             AppendDiagnostic(line + Environment.NewLine);
         }
