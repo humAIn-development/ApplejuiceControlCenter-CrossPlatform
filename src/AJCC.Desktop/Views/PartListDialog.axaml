@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.PartListDialog"
+        Title="Partliste Download"
+        Width="860"
+        Height="420"
+        MinWidth="620"
+        MinHeight="300"
+        WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18">
+    <TextBlock x:Name="FileNameText"
+               FontSize="16"
+               FontWeight="SemiBold"
+               TextTrimming="CharacterEllipsis" />
+
+    <TextBlock x:Name="SummaryText"
+               Grid.Row="1"
+               Classes="muted"
+               Margin="0,7,0,0"
+               TextWrapping="Wrap" />
+
+    <ScrollViewer Grid.Row="2"
+                  Margin="0,14,0,14"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <WrapPanel x:Name="SegmentsPanel"
+                 Orientation="Horizontal" />
+    </ScrollViewer>
+
+    <Button Grid.Row="3"
+            HorizontalAlignment="Right"
+            MinWidth="100"
+            Content="Schließen"
+            Click="CloseButton_OnClick" />
+  </Grid>
+</Window>

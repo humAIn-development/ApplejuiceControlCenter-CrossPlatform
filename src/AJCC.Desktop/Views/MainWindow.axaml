@@ -1,0 +1,991 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AJCC.Desktop.ViewModels"
+        xmlns:models="using:AJCC.Core.Models"
+        xmlns:controls="using:AJCC.Desktop.Controls"
+        xmlns:services="using:AJCC.Desktop.Services"
+        xmlns:views="using:AJCC.Desktop.Views"
+        x:Class="AJCC.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Applejuice-Control-Center X — FirstLight"
+        Width="1280"
+        Height="820"
+        MinWidth="1000"
+        MinHeight="680">
+
+  <Window.Resources>
+    <services:DownloadStatusRuleMatchConverter x:Key="DownloadStatusRuleMatchConverter" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.connectionDot.offline, TextBlock.connectionState.offline">
+      <Setter Property="Foreground" Value="{DynamicResource AjMuted}" />
+    </Style>
+    <Style Selector="TextBlock.connectionDot.online, TextBlock.connectionState.online">
+      <Setter Property="Foreground" Value="{DynamicResource AjGood}" />
+    </Style>
+    <Style Selector="Border.connectionBadge.online">
+      <Setter Property="BorderBrush" Value="{DynamicResource AjGood}" />
+    </Style>
+    <Style Selector="TextBlock.coreProfileReachability.reachable">
+      <Setter Property="Foreground" Value="{DynamicResource AjGood}" />
+    </Style>
+    <Style Selector="TextBlock.coreProfileReachability.unreachable">
+      <Setter Property="Foreground" Value="{DynamicResource AjBad}" />
+    </Style>
+    <Style Selector="StackPanel.coreProfileItem.unreachable">
+      <Setter Property="Opacity" Value="0.55" />
+    </Style>
+    <Style Selector="Grid.searchResultRow.existingDownload">
+      <Setter Property="Background" Value="#382A12" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow">
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status0">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus0Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status0 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus0Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status0">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus0SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status0 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status1">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus1Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status1 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus1Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status1">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus1SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status1 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status12">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus12Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status12 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus12Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status12">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus12SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status12 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status13">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus13Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status13 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus13Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status13">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus13SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status13 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status14">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus14Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status14 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus14Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status14">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus14SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status14 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status15">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus15Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status15 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus15Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status15">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus15SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status15 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status16">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus16Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status16 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus16Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status16">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus16SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status16 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status17">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus17Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status17 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus17Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status17">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus17SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status17 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status18">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatus18Background}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.status18 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatus18Foreground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status18">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatus18SelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.status18 TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.other">
+      <Setter Property="Background" Value="{DynamicResource DownloadStatusOtherBackground}" />
+    </Style>
+    <Style Selector="Border.downloadStatusRow.other TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DownloadStatusOtherForeground}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.other">
+      <Setter Property="Background" Value="{DynamicResource AjSelection}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DownloadStatusOtherSelectionBorder}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected Border.downloadStatusRow.other TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AjText}" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="14">
+    <Border Grid.Row="0"
+            Classes="panel"
+            Padding="10">
+      <Grid RowDefinitions="Auto" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+        <Border Grid.Column="0"
+                Classes="connectionBadge"
+                Classes.online="{Binding IsConnected}"
+                Margin="0,0,14,0">
+          <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+            <TextBlock Text="●"
+                       Classes="connectionDot"
+                       Classes.online="{Binding IsConnected}"
+                       Classes.offline="{Binding IsDisconnected}"
+                       FontSize="12"
+                       VerticalAlignment="Center" />
+            <TextBlock Classes="muted" Text="CORE" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ConnectionStateText}"
+                       Classes="connectionState"
+                       Classes.online="{Binding IsConnected}"
+                       Classes.offline="{Binding IsDisconnected}"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Spacing="8">
+          <TextBlock Text="Core:"
+                     Classes="muted"
+                     VerticalAlignment="Center" />
+          <ComboBox x:Name="CoreProfileComboBox"
+                    Width="250"
+                    IsEnabled="{Binding CanToggleConnection}"
+                    SelectionChanged="CoreProfileComboBox_OnSelectionChanged"
+                    DropDownOpened="CoreProfileComboBox_OnDropDownOpened"
+                    ToolTip.Tip="Gespeichertes Core-Profil auswählen. Grüne Profile sind erreichbar; rote Profile bleiben bis zur nächsten erfolgreichen Prüfung gesperrt.">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="services:CoreProfileEntry">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6"
+                            Classes="coreProfileItem"
+                            Classes.unreachable="{Binding IsUnreachable}"
+                            IsEnabled="{Binding IsSelectable}">
+                  <TextBlock Width="14"
+                             TextAlignment="Center"
+                             Classes="coreProfileReachability"
+                             Classes.reachable="{Binding IsReachable}"
+                             Classes.unreachable="{Binding IsUnreachable}"
+                             Text="{Binding ReachabilityLabel}"
+                             ToolTip.Tip="{Binding ReachabilityText}" />
+                  <TextBlock Text="{Binding Name}"
+                             TextTrimming="CharacterEllipsis"
+                             ToolTip.Tip="{Binding ReachabilityText}" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Button Content="Wechseln"
+                  MinWidth="96"
+                  IsEnabled="{Binding IsConnected}"
+                  Click="SwitchCoreProfileButton_OnClick"
+                  ToolTip.Tip="Verbindung kontrolliert auf das ausgewählte Core-Profil umschalten." />
+          <Button Content="Profile..."
+                  MinWidth="96"
+                  IsEnabled="{Binding CanToggleConnection}"
+                  Click="ManageCoreProfilesButton_OnClick"
+                  ToolTip.Tip="Core-Profile anlegen, bearbeiten, löschen und das Standardprofil festlegen." />
+        </StackPanel>
+
+        <Button Grid.Column="2"
+                MinWidth="120"
+                Margin="10,0,10,0"
+                Content="Einstellungen…"
+                Click="SettingsButton_OnClick" />
+
+        <Button Grid.Column="3"
+                MinWidth="120"
+                Margin="0,0,10,0"
+                Content="Diagnose-ZIP"
+                Click="DiagnosticZipButton_OnClick"
+                ToolTip.Tip="Anonymisiertes Diagnosepaket als ZIP speichern." />
+
+        <Button Grid.Column="4"
+                Classes="primary"
+                MinWidth="120"
+                IsEnabled="{Binding CanToggleConnection}"
+                Content="{Binding ConnectButtonText}"
+                Click="ConnectButton_OnClick" />
+
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*,*,*" Margin="0,10,0,10">
+      <Border Grid.Column="0" Classes="metric" Margin="0,0,5,0">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="metricLabel" Text="Core" />
+          <TextBlock Classes="metricValue" Text="{Binding CoreNick}" />
+          <TextBlock Classes="muted" Text="{Binding CoreVersion}" FontSize="12" />
+          <Button Content="Website"
+                  HorizontalAlignment="Left"
+                  Margin="0,4,0,0"
+                  Padding="8,2"
+                  Click="OfficialProjectWebsiteButton_OnClick"
+                  ToolTip.Tip="Öffnet die offizielle Applejuice-Control-Center-Webseite im Standardbrowser." />
+          <Button Content="Feedback"
+                  HorizontalAlignment="Left"
+                  Margin="0,4,0,0"
+                  Padding="8,2"
+                  Click="FeedbackButton_OnClick"
+                  ToolTip.Tip="Feedback direkt aus AJCC-X senden." />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1" Classes="metric" Margin="5,0">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="metricLabel" Text="Netzwerk" />
+          <TextBlock Classes="metricValue" Text="{Binding NetworkUsersText, StringFormat='{}{0} Nutzer'}" />
+          <TextBlock Classes="muted" Text="{Binding NetworkFilesText, StringFormat='{}{0} Dateien'}" FontSize="12" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="2" Classes="metric" Margin="5,0">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="metricLabel" Text="Credits" />
+          <TextBlock Classes="metricValue" Text="{Binding CreditsText}" />
+          <TextBlock Classes="muted" Text="Core-Credits" FontSize="12" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="3" Classes="metric" Margin="5,0">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="metricLabel" Text="Download" />
+          <TextBlock Classes="metricValue" Text="{Binding DownloadSpeedText}" />
+          <TextBlock Classes="muted" Text="{Binding DownloadCountText, StringFormat='{}{0} Einträge'}" FontSize="12" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="4" Classes="metric" Margin="5,0">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="metricLabel" Text="Upload" />
+          <TextBlock Classes="metricValue" Text="{Binding UploadSpeedText}" />
+          <TextBlock Classes="muted" Text="{Binding UploadCountText, StringFormat='{}{0} Einträge'}" FontSize="12" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="5" Classes="metric" Margin="5,0,0,0">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="metricLabel" Text="Core-Listen" />
+          <TextBlock Classes="metricValue" Text="{Binding ServerCountText, StringFormat='{}{0} Server'}" />
+          <TextBlock Classes="muted" Text="{Binding SearchCountText, StringFormat='{}{0} Suchen'}" FontSize="12" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <TabControl x:Name="MainTabControl"
+                Grid.Row="2"
+                SelectionChanged="MainTabControl_OnSelectionChanged">
+      <TabItem Header="Downloads">
+        <Grid RowDefinitions="Auto,Auto,*,8,240"
+              ColumnDefinitions="*,320"
+              Margin="0,8,0,0">
+          <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="panel" Padding="8" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+              <TextBlock Grid.Column="0"
+                         Classes="muted"
+                         Text="Auswahl"
+                         Margin="2,0,10,0"
+                         VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding SelectedDownloadText}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <Button Grid.Column="2"
+                      MinWidth="96"
+                      Margin="8,0,0,0"
+                      Content="Pausieren"
+                      IsEnabled="{Binding CanPauseSelectedDownload}"
+                      Click="PauseDownloadButton_OnClick" />
+              <Button Grid.Column="3"
+                      Classes="primary"
+                      MinWidth="106"
+                      Margin="8,0,0,0"
+                      Content="Fortsetzen"
+                      IsEnabled="{Binding CanResumeSelectedDownload}"
+                      Click="ResumeDownloadButton_OnClick" />
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="tableHeader">
+            <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*">
+              <TextBlock Text="{Binding DownloadFileSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadFileSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Dateiname sortieren" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding DownloadStatusSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadStatusSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Status sortieren" />
+              <TextBlock Grid.Column="2"
+                         Text="{Binding DownloadProgressSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadProgressSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Fortschritt sortieren" />
+              <TextBlock Grid.Column="3"
+                         Text="{Binding DownloadSourcesSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadSourcesSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Quellen sortieren" />
+              <TextBlock Grid.Column="4"
+                         Text="{Binding DownloadSpeedSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadSpeedSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Geschwindigkeit sortieren" />
+              <TextBlock Grid.Column="5"
+                         Text="{Binding DownloadPowerSortHeader}"
+                         FontWeight="SemiBold"
+                         PointerPressed="DownloadPowerSortHeader_OnPointerPressed"
+                         ToolTip.Tip="Nach Powerdownload sortieren" />
+            </Grid>
+          </Border>
+          <ListBox x:Name="DownloadsList"
+                   Grid.Row="2"
+                   Grid.ColumnSpan="2"
+                   MinHeight="150"
+                   SelectionMode="Multiple"
+                   ItemsSource="{Binding Downloads}"
+                   SelectedItem="{Binding SelectedDownload}"
+                   SelectionChanged="DownloadsList_OnSelectionChanged">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjDownload">
+                <Border Classes="downloadStatusRow"
+                        Classes.status0="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=0}"
+                        Classes.status1="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=1}"
+                        Classes.status12="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=12}"
+                        Classes.status13="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=13}"
+                        Classes.status14="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=14}"
+                        Classes.status15="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=15}"
+                        Classes.status16="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=16}"
+                        Classes.status17="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=17}"
+                        Classes.status18="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=18}"
+                        Classes.other="{Binding Status, Converter={StaticResource DownloadStatusRuleMatchConverter}, ConverterParameter=-1}">
+                  <Grid ColumnDefinitions="4*,1.2*,1.2*,1.2*,1.2*,0.8*"
+                        Margin="8,6"
+                        PointerPressed="DownloadRow_OnPointerPressed"
+                        ContextRequested="DownloadRow_OnContextRequested">
+                    <Grid.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Pausieren" Click="DownloadContextPause_OnClick" />
+                        <MenuItem Header="Fortsetzen" Click="DownloadContextResume_OnClick" />
+                        <MenuItem Header="Download abbrechen…" Click="DownloadContextCancel_OnClick" />
+                        <MenuItem Header="Fertige/abgebrochene Downloads entfernen" Click="DownloadContextClean_OnClick" />
+                        <MenuItem Header="Queue-Priorität"
+                                  ToolTip.Tip="Prioritätsgruppe der Download-Queue. Ausschließen verhindert automatische Pause-/Fortsetzen-Kommandos.">
+                          <MenuItem Header="Hoch" Click="DownloadContextQueuePriorityHigh_OnClick" />
+                          <MenuItem Header="Normal (Standard)" Click="DownloadContextQueuePriorityNormal_OnClick" />
+                          <MenuItem Header="Niedrig" Click="DownloadContextQueuePriorityLow_OnClick" />
+                          <MenuItem Header="Von Automatik ausschließen" Click="DownloadContextQueuePriorityExcluded_OnClick" />
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Header="Umbenennen…" Click="DownloadContextRename_OnClick" />
+                        <MenuItem Header="Zielverzeichnis setzen…" Click="DownloadContextSetTargetDirectory_OnClick" />
+                        <MenuItem Header="Powerdownload setzen…" Click="DownloadContextSetPowerDownload_OnClick" />
+                        <MenuItem Header="Powerdownload löschen" Click="DownloadContextClearPowerDownload_OnClick" />
+                        <Separator />
+                        <MenuItem Header="AJFSP-Link kopieren" Click="DownloadContextCopyAjfsp_OnClick" />
+                        <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="DownloadContextCopyAjfspWithSource_OnClick" />
+                        <MenuItem Header="Dateiname kopieren" Click="DownloadContextCopyFilename_OnClick" />
+                        <MenuItem Header="Hash kopieren" Click="DownloadContextCopyHash_OnClick" />
+                        <MenuItem Header="ID kopieren" Click="DownloadContextCopyId_OnClick" />
+                      </ContextMenu>
+                    </Grid.ContextMenu>
+                    <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
+                    <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                      <controls:AppleProgressBar Percent="{Binding ProgressPercent}"
+                                                 Height="14"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 ToolTip.Tip="{Binding ProgressText}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding ProgressText}"
+                                 VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Grid.Column="3" Text="{Binding SourceCountText}" />
+                    <TextBlock Grid.Column="4" Text="{Binding DownloadSpeedText}" />
+                    <TextBlock Grid.Column="5" Text="{Binding PowerDownloadText}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <GridSplitter Grid.Row="3"
+                        Grid.ColumnSpan="2"
+                        Height="8"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        ResizeDirection="Rows"
+                        ResizeBehavior="PreviousAndNext"
+                        ShowsPreview="True"
+                        Background="{DynamicResource AjBorder}"
+                        Cursor="SizeNorthSouth"
+                        ToolTip.Tip="Downloadliste und Detailbereich in der Höhe anpassen." />
+
+          <Grid Grid.Row="4" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,320" MinHeight="120">
+          <StackPanel Grid.Row="0"
+                      Orientation="Horizontal"
+                      Spacing="12"
+                      Margin="4,10,0,6">
+            <TextBlock Text="Quellen zur markierten Datei"
+                       FontWeight="SemiBold" />
+            <TextBlock Classes="muted"
+                       Text="{Binding SelectedDownloadSourcesText}" />
+          </StackPanel>
+
+          <Border Grid.Row="1" Classes="tableHeader">
+            <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*">
+              <TextBlock Text="Nutzer" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Queue" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Größe" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="4" Text="Geladen" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Geschwindigkeit" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="6" Text="Fortschritt" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+
+          <ListBox x:Name="DownloadSourcesList"
+                   Grid.Row="2"
+                   ItemsSource="{Binding SelectedDownloadSources}"
+                   SelectionMode="Single"
+                   SelectionChanged="DownloadSourcesList_OnSelectionChanged">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjUserSource">
+                <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*" Margin="8,6">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Nick kopieren" Click="DownloadSourceContextCopyNick_OnClick" />
+                      <MenuItem Header="Dateiname kopieren" Click="DownloadSourceContextCopyFilename_OnClick" />
+                      <MenuItem Header="DownloadID kopieren" Click="DownloadSourceContextCopyDownloadId_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <TextBlock Text="{Binding NicknameText}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding StatusText}" />
+                  <TextBlock Grid.Column="2" Text="{Binding QueuePositionText}" />
+                  <TextBlock Grid.Column="3" Text="{Binding SizeText}" />
+                  <TextBlock Grid.Column="4" Text="{Binding AlreadyLoadedText}" />
+                  <TextBlock Grid.Column="5" Text="{Binding SpeedText}" />
+                  <TextBlock Grid.Column="6" Text="{Binding ProgressPercentText}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <Border Grid.Row="0"
+                  Grid.RowSpan="3"
+                  Grid.Column="1"
+                  Classes="panel"
+                  Margin="12,10,0,0"
+                  Padding="10">
+            <Grid RowDefinitions="Auto,Auto,*">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Partliste"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        MinWidth="96"
+                        Content="Aktualisieren"
+                        Click="EmbeddedPartListRefresh_OnClick" />
+              </Grid>
+
+              <TextBlock x:Name="EmbeddedPartListSummaryText"
+                         Grid.Row="1"
+                         Classes="muted"
+                         Margin="0,6,0,8"
+                         Text="Markiere einen Download, um die Partliste zu laden."
+                         TextWrapping="Wrap" />
+
+              <ScrollViewer Grid.Row="2"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Disabled">
+                <WrapPanel x:Name="EmbeddedPartListSegmentsPanel"
+                           Orientation="Horizontal" />
+              </ScrollViewer>
+            </Grid>
+          </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Uploads">
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,*" Margin="0,8,0,0">
+          <TextBlock Grid.Row="0"
+                     Text="Aktive Uploads"
+                     FontWeight="SemiBold"
+                     Margin="4,0,0,6" />
+          <Border Grid.Row="1" Classes="tableHeader">
+            <Grid ColumnDefinitions="3.2*,1.4*,1.1*,1.1*,1.2*,1.8*">
+              <TextBlock Text="Datei" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Nutzer" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Status" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Fortschritt" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="4" Text="Geschwindigkeit" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Aktivität" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+          <ListBox Grid.Row="2" ItemsSource="{Binding ActiveUploads}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjUpload">
+                <Grid ColumnDefinitions="3.2*,1.4*,1.1*,1.1*,1.2*,1.8*" Margin="8,6">
+                  <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding StatusText}" />
+                  <Grid Grid.Column="3" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                    <controls:AppleProgressBar Percent="{Binding ProgressPercent}"
+                                               Height="14"
+                                               Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               ToolTip.Tip="{Binding ProgressPercentText}" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding ProgressPercentText}"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                  <TextBlock Grid.Column="4" Text="{Binding SpeedText}" />
+                  <controls:UploadSpeedSparkline Grid.Column="5"
+                                                 Values="{Binding SpeedHistory}"
+                                                 CurrentSpeed="{Binding Speed}"
+                                                 Height="18"
+                                                 MinHeight="18"
+                                                 VerticalAlignment="Center" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <TextBlock Grid.Row="3"
+                     Text="Inaktive Uploads"
+                     FontWeight="SemiBold"
+                     Margin="4,10,0,6" />
+          <Border Grid.Row="4" Classes="tableHeader">
+            <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*">
+              <TextBlock Text="Datei" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Nutzer" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Fortschritt" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Letzte Verbindung" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+          <ListBox Grid.Row="5" ItemsSource="{Binding InactiveUploads}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjUpload">
+                <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*" Margin="8,6">
+                  <TextBlock Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding Nick}" TextTrimming="CharacterEllipsis" />
+                  <Grid Grid.Column="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                    <controls:AppleProgressBar Percent="{Binding ProgressPercent}"
+                                               Height="14"
+                                               Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               ToolTip.Tip="{Binding ProgressPercentText}" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding ProgressPercentText}"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                  <TextBlock Grid.Column="3" Text="{Binding LastConnectionText}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Server">
+        <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+            <Button Classes="primary"
+                    MinWidth="128"
+                    Content="Mehr Server"
+                    IsEnabled="{Binding IsConnected}"
+                    Click="MoreServersButton_OnClick" />
+          </StackPanel>
+          <Border Grid.Row="1" Classes="tableHeader">
+            <Grid ColumnDefinitions="2.1*,2.1*,0.8*,1.2*,1.3*,1.2*">
+              <TextBlock Text="Name" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Host" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Port" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Status" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="4" Text="Verbindungsdauer" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Letzter Kontakt" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+          <ListBox Grid.Row="2" ItemsSource="{Binding Servers}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjServer">
+                <Grid ColumnDefinitions="2.1*,2.1*,0.8*,1.2*,1.3*,1.2*"
+                      Margin="8,6"
+                      ContextRequested="ServerRow_OnContextRequested">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Verbinden" Click="ServerContextLogin_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Server entfernen" Click="ServerContextRemove_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding HostDisplay}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding Port}" />
+                  <TextBlock Grid.Column="3" Text="{Binding ServerStatusText}" />
+                  <TextBlock Grid.Column="4" Text="{Binding ConnectionDurationText}" />
+                  <TextBlock Grid.Column="5" Text="{Binding LastSeen}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Suche">
+        <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+            <TextBox Grid.Column="0"
+                     Margin="0,0,8,0"
+                     PlaceholderText="Suchbegriff"
+                     Text="{Binding SearchText}" />
+            <Button Grid.Column="1"
+                    Classes="primary"
+                    MinWidth="100"
+                    Content="Suchen"
+                    IsEnabled="{Binding CanSearch}"
+                    Click="SearchButton_OnClick" />
+            <Button Grid.Column="2"
+                    MinWidth="130"
+                    Margin="8,0,0,0"
+                    Content="Suche entfernen"
+                    IsEnabled="{Binding CanRemoveSelectedSearch}"
+                    ToolTip.Tip="Entfernt die ausgewählte abgeschlossene Suche. Laufende Suchen bleiben erhalten."
+                    Click="RemoveSearchButton_OnClick" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="1.1*,2.2*">
+            <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,8,0">
+              <Border Grid.Row="0" Classes="tableHeader">
+                <Grid ColumnDefinitions="2*,1*,1*">
+                  <TextBlock Text="Suche" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="1" Text="Treffer" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="2" Text="Läuft" FontWeight="SemiBold" />
+                </Grid>
+              </Border>
+              <ListBox Grid.Row="1"
+                       ItemsSource="{Binding Searches}"
+                       SelectedItem="{Binding SelectedSearch}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="models:AjSearch">
+                    <Grid ColumnDefinitions="2*,1*,1*" Margin="8,6">
+                      <TextBlock Text="{Binding SearchText}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding FoundFiles}" />
+                      <TextBlock Grid.Column="2" Text="{Binding RunningText}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*" Margin="8,0,0,0">
+              <Border Grid.Row="0" Classes="tableHeader">
+                <Grid ColumnDefinitions="4*,1.2*,1.2*">
+                  <TextBlock Text="Trefferdatei" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="1" Text="Größe" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="2" Text="Nutzer" FontWeight="SemiBold" />
+                </Grid>
+              </Border>
+
+              <Border Grid.Row="1" Classes="panel" Padding="7" Margin="0,0,0,4">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <TextBlock Grid.Column="0"
+                             Classes="muted"
+                             Text="Auswahl"
+                             Margin="2,0,10,0"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding SelectedSearchEntryText}"
+                             TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center" />
+                  <Button Grid.Column="2"
+                          Classes="primary"
+                          MinWidth="170"
+                          Margin="8,0,0,0"
+                          Content="{Binding SelectedSearchEntryDownloadActionText}"
+                          IsEnabled="{Binding CanDownloadSelectedSearchEntry}"
+                          Click="DownloadSearchResultButton_OnClick" />
+                </Grid>
+              </Border>
+
+              <Border Grid.Row="2" Classes="panel" Padding="7" Margin="0,0,0,4">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <TextBlock Grid.Column="0"
+                             Classes="muted"
+                             Text="Vorhandene Treffer filtern:"
+                             Margin="2,0,8,0"
+                             VerticalAlignment="Center"
+                             ToolTip.Tip="Lokaler Filter für bereits vorhandene Suchtreffer. Startet keine neue Core-Suche." />
+                  <TextBox Grid.Column="1"
+                           MinWidth="180"
+                           Text="{Binding SearchResultFilterText}"
+                           PlaceholderText="Dateiname, Checksum, Quelle, Größe oder ID" />
+                  <Button Grid.Column="2"
+                          MinWidth="34"
+                          Margin="6,0,8,0"
+                          Content="X"
+                          ToolTip.Tip="Suchergebnisfilter löschen"
+                          Click="ClearSearchResultFilterButton_OnClick" />
+                  <TextBlock Grid.Column="3"
+                             Classes="muted"
+                             Text="{Binding SearchResultsSummaryText}"
+                             VerticalAlignment="Center" />
+                </Grid>
+              </Border>
+
+              <ListBox Grid.Row="3"
+                       ItemsSource="{Binding SelectedSearchEntries}"
+                       SelectedItem="{Binding SelectedSearchEntry}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="models:AjSearchEntry">
+                    <Grid ColumnDefinitions="4*,1.2*,1.2*"
+                          Classes="searchResultRow"
+                          Classes.existingDownload="{Binding IsExistingDownload}"
+                          ToolTip.Tip="{Binding ExistingDownloadToolTip}"
+                          Margin="8,6"
+                          ContextRequested="SearchResultRow_OnContextRequested">
+                      <Grid.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem Header="{Binding DownloadActionText}"
+                                    IsEnabled="{Binding CanImportAsDownload}"
+                                    Click="SearchResultContextDownload_OnClick" />
+                          <MenuItem Header="AJFSP-Link kopieren" Click="SearchResultContextCopyAjfsp_OnClick" />
+                          <Separator />
+                          <MenuItem Header="Dateiname kopieren" Click="SearchResultContextCopyFilename_OnClick" />
+                          <MenuItem Header="Größe kopieren" Click="SearchResultContextCopySize_OnClick" />
+                          <MenuItem Header="Checksum kopieren" Click="SearchResultContextCopyChecksum_OnClick" />
+                        </ContextMenu>
+                      </Grid.ContextMenu>
+                      <TextBlock Text="{Binding Filename}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding SizeText}" />
+                      <TextBlock Grid.Column="2" Text="{Binding FilenameUsers}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </Grid>
+        </Grid>
+      </TabItem>
+      <TabItem Header="Share">
+        <Grid RowDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+          <Border Grid.Row="0" Classes="panel" Padding="8" Margin="0,0,0,8">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <TextBlock Text="Share-Dateiliste" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" Text="{Binding ShareCountText}" />
+                <TextBlock Classes="muted" Text="{Binding ShareSizeText}" />
+                <TextBlock Classes="muted" Text="nur manuell geladen" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button MinWidth="150"
+                        Content="Freigaben anzeigen…"
+                        IsEnabled="{Binding IsConnected}"
+                        Click="ShareDirectoriesButton_OnClick" />
+                <Button MinWidth="130"
+                        Content="Share-Vergleich…"
+                        IsEnabled="{Binding IsConnected}"
+                        ToolTip.Tip="Vergleicht ausschließlich die bereits geladene Share-Dateiliste mit einer lokalen Vergleichsbasis."
+                        Click="ShareSnapshotDiffButton_OnClick" />
+                <Button MinWidth="100"
+                        Content="Neu laden"
+                        IsEnabled="{Binding IsConnected}"
+                        Click="ReloadSharesButton_OnClick" />
+              </StackPanel>
+
+              <Grid Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                    Margin="0,8,0,0">
+                <TextBlock Text="Filter"
+                           Classes="muted"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center" />
+                <TextBox x:Name="ShareFilterInput"
+                         Grid.Column="1"
+                         MinWidth="240"
+                         PlaceholderText="Dateiname, Pfad, Typ oder Checksum"
+                         KeyDown="ShareFilterInput_OnKeyDown" />
+                <Button Grid.Column="2"
+                        MinWidth="88"
+                        Margin="8,0,0,0"
+                        Content="Anwenden"
+                        IsEnabled="{Binding IsConnected}"
+                        Click="ShareFilterApplyButton_OnClick" />
+                <Button Grid.Column="3"
+                        MinWidth="36"
+                        Margin="6,0,0,0"
+                        Content="×"
+                        ToolTip.Tip="Share-Filter zurücksetzen"
+                        Click="ShareFilterClearButton_OnClick" />
+                <TextBlock x:Name="ShareFilterSummaryText"
+                           Grid.Column="4"
+                           Classes="muted"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="0 / 0 sichtbar" />
+              </Grid>
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="1" Classes="tableHeader">
+            <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*">
+              <TextBlock Text="ID" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="2" Text="Typ" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="3" Text="Pfad" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="4" Text="Größe" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="5" Text="Priorität" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="6" Text="Suchanfragen" FontWeight="SemiBold" />
+            </Grid>
+          </Border>
+
+          <ListBox x:Name="SharesList" Grid.Row="2" SelectionMode="Multiple" ItemsSource="{Binding VisibleShares}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:AjShareFile">
+                <Grid ColumnDefinitions="0.7*,3.2*,0.8*,2.2*,1.1*,0.8*,1*" Margin="8,6">
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="AJFSP-Link kopieren" Click="ShareContextCopyAjfsp_OnClick" />
+                      <MenuItem Header="AJFSP-Link mit Quelle kopieren" Click="ShareContextCopyAjfspWithSource_OnClick" />
+                      <MenuItem Header="AppleJuice-Linkliste (.ajl) exportieren" Click="ShareContextExportAjl_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Priorität setzen…" Click="ShareContextSetPriority_OnClick" />
+                      <MenuItem Header="Alle Prioritäten auf 1 setzen" Click="ShareContextResetAllPriorities_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Dateiname kopieren" Click="ShareContextCopyFilename_OnClick" />
+                      <MenuItem Header="Pfad kopieren" Click="ShareContextCopyPath_OnClick" />
+                      <MenuItem Header="Checksum kopieren" Click="ShareContextCopyChecksum_OnClick" />
+                      <MenuItem Header="ID kopieren" Click="ShareContextCopyId_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Medienwiedergabe mit VLC öffnen" Click="ShareContextOpenWithVlc_OnClick" />
+                      <Separator />
+                      <MenuItem Header="Share-Dateiliste neu laden" Click="ReloadSharesButton_OnClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <TextBlock Text="{Binding Id}" />
+                  <TextBlock Grid.Column="1" Text="{Binding DisplayFilename}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding FileType}" />
+                  <TextBlock Grid.Column="3" Text="{Binding DirectoryPath}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="4" Text="{Binding SizeText}" />
+                  <TextBlock Grid.Column="5" Text="{Binding Priority}" />
+                  <TextBlock Grid.Column="6" Text="{Binding AskCount}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+      <TabItem Header="Statistik">
+        <views:StatisticsView />
+      </TabItem>
+    </TabControl>
+
+    <Border Grid.Row="3"
+            Classes="statusBar"
+            Margin="0,10,0,0"
+            ToolTip.Tip="{Binding StatusText}">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+            <TextBlock Text="●"
+                       Classes="connectionDot"
+                       Classes.online="{Binding IsConnected}"
+                       Classes.offline="{Binding IsDisconnected}"
+                       FontSize="11"
+                       VerticalAlignment="Center" />
+            <TextBlock Text="{Binding FooterConnectionText}"
+                       FontSize="11"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterServerText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterDownloadSpeedText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding FooterUploadSpeedText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterSessionDownloadText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding FooterSessionUploadText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterIpText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding FooterCreditsText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted"
+                     IsVisible="{Binding HasServerReconnectRestriction}"
+                     Text="{Binding ServerReconnectRestrictionText}"
+                     FontSize="11"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</Window>

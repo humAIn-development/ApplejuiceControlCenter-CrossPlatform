@@ -1,0 +1,156 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.CoreProfileManagerDialog"
+        Title="Core-Profile verwalten"
+        Width="860"
+        Height="560"
+        MinWidth="760"
+        MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+  <Grid Margin="16" RowDefinitions="Auto,*,Auto">
+    <StackPanel Margin="0,0,0,12" Spacing="4">
+      <TextBlock Text="Core-Profile"
+                 FontSize="20"
+                 FontWeight="SemiBold" />
+      <TextBlock Text="Profile speichern Name, Host und XML-Port. Der laufende Core wird hier nicht gewechselt; dafür dient der Profilumschalter im Hauptfenster."
+                 Classes="muted"
+                 TextWrapping="Wrap" />
+      <TextBlock x:Name="ActiveProfileHintText"
+                 Foreground="{DynamicResource AjAccent}"
+                 TextWrapping="Wrap" />
+      <TextBlock Text="Core-Passwörter werden in AJCC-X nicht gespeichert. Sie werden beim Verbinden oder Wechseln bei Bedarf für die laufende Sitzung abgefragt."
+                 Classes="muted"
+                 TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="2*,16,3*">
+      <Border Grid.Column="0"
+              Classes="panel"
+              Padding="10">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <Grid ColumnDefinitions="54,*,1.4*,80" Margin="8,0,8,6">
+            <TextBlock Grid.Column="0" Text="" />
+            <TextBlock Grid.Column="1" Text="Name" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="2" Text="Host" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="3" Text="XML-Port" FontWeight="SemiBold" />
+          </Grid>
+
+          <ListBox x:Name="ProfilesList"
+                   Grid.Row="1"
+                   SelectionMode="Single"
+                   SelectionChanged="ProfilesList_OnSelectionChanged">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:CompileBindings="False">
+                <Grid ColumnDefinitions="54,*,1.4*,80" Margin="4,3">
+                  <TextBlock Grid.Column="0"
+                             Text="{Binding StatusMark}"
+                             Foreground="{DynamicResource AjAccent}" />
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding Name}"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2"
+                             Text="{Binding Host}"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="3"
+                             Text="{Binding XmlPort}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+            <Button Content="Neu"
+                    MinWidth="90"
+                    Margin="0,0,8,0"
+                    Click="NewProfileButton_OnClick" />
+            <Button Content="Löschen"
+                    MinWidth="90"
+                    Margin="0,0,8,0"
+                    Click="DeleteProfileButton_OnClick" />
+            <Button Content="Als Standard"
+                    MinWidth="120"
+                    Click="SetDefaultProfileButton_OnClick"
+                    ToolTip.Tip="Dieses Profil wird beim nächsten AJCC-X-Start verwendet." />
+          </WrapPanel>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="2"
+              Classes="panel"
+              Padding="14">
+        <Grid ColumnDefinitions="145,*"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
+          <TextBlock Grid.Row="0"
+                     Grid.ColumnSpan="2"
+                     Text="Profil bearbeiten"
+                     FontSize="17"
+                     FontWeight="SemiBold"
+                     Margin="0,0,0,12" />
+
+          <TextBlock Grid.Row="1"
+                     Text="Profilname"
+                     VerticalAlignment="Center"
+                     Margin="0,0,10,8" />
+          <TextBox Grid.Row="1"
+                   Grid.Column="1"
+                   x:Name="ProfileNameInput"
+                   Margin="0,0,0,8" />
+
+          <TextBlock Grid.Row="2"
+                     Text="Core-IP / Host"
+                     VerticalAlignment="Center"
+                     Margin="0,0,10,8" />
+          <TextBox Grid.Row="2"
+                   Grid.Column="1"
+                   x:Name="ProfileHostInput"
+                   Margin="0,0,0,8" />
+
+          <TextBlock Grid.Row="3"
+                     Text="XML-Port"
+                     VerticalAlignment="Center"
+                     Margin="0,0,10,8" />
+          <TextBox Grid.Row="3"
+                   Grid.Column="1"
+                   x:Name="ProfilePortInput"
+                   Margin="0,0,0,8" />
+
+          <TextBlock x:Name="SelectedProfileStatusText"
+                     Grid.Row="4"
+                     Grid.ColumnSpan="2"
+                     Classes="muted"
+                     TextWrapping="Wrap"
+                     Margin="0,8,0,8" />
+
+          <TextBlock x:Name="ValidationText"
+                     Grid.Row="5"
+                     Grid.ColumnSpan="2"
+                     Foreground="{DynamicResource AjBad}"
+                     TextWrapping="Wrap"
+                     Margin="0,0,0,10" />
+
+          <Button Grid.Row="6"
+                  Grid.ColumnSpan="2"
+                  Content="Änderungen übernehmen"
+                  MinWidth="180"
+                  HorizontalAlignment="Left"
+                  Click="ApplyProfileChangesButton_OnClick" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Margin="0,14,0,0"
+                Spacing="10">
+      <Button Content="Speichern und schließen"
+              Classes="primary"
+              MinWidth="170"
+              Click="SaveAndCloseButton_OnClick" />
+      <Button Content="Abbrechen"
+              MinWidth="110"
+              Click="CancelButton_OnClick" />
+    </StackPanel>
+  </Grid>
+</Window>

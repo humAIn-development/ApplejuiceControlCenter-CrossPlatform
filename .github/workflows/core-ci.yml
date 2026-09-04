@@ -1,19 +1,24 @@
-name: AJCC.Core CI
+name: AJCC Cross-platform CI
 
 on:
   push:
     branches:
       - "foundation/**"
+      - "firstlight/**"
     paths:
       - "src/AJCC.Core/**"
+      - "src/AJCC.Desktop/**"
       - "tests/AJCC.Core.Tests/**"
+      - "tests/AJCC.Desktop.Tests/**"
       - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
       - ".github/workflows/core-ci.yml"
   pull_request:
     paths:
       - "src/AJCC.Core/**"
+      - "src/AJCC.Desktop/**"
       - "tests/AJCC.Core.Tests/**"
+      - "tests/AJCC.Desktop.Tests/**"
       - "tools/AJCC.Core.Probe/**"
       - "ApplejuiceControlCenter-CrossPlatform.sln"
       - ".github/workflows/core-ci.yml"
@@ -22,8 +27,8 @@ permissions:
   contents: read
 
 jobs:
-  core:
-    name: Core (${{ matrix.os }})
+  build-test:
+    name: Build + tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -36,6 +41,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
@@ -46,7 +53,10 @@ jobs:
         run: dotnet restore ApplejuiceControlCenter-CrossPlatform.sln
 
       - name: Build
-        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore
+        run: dotnet build ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-restore /p:GitBranch="${{ github.head_ref || github.ref_name }}" /p:GitCommit="${{ github.event.pull_request.head.sha || github.sha }}" /p:CiRunId="${{ github.run_id }}" /p:CiRunNumber="${{ github.run_number }}"
 
-      - name: Test
-        run: dotnet test ApplejuiceControlCenter-CrossPlatform.sln --configuration Release --no-build --verbosity normal
+      - name: Test Core
+        run: dotnet test tests/AJCC.Core.Tests/AJCC.Core.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Test Desktop services
+        run: dotnet test tests/AJCC.Desktop.Tests/AJCC.Desktop.Tests.csproj --configuration Release --no-build --verbosity normal

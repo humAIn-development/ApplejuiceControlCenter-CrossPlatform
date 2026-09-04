@@ -1,0 +1,56 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.CoreProfileEditDialog"
+        Title="Core-Profil bearbeiten"
+        Width="520"
+        Height="290"
+        MinWidth="440"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AjBackground}">
+  <Border Margin="14"
+          Padding="16"
+          Background="{DynamicResource AjPanel}"
+          BorderBrush="{DynamicResource AjBorder}"
+          BorderThickness="1"
+          CornerRadius="10">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+      <TextBlock Text="Core-Profil bearbeiten"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource AjText}" />
+
+      <TextBox x:Name="ProfileNameInput"
+               Grid.Row="1"
+               Margin="0,14,0,8"
+               PlaceholderText="Profilname" />
+
+      <TextBox x:Name="EndpointInput"
+               Grid.Row="2"
+               Margin="0,0,0,8"
+               PlaceholderText="Core-Endpunkt, z. B. http://127.0.0.1:9851/" />
+
+      <TextBlock x:Name="StatusText"
+                 Grid.Row="3"
+                 Classes="muted"
+                 TextWrapping="Wrap" />
+
+      <StackPanel Grid.Row="4"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Bottom"
+                  Spacing="8">
+        <Button Classes="primary"
+                IsDefault="True"
+                MinWidth="110"
+                Content="Übernehmen"
+                Click="SaveButton_OnClick" />
+        <Button IsCancel="True"
+                MinWidth="100"
+                Content="Abbrechen"
+                Click="CancelButton_OnClick" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
