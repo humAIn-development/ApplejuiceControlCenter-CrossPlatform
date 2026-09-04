@@ -568,6 +568,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ? "-"
         : DisplayFormatHelper.BytesPerSecond(DownloadTransferSpeedSemantics.CalculateDisplayedTotal(_state.Downloads));
     public string UploadSpeedText => _state?.Information.UploadSpeedText ?? "-";
+    public long StatisticsDownloadSpeed => Math.Max(0L, _state?.Information.DownloadSpeed ?? 0L);
+    public long StatisticsUploadSpeed => Math.Max(0L, _state?.Information.UploadSpeed ?? 0L);
+    public int StatisticsOpenConnections => Math.Max(0, _state?.Information.OpenConnections ?? 0);
     public string FooterConnectionText
     {
         get

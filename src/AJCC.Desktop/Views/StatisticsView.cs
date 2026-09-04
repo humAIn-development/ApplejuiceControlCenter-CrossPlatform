@@ -97,6 +97,8 @@ public sealed class StatisticsView : UserControl
         };
         detailBorder.Classes.Add("panel");
 
+        StatisticsChartsPanel chartsPanel = new();
+
         StackPanel root = new()
         {
             Margin = new Thickness(0, 8, 0, 0)
@@ -104,6 +106,7 @@ public sealed class StatisticsView : UserControl
         root.Children.Add(header);
         root.Children.Add(_tilesPanel);
         root.Children.Add(detailBorder);
+        root.Children.Add(chartsPanel);
 
         Content = new ScrollViewer
         {

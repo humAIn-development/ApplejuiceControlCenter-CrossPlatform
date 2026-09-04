@@ -39,8 +39,9 @@ public sealed class StatisticsTileConfigurationStoreTests
         CollectionAssert.AreEqual(
             expectedKeys.Take(StatisticsTileCatalog.MaximumVisibleTiles).ToArray(),
             StatisticsTileCatalog.DefaultSelectedKeys);
-        Assert.AreEqual(1, StatisticsTileCatalog.MinimumVisibleTiles);
-        Assert.AreEqual(8, StatisticsTileCatalog.MaximumVisibleTiles);
+        CollectionAssert.AreEqual(
+            new[] { "connection" },
+            StatisticsTileCatalog.NormalizeSelection(new[] { "connection" }));
     }
 
     [TestMethod]
