@@ -54,6 +54,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private string _localIncomingMappingText = string.Empty;
     private string _serverReconnectRestrictionEndpoint = string.Empty;
     private string _statusText = "Nicht verbunden";
+    private string _footerPortStatusText = "Port: ?";
     private string _coreVersion = "-";
     private string _searchText = string.Empty;
     private string _searchResultFilterText = string.Empty;
@@ -123,7 +124,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public string LocalIncomingMappingText
     {
         get => _localIncomingMappingText;
-        set => SetField(ref _localIncomingMappingText, value ?? string.Empty);
+        set
+        {
+            if (SetField(ref _localIncomingMappingText, value ?? string.Empty))
+                OnPropertyChanged(nameof(FooterConnectionText));
+        }
     }
 
     public string StatusText
@@ -563,6 +568,50 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         ? "-"
         : DisplayFormatHelper.BytesPerSecond(DownloadTransferSpeedSemantics.CalculateDisplayedTotal(_state.Downloads));
     public string UploadSpeedText => _state?.Information.UploadSpeedText ?? "-";
+    public string FooterConnectionText
+    {
+        get
+        {
+            string connection = IsConnected ? "Verbunden" : "Nicht verbunden";
+            string mapping = string.IsNullOrWhiteSpace(LocalIncomingMappingText)
+                ? "Mapping: fehlt"
+                : "Mapping: gesetzt";
+            return $"{connection} / {_footerPortStatusText} / {mapping}";
+        }
+    }
+    public string FooterServerText
+    {
+        get
+        {
+            AjState? state = _state;
+            long connectedServerId = state?.NetworkInfo.ConnectedWithServerId ?? 0;
+            if (!IsConnected || state is null || connectedServerId <= 0)
+                return "Server: -";
+
+            AjServer? server = state.Servers.FirstOrDefault(item => item.Id == connectedServerId);
+            if (server is null)
+                return $"Server: ID {connectedServerId}";
+
+            string display = string.IsNullOrWhiteSpace(server.Name)
+                ? server.HostDisplay
+                : server.Name.Trim();
+            return string.IsNullOrWhiteSpace(display)
+                ? $"Server: ID {connectedServerId}"
+                : "Server: " + display;
+        }
+    }
+    public string FooterDownloadSpeedText
+        => "↓ " + (IsConnected && _state is not null ? DownloadSpeedText : "0 B/s");
+    public string FooterUploadSpeedText
+        => "↑ " + (IsConnected && _state is not null ? UploadSpeedText : "0 B/s");
+    public string FooterSessionDownloadText
+        => "in: " + (_state?.Information.SessionDownloadText ?? "0 B");
+    public string FooterSessionUploadText
+        => "out: " + (_state?.Information.SessionUploadText ?? "0 B");
+    public string FooterIpText
+        => "IP: " + SecurityHelper.MaskIpForDisplay(_state?.NetworkInfo.Ip);
+    public string FooterCreditsText
+        => "Credits: " + (_state?.Information.CreditsText ?? "0 B");
     public string DownloadCountText => _state?.Downloads.Count.ToString("N0") ?? "0";
     public string UploadCountText => _state?.Uploads.Count.ToString("N0") ?? "0";
     public string ServerCountText => _state?.Servers.Count.ToString("N0") ?? "0";
@@ -1928,6 +1977,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         }
 
         StatusText = result;
+        _footerPortStatusText = result.StartsWith("Porttest: erreichbar", StringComparison.Ordinal)
+            ? "Port: erreichbar"
+            : result.StartsWith("Porttest: nicht erreichbar", StringComparison.Ordinal)
+                ? "Port: nicht erreichbar"
+                : result.StartsWith("Porttest: offline", StringComparison.Ordinal)
+                    ? "Port: offline"
+                    : "Port: ?";
+        OnPropertyChanged(nameof(FooterConnectionText));
         return result;
     }
 
@@ -2636,6 +2693,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         _httpClient?.Dispose();
         _httpClient = null;
         IsConnected = false;
+        _footerPortStatusText = "Port: ?";
+        OnPropertyChanged(nameof(FooterConnectionText));
         ClearPendingSearchAdoption();
 
         if (!clearState)
@@ -3763,6 +3822,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ServerCountText));
         OnPropertyChanged(nameof(SearchCountText));
         OnPropertyChanged(nameof(CoreTimestampText));
+        OnPropertyChanged(nameof(FooterConnectionText));
+        OnPropertyChanged(nameof(FooterServerText));
+        OnPropertyChanged(nameof(FooterDownloadSpeedText));
+        OnPropertyChanged(nameof(FooterUploadSpeedText));
+        OnPropertyChanged(nameof(FooterSessionDownloadText));
+        OnPropertyChanged(nameof(FooterSessionUploadText));
+        OnPropertyChanged(nameof(FooterIpText));
+        OnPropertyChanged(nameof(FooterCreditsText));
         RaiseServerReconnectRestrictionProperties();
     }
 

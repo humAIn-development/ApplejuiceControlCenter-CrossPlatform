@@ -931,23 +931,42 @@
       </TabItem>
     </TabControl>
 
-    <Border Grid.Row="3" Classes="statusBar" Margin="0,10,0,0">
-      <Grid ColumnDefinitions="*,Auto,Auto">
-        <TextBlock Classes="muted"
-                   Text="{Binding StatusText}"
-                   TextTrimming="CharacterEllipsis"
-                   VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1"
-                   Classes="muted"
-                   Margin="12,0,0,0"
-                   IsVisible="{Binding HasServerReconnectRestriction}"
-                   Text="{Binding ServerReconnectRestrictionText}"
-                   VerticalAlignment="Center" />
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-          <TextBlock Classes="muted" Text="Core-Timestamp" FontSize="12" />
-          <TextBlock Text="{Binding CoreTimestampText}" FontSize="12" />
+    <Border Grid.Row="3"
+            Classes="statusBar"
+            Margin="0,10,0,0"
+            ToolTip.Tip="{Binding StatusText}">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+            <TextBlock Text="●"
+                       Classes="connectionDot"
+                       Classes.online="{Binding IsConnected}"
+                       Classes.offline="{Binding IsDisconnected}"
+                       FontSize="11"
+                       VerticalAlignment="Center" />
+            <TextBlock Text="{Binding FooterConnectionText}"
+                       FontSize="11"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterServerText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterDownloadSpeedText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding FooterUploadSpeedText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterSessionDownloadText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding FooterSessionUploadText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="|" FontSize="11" />
+          <TextBlock Text="{Binding FooterIpText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding FooterCreditsText}" FontSize="11" VerticalAlignment="Center" />
+          <TextBlock Classes="muted"
+                     IsVisible="{Binding HasServerReconnectRestriction}"
+                     Text="{Binding ServerReconnectRestrictionText}"
+                     FontSize="11"
+                     VerticalAlignment="Center" />
         </StackPanel>
-      </Grid>
+      </ScrollViewer>
     </Border>
   </Grid>
 </Window>
