@@ -571,6 +571,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     public long StatisticsDownloadSpeed => Math.Max(0L, _state?.Information.DownloadSpeed ?? 0L);
     public long StatisticsUploadSpeed => Math.Max(0L, _state?.Information.UploadSpeed ?? 0L);
     public int StatisticsOpenConnections => Math.Max(0, _state?.Information.OpenConnections ?? 0);
+    private string _footerVlcStatusText = "VLC: aus";
     public string FooterConnectionText
     {
         get
@@ -579,9 +580,20 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             string mapping = string.IsNullOrWhiteSpace(LocalIncomingMappingText)
                 ? "Mapping: fehlt"
                 : "Mapping: gesetzt";
-            return $"{connection} / {_footerPortStatusText} / {mapping}";
+            return $"{connection} / {_footerPortStatusText} / {_footerVlcStatusText} / {mapping}";
         }
     }
+
+    public void SetFooterVlcStatus(string status)
+    {
+        string next = string.IsNullOrWhiteSpace(status) ? "VLC: aus" : status.Trim();
+        if (string.Equals(_footerVlcStatusText, next, StringComparison.Ordinal))
+            return;
+
+        _footerVlcStatusText = next;
+        OnPropertyChanged(nameof(FooterConnectionText));
+    }
+
     public string FooterServerText
     {
         get

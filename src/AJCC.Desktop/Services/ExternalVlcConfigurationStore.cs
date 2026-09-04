@@ -33,6 +33,18 @@ public sealed class ExternalVlcConfigurationStore
         }
     }
 
+    public static string GetFooterStatus(ExternalVlcConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        if (!configuration.Enabled)
+            return "VLC: aus";
+
+        string executablePath = (configuration.ExecutablePath ?? string.Empty).Trim().Trim('\"');
+        return executablePath.Length > 0 && File.Exists(executablePath)
+            ? "VLC: bereit"
+            : "VLC: ungültig";
+    }
+
     public bool TrySave(ExternalVlcConfiguration configuration, out string errorMessage)
     {
         ArgumentNullException.ThrowIfNull(configuration);

@@ -277,6 +277,34 @@ public sealed class DesktopPersistenceStoreTests
         }
     }
 
+    [TestMethod]
+    public void ExternalVlcFooterStatus_MatchesProductiveThreeStateSemantics()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            string executablePath = Path.Combine(root, "vlc-test");
+            File.WriteAllText(executablePath, string.Empty);
+
+            Assert.AreEqual(
+                "VLC: aus",
+                ExternalVlcConfigurationStore.GetFooterStatus(
+                    new ExternalVlcConfiguration(false, executablePath)));
+            Assert.AreEqual(
+                "VLC: bereit",
+                ExternalVlcConfigurationStore.GetFooterStatus(
+                    new ExternalVlcConfiguration(true, executablePath)));
+            Assert.AreEqual(
+                "VLC: ungültig",
+                ExternalVlcConfigurationStore.GetFooterStatus(
+                    new ExternalVlcConfiguration(true, Path.Combine(root, "missing-vlc"))));
+        }
+        finally
+        {
+            DeleteTempDirectory(root);
+        }
+    }
+
     private static void AssertNoTempFile(string path)
         => Assert.IsFalse(File.Exists(path + ".tmp"), $"Temporary file remained for {path}.");
 

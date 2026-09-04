@@ -84,6 +84,8 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         ApplyDownloadStatusColors(_downloadStatusColorConfigurationStore.Load());
         DataContext = _viewModel;
+        _viewModel.SetFooterVlcStatus(
+            ExternalVlcConfigurationStore.GetFooterStatus(_externalVlcConfigurationStore.Load()));
         _startupImportTimer.Interval = TimeSpan.FromMilliseconds(250);
         _startupImportTimer.Tick += StartupImportTimer_OnTick;
         EnqueueStartupImportRequest(startupRequest);
@@ -1440,6 +1442,8 @@ public sealed partial class MainWindow : Window
             _viewModel.ChangeCorePasswordAsync);
         await dialog.ShowDialog<bool>(this);
         ApplyDownloadStatusColors(_downloadStatusColorConfigurationStore.Load());
+        _viewModel.SetFooterVlcStatus(
+            ExternalVlcConfigurationStore.GetFooterStatus(_externalVlcConfigurationStore.Load()));
     }
 
     private void ConfigureLocalIncomingMappingControls()
@@ -1501,6 +1505,7 @@ public sealed partial class MainWindow : Window
         }
 
         ExternalVlcConfiguration configuration = _externalVlcConfigurationStore.Load();
+        _viewModel.SetFooterVlcStatus(ExternalVlcConfigurationStore.GetFooterStatus(configuration));
         if (!configuration.Enabled
             || string.IsNullOrWhiteSpace(configuration.ExecutablePath)
             || !File.Exists(configuration.ExecutablePath))
