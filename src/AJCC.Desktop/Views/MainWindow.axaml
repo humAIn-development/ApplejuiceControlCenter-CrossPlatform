@@ -342,7 +342,7 @@
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,Auto,2*,Auto,Auto,*"
+        <Grid RowDefinitions="Auto,Auto,*,8,240"
               ColumnDefinitions="*,320"
               Margin="0,8,0,0">
           <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="panel" Padding="8" Margin="0,0,0,8">
@@ -408,6 +408,7 @@
           <ListBox x:Name="DownloadsList"
                    Grid.Row="2"
                    Grid.ColumnSpan="2"
+                   MinHeight="150"
                    SelectionMode="Multiple"
                    ItemsSource="{Binding Downloads}"
                    SelectedItem="{Binding SelectedDownload}"
@@ -476,7 +477,20 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <StackPanel Grid.Row="3"
+          <GridSplitter Grid.Row="3"
+                        Grid.ColumnSpan="2"
+                        Height="8"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        ResizeDirection="Rows"
+                        ResizeBehavior="PreviousAndNext"
+                        ShowsPreview="True"
+                        Background="{DynamicResource AjBorder}"
+                        Cursor="SizeNorthSouth"
+                        ToolTip.Tip="Downloadliste und Detailbereich in der Höhe anpassen." />
+
+          <Grid Grid.Row="4" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,320" MinHeight="120">
+          <StackPanel Grid.Row="0"
                       Orientation="Horizontal"
                       Spacing="12"
                       Margin="4,10,0,6">
@@ -486,7 +500,7 @@
                        Text="{Binding SelectedDownloadSourcesText}" />
           </StackPanel>
 
-          <Border Grid.Row="4" Classes="tableHeader">
+          <Border Grid.Row="1" Classes="tableHeader">
             <Grid ColumnDefinitions="1.7*,1.2*,0.9*,1.1*,1.2*,1.2*,1.1*">
               <TextBlock Text="Nutzer" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Status" FontWeight="SemiBold" />
@@ -499,7 +513,7 @@
           </Border>
 
           <ListBox x:Name="DownloadSourcesList"
-                   Grid.Row="5"
+                   Grid.Row="2"
                    ItemsSource="{Binding SelectedDownloadSources}"
                    SelectionMode="Single"
                    SelectionChanged="DownloadSourcesList_OnSelectionChanged">
@@ -525,7 +539,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <Border Grid.Row="3"
+          <Border Grid.Row="0"
                   Grid.RowSpan="3"
                   Grid.Column="1"
                   Classes="panel"
@@ -557,6 +571,7 @@
               </ScrollViewer>
             </Grid>
           </Border>
+          </Grid>
         </Grid>
       </TabItem>
 
