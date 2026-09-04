@@ -4,6 +4,7 @@
         xmlns:models="using:AJCC.Core.Models"
         xmlns:controls="using:AJCC.Desktop.Controls"
         xmlns:services="using:AJCC.Desktop.Services"
+        xmlns:views="using:AJCC.Desktop.Views"
         x:Class="AJCC.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Applejuice-Control-Center X — FirstLight"
@@ -928,6 +929,9 @@
             </ListBox.ItemTemplate>
           </ListBox>
         </Grid>
+      </TabItem>
+      <TabItem Header="Statistik">
+        <views:StatisticsView />
       </TabItem>
     </TabControl>
 
