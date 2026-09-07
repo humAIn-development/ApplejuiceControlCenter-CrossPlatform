@@ -281,11 +281,6 @@
                 HorizontalAlignment="Right"
                 Spacing="8"
                 Margin="0,8,0,4">
-      <Button Content="Website"
-              MinWidth="86"
-              Padding="10,4"
-              Click="OfficialProjectWebsiteButton_OnClick"
-              ToolTip.Tip="Öffnet die offizielle Applejuice-Control-Center-Webseite im Standardbrowser." />
       <Button Content="Feedback"
               MinWidth="92"
               Padding="10,4"
@@ -296,6 +291,27 @@
     <TabControl x:Name="MainTabControl"
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
+      <TabItem Header="Dashboard">
+        <Grid Margin="0,8,0,0">
+          <Border Classes="panel" Padding="16">
+            <StackPanel HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Spacing="10">
+              <TextBlock Text="Applejuice-Control-Center"
+                         FontSize="20"
+                         FontWeight="SemiBold" />
+              <TextBlock Classes="muted"
+                         Text="Offizielle Projektseite"
+                         TextWrapping="Wrap" />
+              <Button Content="Website"
+                      MinWidth="112"
+                      HorizontalAlignment="Left"
+                      Click="OfficialProjectWebsiteButton_OnClick"
+                      ToolTip.Tip="Öffnet die offizielle Applejuice-Control-Center-Webseite im Standardbrowser." />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </TabItem>
       <TabItem Header="Traffic">
         <Carousel x:Name="TrafficModeCarousel">
         <Grid ColumnDefinitions="*,320"
