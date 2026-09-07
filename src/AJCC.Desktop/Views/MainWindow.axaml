@@ -445,7 +445,7 @@
                         Cursor="SizeNorthSouth"
                         ToolTip.Tip="Downloadliste und Detailbereich in der Höhe anpassen." />
 
-          <Grid Grid.Row="4" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,320" MinHeight="120">
+          <Grid Grid.Row="4" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*,320" MinHeight="240">
           <StackPanel Grid.Row="0"
                       Orientation="Horizontal"
                       Spacing="12"
