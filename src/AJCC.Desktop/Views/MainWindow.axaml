@@ -297,9 +297,15 @@
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,Auto,2*,8,*"
-              ColumnDefinitions="*,320"
+        <Grid ColumnDefinitions="*,320"
               Margin="0,8,0,0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="2*" MinHeight="150" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="*" MinHeight="240" />
+          </Grid.RowDefinitions>
           <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="panel" Padding="8" Margin="0,0,0,8">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
               <TextBlock Grid.Column="0"
