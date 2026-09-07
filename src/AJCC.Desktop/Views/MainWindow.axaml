@@ -256,12 +256,6 @@
         <Button Grid.Column="2"
                 MinWidth="120"
                 Margin="10,0,10,0"
-                Content="Einstellungen…"
-                Click="SettingsButton_OnClick" />
-
-        <Button Grid.Column="3"
-                MinWidth="120"
-                Margin="0,0,10,0"
                 Content="Diagnose-ZIP"
                 Click="DiagnosticZipButton_OnClick"
                 ToolTip.Tip="Anonymisiertes Diagnosepaket als ZIP speichern." />
@@ -952,6 +946,19 @@
         <Grid Margin="0,8,0,0">
           <TextBlock Classes="muted"
                      Text="Feedbackdialog wird geöffnet ..."
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </TabItem>
+      <TabItem PointerPressed="SettingsTabItem_OnPointerPressed"
+               ToolTip.Tip="Öffnet den Einstellungsbereich.">
+        <TabItem.Header>
+          <TextBlock Text="Einstellungen"
+                     FontWeight="SemiBold" />
+        </TabItem.Header>
+        <Grid Margin="0,8,0,0">
+          <TextBlock Classes="muted"
+                     Text="Einstellungsdialog wird geöffnet ..."
                      HorizontalAlignment="Center"
                      VerticalAlignment="Center" />
         </Grid>
