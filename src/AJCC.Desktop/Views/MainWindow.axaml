@@ -276,18 +276,6 @@
       </Grid>
     </Border>
 
-    <StackPanel Grid.Row="1"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right"
-                Spacing="8"
-                Margin="0,8,0,4">
-      <Button Content="Feedback"
-              MinWidth="92"
-              Padding="10,4"
-              Click="FeedbackButton_OnClick"
-              ToolTip.Tip="Feedback direkt aus AJCC-X senden." />
-    </StackPanel>
-
     <TabControl x:Name="MainTabControl"
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
@@ -953,6 +941,20 @@
       </TabItem>
       <TabItem Header="Statistik">
         <views:StatisticsView />
+      </TabItem>
+      <TabItem PointerPressed="FeedbackTabItem_OnPointerPressed"
+               ToolTip.Tip="Öffnet die integrierte Feedbackbox.">
+        <TabItem.Header>
+          <TextBlock Text="Feedback"
+                     Foreground="#FF6B6B"
+                     FontWeight="SemiBold" />
+        </TabItem.Header>
+        <Grid Margin="0,8,0,0">
+          <TextBlock Classes="muted"
+                     Text="Feedbackdialog wird geöffnet ..."
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+        </Grid>
       </TabItem>
     </TabControl>
 

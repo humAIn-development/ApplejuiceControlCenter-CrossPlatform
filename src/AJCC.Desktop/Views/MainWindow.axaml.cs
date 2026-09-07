@@ -152,6 +152,12 @@ public sealed partial class MainWindow : Window
         AudioFeedbackService.PlayButtonTick();
     }
 
+    private void FeedbackTabItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        e.Handled = true;
+        FeedbackButton_OnClick(sender, e);
+    }
+
     private void TrafficModeButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button button || button.Tag is not string targetHeader)
