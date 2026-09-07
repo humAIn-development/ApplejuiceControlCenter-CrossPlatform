@@ -8,10 +8,10 @@
         x:Class="AJCC.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Applejuice-Control-Center X — FirstLight"
-        Width="1280"
-        Height="820"
-        MinWidth="1000"
-        MinHeight="680">
+        Width="1600"
+        Height="900"
+        MinWidth="1280"
+        MinHeight="760">
 
   <Window.Resources>
     <services:DownloadStatusRuleMatchConverter x:Key="DownloadStatusRuleMatchConverter" />
