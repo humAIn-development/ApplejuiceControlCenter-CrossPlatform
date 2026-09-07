@@ -91,9 +91,9 @@ internal sealed class StatisticsChartsPanel : UserControl
         _pieRadioButton.IsCheckedChanged += ShareChartType_OnChanged;
         _barRadioButton.IsCheckedChanged += ShareChartType_OnChanged;
 
-        WrapPanel cards = new()
+        UniformGrid cards = new()
         {
-            Orientation = Orientation.Horizontal
+            Columns = 3
         };
         cards.Children.Add(BuildShareCard());
         cards.Children.Add(BuildSpeedCard());
@@ -195,7 +195,6 @@ internal sealed class StatisticsChartsPanel : UserControl
     {
         Border border = new()
         {
-            Width = 370,
             MinHeight = 220,
             Padding = new Thickness(8),
             Margin = new Thickness(0, 0, 8, 8),

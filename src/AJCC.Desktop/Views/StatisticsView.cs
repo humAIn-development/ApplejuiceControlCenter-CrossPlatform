@@ -19,7 +19,7 @@ public sealed class StatisticsView : UserControl
     private sealed record TileTextBlocks(TextBlock Primary, TextBlock Secondary);
 
     private readonly StatisticsTileConfigurationStore _configurationStore = new();
-    private readonly WrapPanel _tilesPanel = new() { Orientation = Orientation.Horizontal };
+    private readonly UniformGrid _tilesPanel = new() { Columns = 4 };
     private readonly TextBlock _detailTitle = new()
     {
         FontSize = 16,
@@ -220,7 +220,6 @@ public sealed class StatisticsView : UserControl
 
             Border tile = new()
             {
-                Width = 250,
                 MinHeight = 104,
                 Padding = new Thickness(12),
                 Margin = new Thickness(0, 0, 8, 8),
