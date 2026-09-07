@@ -297,6 +297,7 @@
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
       <TabItem Header="Traffic">
+        <Carousel x:Name="TrafficModeCarousel">
         <Grid ColumnDefinitions="*,320"
               Margin="0,8,0,0">
           <Grid.RowDefinitions>
@@ -553,9 +554,6 @@
           </Border>
           </Grid>
         </Grid>
-      </TabItem>
-
-      <TabItem Header="Uploads">
         <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
           <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <Button MinWidth="96" Content="Downloads" Tag="Traffic" Click="TrafficModeButton_OnClick" />
@@ -641,9 +639,6 @@
           </ListBox>
         </Grid>
         </Grid>
-      </TabItem>
-
-      <TabItem Header="Server">
         <Grid RowDefinitions="Auto,*" Margin="0,8,0,0">
           <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <Button MinWidth="96" Content="Downloads" Tag="Traffic" Click="TrafficModeButton_OnClick" />
@@ -693,6 +688,7 @@
           </ListBox>
         </Grid>
         </Grid>
+        </Carousel>
       </TabItem>
 
       <TabItem Header="Suche">

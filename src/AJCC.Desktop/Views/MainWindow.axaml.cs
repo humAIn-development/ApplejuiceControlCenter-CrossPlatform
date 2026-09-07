@@ -157,13 +157,17 @@ public sealed partial class MainWindow : Window
         if (sender is not Button button || button.Tag is not string targetHeader)
             return;
 
-        TabControl? tabControl = this.FindControl<TabControl>("MainTabControl");
-        TabItem? targetTab = tabControl?.Items
-            .OfType<TabItem>()
-            .FirstOrDefault(item => string.Equals(item.Header?.ToString(), targetHeader, StringComparison.Ordinal));
+        int targetIndex = targetHeader switch
+        {
+            "Traffic" => 0,
+            "Uploads" => 1,
+            "Server" => 2,
+            _ => -1
+        };
 
-        if (tabControl is not null && targetTab is not null)
-            tabControl.SelectedItem = targetTab;
+        Carousel? carousel = this.FindControl<Carousel>("TrafficModeCarousel");
+        if (carousel is not null && targetIndex >= 0)
+            carousel.SelectedIndex = targetIndex;
     }
 
     private void DownloadFileSortHeader_OnPointerPressed(object? sender, PointerPressedEventArgs e)
