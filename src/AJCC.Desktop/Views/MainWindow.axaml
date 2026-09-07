@@ -342,7 +342,7 @@
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
       <TabItem Header="Downloads">
-        <Grid RowDefinitions="Auto,Auto,*,8,240"
+        <Grid RowDefinitions="Auto,Auto,2*,8,*"
               ColumnDefinitions="*,320"
               Margin="0,8,0,0">
           <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="panel" Padding="8" Margin="0,0,0,8">
@@ -408,6 +408,7 @@
           <ListBox x:Name="DownloadsList"
                    Grid.Row="2"
                    Grid.ColumnSpan="2"
+                   ClipToBounds="True"
                    MinHeight="150"
                    SelectionMode="Multiple"
                    ItemsSource="{Binding Downloads}"
