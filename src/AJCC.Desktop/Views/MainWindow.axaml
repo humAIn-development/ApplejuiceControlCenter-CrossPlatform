@@ -296,7 +296,7 @@
     <TabControl x:Name="MainTabControl"
                 Grid.Row="2"
                 SelectionChanged="MainTabControl_OnSelectionChanged">
-      <TabItem Header="Downloads">
+      <TabItem Header="Traffic">
         <Grid ColumnDefinitions="*,320"
               Margin="0,8,0,0">
           <Grid.RowDefinitions>
@@ -307,23 +307,41 @@
             <RowDefinition Height="*" MinHeight="240" />
           </Grid.RowDefinitions>
           <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="panel" Padding="8" Margin="0,0,0,8">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-              <TextBlock Grid.Column="0"
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
+              <Button Grid.Column="0"
+                      Classes="primary"
+                      MinWidth="96"
+                      Content="Downloads"
+                      Tag="Traffic"
+                      Click="TrafficModeButton_OnClick" />
+              <Button Grid.Column="1"
+                      MinWidth="96"
+                      Margin="8,0,0,0"
+                      Content="Uploads"
+                      Tag="Uploads"
+                      Click="TrafficModeButton_OnClick" />
+              <Button Grid.Column="2"
+                      MinWidth="96"
+                      Margin="8,0,0,0"
+                      Content="Server"
+                      Tag="Server"
+                      Click="TrafficModeButton_OnClick" />
+              <TextBlock Grid.Column="3"
                          Classes="muted"
                          Text="Auswahl"
-                         Margin="2,0,10,0"
+                         Margin="14,0,10,0"
                          VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1"
+              <TextBlock Grid.Column="4"
                          Text="{Binding SelectedDownloadText}"
                          TextTrimming="CharacterEllipsis"
                          VerticalAlignment="Center" />
-              <Button Grid.Column="2"
+              <Button Grid.Column="5"
                       MinWidth="96"
                       Margin="8,0,0,0"
                       Content="Pausieren"
                       IsEnabled="{Binding CanPauseSelectedDownload}"
                       Click="PauseDownloadButton_OnClick" />
-              <Button Grid.Column="3"
+              <Button Grid.Column="6"
                       Classes="primary"
                       MinWidth="106"
                       Margin="8,0,0,0"
