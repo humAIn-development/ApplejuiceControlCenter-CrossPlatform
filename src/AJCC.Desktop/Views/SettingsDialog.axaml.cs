@@ -12,6 +12,7 @@ public sealed partial class SettingsDialog : Window
     private readonly ExternalVlcConfigurationStore _externalVlcConfigurationStore = new();
     private readonly DownloadQueueConfigurationStore _downloadQueueConfigurationStore = new();
     private readonly LocalIncomingMappingStore _localIncomingMappingStore = new();
+    private readonly GuiProxyConfigurationStore _guiProxyConfigurationStore = new();
     private bool _loadingExternalVlcConfiguration;
     private bool _loadingUiPreferences;
     private Func<bool, bool>? _applySuppressCoreSwitchConfirmation;
@@ -49,6 +50,7 @@ public sealed partial class SettingsDialog : Window
     {
         InitializeComponent();
         LoadExternalVlcConfiguration();
+        LoadGuiProxyConfiguration();
         LoadDownloadQueueConfiguration();
         Opened += (_, _) => _tabSoundReady = true;
     }
@@ -1271,6 +1273,101 @@ public sealed partial class SettingsDialog : Window
         finally
         {
             _loadingUiPreferences = false;
+        }
+    }
+
+    private void LoadGuiProxyConfiguration()
+    {
+        GuiProxyConfiguration configuration = _guiProxyConfigurationStore.Load();
+
+        CheckBox? enabledInput = this.FindControl<CheckBox>("ProxyEnabledCheckBox");
+        RadioButton? publicInput = this.FindControl<RadioButton>("ProxyPublicRadioButton");
+        RadioButton? privateInput = this.FindControl<RadioButton>("ProxyPrivateRadioButton");
+        TextBox? hostInput = this.FindControl<TextBox>("ProxyHostTextBox");
+        TextBox? portInput = this.FindControl<TextBox>("ProxyPortTextBox");
+        TextBox? userNameInput = this.FindControl<TextBox>("ProxyUserNameTextBox");
+        TextBox? passwordInput = this.FindControl<TextBox>("ProxyPasswordTextBox");
+
+        if (enabledInput is not null)
+            enabledInput.IsChecked = configuration.Enabled;
+        if (publicInput is not null)
+            publicInput.IsChecked = !string.Equals(
+                configuration.Mode,
+                GuiProxyConfiguration.PrivateMode,
+                StringComparison.Ordinal);
+        if (privateInput is not null)
+            privateInput.IsChecked = string.Equals(
+                configuration.Mode,
+                GuiProxyConfiguration.PrivateMode,
+                StringComparison.Ordinal);
+        if (hostInput is not null)
+            hostInput.Text = configuration.Host;
+        if (portInput is not null)
+            portInput.Text = configuration.Port > 0
+                ? configuration.Port.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : string.Empty;
+        if (userNameInput is not null)
+            userNameInput.Text = configuration.UserName;
+        if (passwordInput is not null)
+            passwordInput.Text = string.Empty;
+    }
+
+    private void SaveGuiProxyConfigurationButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        CheckBox? enabledInput = this.FindControl<CheckBox>("ProxyEnabledCheckBox");
+        RadioButton? privateInput = this.FindControl<RadioButton>("ProxyPrivateRadioButton");
+        TextBox? hostInput = this.FindControl<TextBox>("ProxyHostTextBox");
+        TextBox? portInput = this.FindControl<TextBox>("ProxyPortTextBox");
+        TextBox? userNameInput = this.FindControl<TextBox>("ProxyUserNameTextBox");
+        TextBlock? status = this.FindControl<TextBlock>("ProxyStatusText");
+
+        string rawPort = (portInput?.Text ?? string.Empty).Trim();
+        int port = 0;
+        if (rawPort.Length > 0
+            && (!int.TryParse(
+                    rawPort,
+                    System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out port)
+                || port is < 1 or > 65535))
+        {
+            if (status is not null)
+                status.Text = "Bitte einen Proxy-Port zwischen 1 und 65535 eingeben oder das Feld leer lassen.";
+            return;
+        }
+
+        string mode = privateInput?.IsChecked == true
+            ? GuiProxyConfiguration.PrivateMode
+            : GuiProxyConfiguration.PublicMode;
+        GuiProxyConfiguration configuration = new(
+            enabledInput?.IsChecked == true,
+            mode,
+            hostInput?.Text ?? string.Empty,
+            port,
+            userNameInput?.Text ?? string.Empty);
+
+        if (!_guiProxyConfigurationStore.TrySave(configuration, out string errorMessage))
+        {
+            if (status is not null)
+                status.Text = "Proxy-Konfiguration konnte nicht gespeichert werden: " + errorMessage;
+            return;
+        }
+
+        GuiProxyConfiguration effective = configuration.Normalize();
+        if (hostInput is not null)
+            hostInput.Text = effective.Host;
+        if (portInput is not null)
+            portInput.Text = effective.Port > 0
+                ? effective.Port.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : string.Empty;
+        if (userNameInput is not null)
+            userNameInput.Text = effective.UserName;
+
+        if (status is not null)
+        {
+            status.Text = effective.Enabled
+                ? "Proxy-Konfiguration gespeichert. Das Passwort bleibt ausschließlich in der laufenden Sitzung; die GUI-HTTP-Anbindung folgt separat."
+                : "Proxy deaktiviert. Die eingetragenen Werte bleiben für eine spätere Aktivierung gespeichert.";
         }
     }
 
