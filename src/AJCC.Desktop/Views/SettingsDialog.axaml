@@ -757,6 +757,84 @@
           </StackPanel>
         </ScrollViewer>
       </TabItem>
+
+      <TabItem Header="Info"
+               ToolTip.Tip="Info-, Build- und Plattformhinweise zu AJCC-X.">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,8,0,0"
+                      Spacing="10">
+            <Border Classes="panel"
+                    Padding="14">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Über AJCC-X"
+                           FontSize="20"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="InfoVersionText"
+                           FontWeight="SemiBold"
+                           Text="Version wird geladen..."
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="InfoBuildText"
+                           Classes="muted"
+                           Text="Build wird geladen..."
+                           TextWrapping="Wrap" />
+                <TextBlock Text="AJCC-X ist die plattformübergreifende Desktop-GUI für den vorhandenen AppleJuice-Core. Die GUI steuert den Core über dessen Schnittstellen; sie ersetzt oder erweitert den Core selbst nicht."
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel"
+                    Padding="14">
+              <Grid ColumnDefinitions="Auto,*"
+                    RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Text="Produkt"
+                           Margin="0,0,16,8"
+                           Classes="muted" />
+                <TextBlock Grid.Column="1"
+                           Margin="0,0,0,8"
+                           Text="Applejuice-Control-Center Cross-Platform" />
+                <TextBlock Grid.Row="1"
+                           Text="Version / Build"
+                           Margin="0,0,16,8"
+                           Classes="muted" />
+                <TextBlock x:Name="InfoDiagnosticVersionText"
+                           Grid.Row="1"
+                           Grid.Column="1"
+                           Margin="0,0,0,8"
+                           TextWrapping="Wrap" />
+                <TextBlock Grid.Row="2"
+                           Text="Laufzeit"
+                           Margin="0,0,16,8"
+                           Classes="muted" />
+                <TextBlock x:Name="InfoPlatformText"
+                           Grid.Row="2"
+                           Grid.Column="1"
+                           Margin="0,0,0,8"
+                           TextWrapping="Wrap" />
+                <TextBlock Grid.Row="3"
+                           Text="Zielplattformen"
+                           Margin="0,0,16,0"
+                           Classes="muted" />
+                <TextBlock Grid.Row="3"
+                           Grid.Column="1"
+                           Text="Windows · Linux · macOS"
+                           TextWrapping="Wrap" />
+              </Grid>
+            </Border>
+
+            <Border Classes="panel"
+                    Padding="14">
+              <StackPanel Spacing="6">
+                <TextBlock Text="FirstLight"
+                           FontWeight="SemiBold" />
+                <TextBlock Classes="muted"
+                           Text="v0.0.2 ist weiterhin ein Testbuild. Packaging, Installer, Protokoll-/Dateizuordnungen und eine spätere Freigabe nach main bleiben getrennte Entscheidungen."
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
     </TabControl>
 
     <Button Grid.Row="2"

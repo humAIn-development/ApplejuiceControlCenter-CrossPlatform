@@ -52,7 +52,32 @@ public sealed partial class SettingsDialog : Window
         LoadExternalVlcConfiguration();
         LoadGuiProxyConfiguration();
         LoadDownloadQueueConfiguration();
+        LoadBuildInformation();
         Opened += (_, _) => _tabSoundReady = true;
+    }
+
+
+    private void LoadBuildInformation()
+    {
+        TextBlock? version = this.FindControl<TextBlock>("InfoVersionText");
+        if (version is not null)
+            version.Text = AppBuildInfo.DisplayVersion;
+
+        TextBlock? build = this.FindControl<TextBlock>("InfoBuildText");
+        if (build is not null)
+        {
+            build.Text = string.Equals(AppBuildInfo.CiRunNumber, "local", StringComparison.OrdinalIgnoreCase)
+                ? "Lokaler Build"
+                : $"CI #{AppBuildInfo.CiRunNumber} · Run {AppBuildInfo.CiRunId}";
+        }
+
+        TextBlock? diagnosticVersion = this.FindControl<TextBlock>("InfoDiagnosticVersionText");
+        if (diagnosticVersion is not null)
+            diagnosticVersion.Text = AppBuildInfo.DiagnosticVersion;
+
+        TextBlock? platform = this.FindControl<TextBlock>("InfoPlatformText");
+        if (platform is not null)
+            platform.Text = $"{Environment.OSVersion} · {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture} · .NET {Environment.Version}";
     }
 
     public void ConfigureUiPreferences(
