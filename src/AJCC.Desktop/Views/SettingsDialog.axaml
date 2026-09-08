@@ -681,6 +681,82 @@
         </Border>
         </ScrollViewer>
       </TabItem>
+      <TabItem Header="Konnektoren"
+               ToolTip.Tip="Konnektor-/Erweiterungsbereich für spätere optionale Funktionen.">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,8,0,0"
+                      Spacing="10">
+            <Border Classes="panel"
+                    Padding="14">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Konnektoren"
+                           FontSize="20"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Dieser Bereich ist als zukünftige Erweiterungszentrale von Applejuice-Control-Center vorgesehen. Aktuell ist hier noch kein aktives Konnektor-System eingebaut."
+                           TextWrapping="Wrap" />
+                <TextBlock Classes="muted"
+                           Text="Unsere Linie: Konnektoren sollen später klar abgegrenzte Aufgaben übernehmen, ohne den AppleJuice-Core unnötig zu belasten oder zu ersetzen."
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel"
+                    Padding="14">
+              <Grid ColumnDefinitions="*,12,*">
+                <StackPanel Grid.Column="0"
+                            Spacing="8">
+                  <TextBlock Text="Future Vision"
+                             FontSize="18"
+                             FontWeight="SemiBold" />
+                  <TextBlock Classes="muted"
+                             Text="Konnektoren können später servernahe Zusatzfunktionen bereitstellen. AJCC würde diese Funktionen kontrolliert ansprechen, Status anzeigen und Fehler sichtbar machen."
+                             TextWrapping="Wrap" />
+                  <TextBlock Classes="muted"
+                             Text="Vorgedachte Richtung: Linux-first, getrennt vom Core, bewusst aktivierbar, sauber protokolliert."
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Spacing="8">
+                  <TextBlock Text="Nicht das Ziel"
+                             FontSize="18"
+                             FontWeight="SemiBold" />
+                  <TextBlock Classes="muted"
+                             Text="Kein beliebiger Fremdcode, keine automatische Netzwerk-Magie, keine zusätzliche Last beim normalen Start und keine versteckte Überwachung."
+                             TextWrapping="Wrap" />
+                  <TextBlock Classes="muted"
+                             Text="Der Core bleibt die Arbeitsmaschine. Konnektoren wären optionale Helfer, nicht Ersatz oder Eingriff in den Core."
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Border Classes="panel"
+                    Padding="14">
+              <Grid ColumnDefinitions="*,12,*">
+                <StackPanel Grid.Column="0"
+                            Spacing="6">
+                  <TextBlock Text="Tunnel-/Relay-Vision"
+                             FontWeight="SemiBold" />
+                  <TextBlock Classes="muted"
+                             Text="Langfristige Idee für schwierige Erreichbarkeitssituationen. Anspruchsvoll, optional und nicht Teil dieses Pre-Releases."
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Spacing="6">
+                  <TextBlock Text="Diagnose und Status"
+                             FontWeight="SemiBold" />
+                  <TextBlock Classes="muted"
+                             Text="Konnektorstatus, Logs und klare Fehlerhinweise, ohne normale AJCC-Funktionen zu stören."
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
     </TabControl>
 
     <Button Grid.Row="2"
