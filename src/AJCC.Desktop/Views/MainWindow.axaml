@@ -558,7 +558,16 @@
             <Button Classes="primary" MinWidth="96" Content="Uploads" Tag="Uploads" Click="TrafficModeButton_OnClick" />
             <Button MinWidth="96" Content="Server" Tag="Server" Click="TrafficModeButton_OnClick" />
           </StackPanel>
-          <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto,Auto,*">
+          <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" MinHeight="120" />
+              <RowDefinition Height="8" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" MinHeight="120" />
+            </Grid.RowDefinitions>
           <TextBlock Grid.Row="0"
                      Text="Aktive Uploads"
                      FontWeight="SemiBold"
@@ -602,11 +611,22 @@
             </ListBox.ItemTemplate>
           </ListBox>
 
-          <TextBlock Grid.Row="3"
+          <GridSplitter Grid.Row="3"
+                        Height="8"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        ResizeDirection="Rows"
+                        ResizeBehavior="PreviousAndNext"
+                        ShowsPreview="True"
+                        Background="{DynamicResource AjBorder}"
+                        Cursor="SizeNorthSouth"
+                        ToolTip.Tip="Aktive und inaktive Uploads in der Höhe unabhängig vom Downloadbereich anpassen." />
+
+          <TextBlock Grid.Row="4"
                      Text="Inaktive Uploads"
                      FontWeight="SemiBold"
                      Margin="4,10,0,6" />
-          <Border Grid.Row="4" Classes="tableHeader">
+          <Border Grid.Row="5" Classes="tableHeader">
             <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*">
               <TextBlock Text="Datei" FontWeight="SemiBold" />
               <TextBlock Grid.Column="1" Text="Nutzer" FontWeight="SemiBold" />
@@ -614,7 +634,7 @@
               <TextBlock Grid.Column="3" Text="Letzte Verbindung" FontWeight="SemiBold" />
             </Grid>
           </Border>
-          <ListBox Grid.Row="5" ItemsSource="{Binding InactiveUploads}">
+          <ListBox Grid.Row="6" ItemsSource="{Binding InactiveUploads}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:AjUpload">
                 <Grid ColumnDefinitions="3.5*,1.5*,1.2*,1.5*" Margin="8,6">
