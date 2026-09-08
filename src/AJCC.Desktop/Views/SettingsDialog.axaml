@@ -825,24 +825,6 @@
             <Border Classes="panel"
                     Padding="14">
               <StackPanel Spacing="6">
-                <TextBlock Text="Diagnose"
-                           FontWeight="SemiBold" />
-                <TextBlock Classes="muted"
-                           Text="Erstellt das vorhandene anonymisierte AJCC-X-Diagnosepaket mit begrenzten Logauszügen und Laufzeitstatus. Die Diagnosefunktion selbst bleibt unverändert; nur ihr Bedienort wird in den Info-Reiter verschoben."
-                           TextWrapping="Wrap" />
-                <Button x:Name="DiagnosticZipButton"
-                        MinWidth="190"
-                        HorizontalAlignment="Left"
-                        IsEnabled="False"
-                        Content="Diagnose-ZIP erstellen…"
-                        Click="DiagnosticZipButton_OnClick"
-                        ToolTip.Tip="Anonymisiertes AJCC-X-Diagnosepaket als ZIP speichern." />
-              </StackPanel>
-            </Border>
-
-            <Border Classes="panel"
-                    Padding="14">
-              <StackPanel Spacing="6">
                 <TextBlock Text="FirstLight"
                            FontWeight="SemiBold" />
                 <TextBlock Classes="muted"

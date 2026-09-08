@@ -1244,7 +1244,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task CreateDiagnosticZipAsync(TopLevel owner)
+    private async void DiagnosticZipButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -1280,7 +1280,7 @@ public sealed partial class MainWindow : Window
                 }
             };
 
-            IStorageFile? file = await owner.StorageProvider.SaveFilePickerAsync(options);
+            IStorageFile? file = await StorageProvider.SaveFilePickerAsync(options);
             if (file is null)
                 return;
 
@@ -1368,7 +1368,6 @@ public sealed partial class MainWindow : Window
     private async void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         SettingsDialog dialog = new();
-        dialog.ConfigureDiagnosticExport(CreateDiagnosticZipAsync);
         dialog.ConfigureLocalIncomingMapping(
             _viewModel.EndpointText,
             _viewModel.LocalIncomingMappingText,
