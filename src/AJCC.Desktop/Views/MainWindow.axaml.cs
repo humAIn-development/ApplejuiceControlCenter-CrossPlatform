@@ -155,13 +155,17 @@ public sealed partial class MainWindow : Window
     private void FeedbackTabItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
-        FeedbackButton_OnClick(sender, e);
+        Dispatcher.UIThread.Post(
+            () => FeedbackButton_OnClick(sender, e),
+            DispatcherPriority.Background);
     }
 
     private void SettingsTabItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
-        SettingsButton_OnClick(sender, e);
+        Dispatcher.UIThread.Post(
+            () => SettingsButton_OnClick(sender, e),
+            DispatcherPriority.Background);
     }
 
     private void TrafficModeButton_OnClick(object? sender, RoutedEventArgs e)
