@@ -44,6 +44,10 @@ public sealed partial class MainWindow : Window
     private bool _startupShareLoadEnabledForThisProcess;
     private bool _automaticStartupShareLoadHandledThisProcess;
     private bool _tabSoundReady;
+    private const int FeedbackMainTabIndex = 5;
+    private const int SettingsMainTabIndex = 6;
+    private int _lastRegularMainTabIndex;
+    private bool _mainTabDialogDispatchPending;
     private int _activeCoreReachabilityFailureCount;
     private AjServer? _selectedServerForContext;
     private AjUserSource? _selectedDownloadSourceForContext;
@@ -144,28 +148,55 @@ public sealed partial class MainWindow : Window
 
     private void MainTabControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (!_tabSoundReady
-            || sender is not TabControl tabControl
+        if (sender is not TabControl tabControl
             || !ReferenceEquals(e.Source, tabControl))
             return;
 
-        AudioFeedbackService.PlayButtonTick();
+        if (_tabSoundReady)
+            AudioFeedbackService.PlayButtonTick();
+
+        int selectedIndex = tabControl.SelectedIndex;
+        if (selectedIndex != FeedbackMainTabIndex
+            && selectedIndex != SettingsMainTabIndex)
+        {
+            if (selectedIndex >= 0)
+                _lastRegularMainTabIndex = selectedIndex;
+            return;
+        }
+
+        if (_mainTabDialogDispatchPending)
+            return;
+
+        int restoreIndex = _lastRegularMainTabIndex is >= 0 and < FeedbackMainTabIndex
+            ? _lastRegularMainTabIndex
+            : 0;
+        _mainTabDialogDispatchPending = true;
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                try
+                {
+                    tabControl.SelectedIndex = restoreIndex;
+                    if (selectedIndex == FeedbackMainTabIndex)
+                        FeedbackButton_OnClick(tabControl, e);
+                    else
+                        SettingsButton_OnClick(tabControl, e);
+                }
+                finally
+                {
+                    _mainTabDialogDispatchPending = false;
+                }
+            },
+            DispatcherPriority.Background);
     }
 
     private void FeedbackTabItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        e.Handled = true;
-        Dispatcher.UIThread.Post(
-            () => FeedbackButton_OnClick(sender, e),
-            DispatcherPriority.Background);
     }
 
     private void SettingsTabItem_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        e.Handled = true;
-        Dispatcher.UIThread.Post(
-            () => SettingsButton_OnClick(sender, e),
-            DispatcherPriority.Background);
     }
 
     private void TrafficModeButton_OnClick(object? sender, RoutedEventArgs e)
