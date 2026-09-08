@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AJCC.Core", "src\AJCC.Core\AJCC.Core.csproj", "{5DFEF9AD-E2C5-4638-A729-25B5C98DF333}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AJCC.Core.Tests", "tests\AJCC.Core.Tests\AJCC.Core.Tests.csproj", "{06398518-C270-45D0-A341-6CF45CA7538A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AJCC.Core.Probe", "tools\AJCC.Core.Probe\AJCC.Core.Probe.csproj", "{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5DFEF9AD-E2C5-4638-A729-25B5C98DF333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DFEF9AD-E2C5-4638-A729-25B5C98DF333}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DFEF9AD-E2C5-4638-A729-25B5C98DF333}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DFEF9AD-E2C5-4638-A729-25B5C98DF333}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06398518-C270-45D0-A341-6CF45CA7538A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06398518-C270-45D0-A341-6CF45CA7538A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06398518-C270-45D0-A341-6CF45CA7538A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06398518-C270-45D0-A341-6CF45CA7538A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9B2AA8C-97CB-4B08-9272-2DB82355CA81}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
