@@ -23,6 +23,7 @@ public sealed partial class SettingsDialog : Window
     private bool _autoLoadShareFilesAtStartup;
     private bool _guiSoundsEnabled = true;
     private bool _tabSoundReady;
+    private Func<TopLevel, Task>? _exportDiagnosticZipAsync;
     private Func<int, Task<int>>? _applyMaxConnectionsAsync;
     private Func<int, Task<int>>? _applyMaxSourcesPerFileAsync;
     private Func<int, Task<int>>? _applyMaxNewConnectionsPerTurnAsync;
@@ -56,6 +57,32 @@ public sealed partial class SettingsDialog : Window
         Opened += (_, _) => _tabSoundReady = true;
     }
 
+    public void ConfigureDiagnosticExport(Func<TopLevel, Task>? exportDiagnosticZipAsync)
+    {
+        _exportDiagnosticZipAsync = exportDiagnosticZipAsync;
+        Button? button = this.FindControl<Button>("DiagnosticZipButton");
+        if (button is not null)
+            button.IsEnabled = _exportDiagnosticZipAsync is not null;
+    }
+
+    private async void DiagnosticZipButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_exportDiagnosticZipAsync is null)
+            return;
+
+        Button? button = sender as Button;
+        if (button is not null)
+            button.IsEnabled = false;
+        try
+        {
+            await _exportDiagnosticZipAsync(this);
+        }
+        finally
+        {
+            if (button is not null)
+                button.IsEnabled = true;
+        }
+    }
 
     private void LoadBuildInformation()
     {
