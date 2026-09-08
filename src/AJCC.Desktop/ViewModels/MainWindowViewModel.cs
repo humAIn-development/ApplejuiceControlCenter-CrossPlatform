@@ -1908,7 +1908,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
-            using HttpClient listClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+            using HttpClient listClient =
+                GuiProxyHttpClientFactory.Create(TimeSpan.FromSeconds(10));
             string xml = await listClient.GetStringAsync(
                 "http://www.applejuicenet.cc/serverlist/xmllist.php").ConfigureAwait(true);
             IReadOnlyList<string> links = AjServerListParser.ParseLinks(xml);

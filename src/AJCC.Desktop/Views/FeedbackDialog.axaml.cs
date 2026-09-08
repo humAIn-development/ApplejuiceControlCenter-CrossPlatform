@@ -10,7 +10,6 @@ namespace AJCC.Desktop.Views;
 public sealed partial class FeedbackDialog : Window
 {
     private const string FeedbackEndpoint = "https://applejuice-control-center.de.cool/feedback_send.php";
-    private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(45) };
 
     private readonly string _technicalContext;
     private readonly byte[] _diagnosticsZip;
@@ -113,7 +112,10 @@ public sealed partial class FeedbackDialog : Window
                 content.Add(diagnostics, "diagnostics", "AJCC-X-diagnostics.zip");
             }
 
-            using HttpResponseMessage response = await HttpClient.PostAsync(FeedbackEndpoint, content);
+            using HttpClient httpClient =
+                AJCC.Desktop.Services.GuiProxyHttpClientFactory.Create(TimeSpan.FromSeconds(45));
+            using HttpResponseMessage response =
+                await httpClient.PostAsync(FeedbackEndpoint, content);
             string responseText = await response.Content.ReadAsStringAsync();
             (bool? ok, string message) = ParseResponse(responseText);
 

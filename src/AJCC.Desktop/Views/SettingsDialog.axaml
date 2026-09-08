@@ -484,7 +484,7 @@
                        Grid.ColumnSpan="2"
                        Classes="muted"
                        Margin="0,10,0,0"
-                       Text="Proxy gilt ausschließlich für GUI-HTTP-Zugriffe. Der Core wird nicht verändert. Das Passwort wird nicht gespeichert; die HTTP-Anbindung folgt separat."
+                       Text="Proxy gilt ausschließlich für GUI-HTTP-Zugriffe von AJCC-X (Feedback und öffentliche Serverliste). Der AppleJuice-Core wird nicht verändert. Private Proxy-Passwörter bleiben nur in der laufenden Sitzung."
                        TextWrapping="Wrap" />
           </Grid>
         </Border>

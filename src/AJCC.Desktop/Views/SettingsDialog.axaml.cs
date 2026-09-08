@@ -1319,6 +1319,7 @@ public sealed partial class SettingsDialog : Window
         TextBox? hostInput = this.FindControl<TextBox>("ProxyHostTextBox");
         TextBox? portInput = this.FindControl<TextBox>("ProxyPortTextBox");
         TextBox? userNameInput = this.FindControl<TextBox>("ProxyUserNameTextBox");
+        TextBox? passwordInput = this.FindControl<TextBox>("ProxyPasswordTextBox");
         TextBlock? status = this.FindControl<TextBlock>("ProxyStatusText");
 
         string rawPort = (portInput?.Text ?? string.Empty).Trim();
@@ -1363,11 +1364,30 @@ public sealed partial class SettingsDialog : Window
         if (userNameInput is not null)
             userNameInput.Text = effective.UserName;
 
+        bool privateProxyEnabled = effective.Enabled
+            && string.Equals(
+                effective.Mode,
+                GuiProxyConfiguration.PrivateMode,
+                StringComparison.Ordinal);
+        if (!privateProxyEnabled)
+        {
+            GuiProxySessionCredentials.ClearPassword();
+        }
+        else if (!string.IsNullOrEmpty(passwordInput?.Text))
+        {
+            GuiProxySessionCredentials.SetPassword(passwordInput.Text);
+        }
+
+        if (passwordInput is not null)
+            passwordInput.Text = string.Empty;
+
         if (status is not null)
         {
             status.Text = effective.Enabled
-                ? "Proxy-Konfiguration gespeichert. Das Passwort bleibt ausschließlich in der laufenden Sitzung; die GUI-HTTP-Anbindung folgt separat."
-                : "Proxy deaktiviert. Die eingetragenen Werte bleiben für eine spätere Aktivierung gespeichert.";
+                ? privateProxyEnabled
+                    ? "Private GUI-Proxy-Konfiguration gespeichert und sofort aktiv. Das Proxy-Passwort bleibt ausschließlich in der laufenden Sitzung."
+                    : "Public GUI-Proxy-Konfiguration gespeichert und sofort aktiv."
+                : "GUI-Proxy deaktiviert. Feedback und öffentliche Serverliste verwenden wieder direkte HTTP-Verbindungen.";
         }
     }
 
