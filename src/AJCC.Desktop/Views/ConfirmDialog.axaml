@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.ConfirmDialog"
+        Width="520"
+        MinWidth="470"
+        MinHeight="220"
+        MaxWidth="900"
+        MaxHeight="720"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AjBackground}">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+  <Border Margin="14"
+          Padding="16"
+          Background="{DynamicResource AjPanel}"
+          BorderBrush="{DynamicResource AjBorder}"
+          BorderThickness="1"
+          CornerRadius="10">
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+      <TextBlock x:Name="TitleText"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource AjText}" />
+
+      <TextBlock x:Name="MessageText"
+                 Grid.Row="1"
+                 Margin="0,14,0,14"
+                 TextWrapping="Wrap"
+                 VerticalAlignment="Center"
+                 Foreground="{DynamicResource AjText}" />
+
+      <CheckBox x:Name="SuppressFutureConfirmationCheckBox"
+                Grid.Row="2"
+                Margin="0,0,0,14"
+                Content="Diese Bestätigung künftig nicht mehr anzeigen"
+                ToolTip.Tip="Der Core-Wechsel erfolgt künftig direkt nach Auswahl und Klick auf Wechseln."
+                IsVisible="False" />
+
+      <StackPanel Grid.Row="3"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8">
+        <Button x:Name="ConfirmButton"
+                Classes="primary"
+                IsDefault="True"
+                MinWidth="110"
+                Click="ConfirmButton_OnClick" />
+        <Button x:Name="CancelButton"
+                IsCancel="True"
+                MinWidth="100"
+                Click="CancelButton_OnClick" />
+      </StackPanel>
+    </Grid>
+  </Border>
+  </ScrollViewer>
+</Window>

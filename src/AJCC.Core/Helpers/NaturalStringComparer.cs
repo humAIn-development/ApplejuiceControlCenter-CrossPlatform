@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace AJCC.Core.Helpers;
 
-internal sealed class NaturalStringComparer : IComparer<string>
+public sealed class NaturalStringComparer : IComparer<string>
 {
     public static readonly NaturalStringComparer Instance = new();
 

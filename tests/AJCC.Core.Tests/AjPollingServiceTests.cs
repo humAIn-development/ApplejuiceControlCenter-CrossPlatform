@@ -57,6 +57,29 @@ public sealed class AjPollingServiceTests
         StringAssert.Contains(query, "session=existing-session");
     }
 
+    [TestMethod]
+    public async Task Polling_RequestsFullResyncAfterThreeMissingCoreTimestamps()
+    {
+        MissingTimestampPollingHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        AppleJuiceCoreClient client = new(new CoreEndpoint("http", "127.0.0.1", 9851), httpClient: httpClient);
+        AjPollingService polling = new(client);
+        AjState state = new() { SessionId = "existing-session", LastTimestamp = 77 };
+        TaskCompletionSource<(int Count, string Reason)> requested =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        polling.FullResyncRequested += (count, reason) => requested.TrySetResult((count, reason));
+
+        await polling.StartAsync(state, intervalMs: 10);
+        (int count, string reason) = await requested.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await polling.StopAsync();
+
+        Assert.AreEqual(3, count);
+        Assert.AreEqual(77L, state.LastTimestamp);
+        Assert.IsTrue(handler.ModifiedRequestCount >= 3);
+        StringAssert.Contains(reason, "keinen Core-Zeitstempel");
+    }
+
     private sealed class PollingHandler : HttpMessageHandler
     {
         public int SessionRequestCount { get; private set; }
@@ -90,4 +113,30 @@ public sealed class AjPollingServiceTests
             });
         }
     }
+    private sealed class MissingTimestampPollingHandler : HttpMessageHandler
+    {
+        public int ModifiedRequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            string body;
+
+            if (path.EndsWith("/xml/modified.xml", StringComparison.Ordinal))
+            {
+                ModifiedRequestCount++;
+                body = "<modified />";
+            }
+            else
+            {
+                body = "<applejuice />";
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body)
+            });
+        }
+    }
+
 }

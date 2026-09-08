@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.CoreProfileSaveDialog"
+        Title="Core-Profil speichern"
+        Width="440"
+        Height="220"
+        MinWidth="380"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AjBackground}">
+  <Border Margin="14"
+          Padding="16"
+          Background="{DynamicResource AjPanel}"
+          BorderBrush="{DynamicResource AjBorder}"
+          BorderThickness="1"
+          CornerRadius="10">
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+      <TextBlock Text="Profilname"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource AjText}" />
+
+      <TextBox x:Name="ProfileNameInput"
+               Grid.Row="1"
+               Margin="0,14,0,8"
+               PlaceholderText="z. B. Wohnzimmer-Core" />
+
+      <TextBlock x:Name="StatusText"
+                 Grid.Row="2"
+                 Classes="muted"
+                 TextWrapping="Wrap" />
+
+      <StackPanel Grid.Row="3"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Bottom"
+                  Spacing="8">
+        <Button Classes="primary"
+                IsDefault="True"
+                MinWidth="110"
+                Content="Speichern"
+                Click="SaveButton_OnClick" />
+        <Button IsCancel="True"
+                MinWidth="100"
+                Content="Abbrechen"
+                Click="CancelButton_OnClick" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

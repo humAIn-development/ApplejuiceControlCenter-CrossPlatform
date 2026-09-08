@@ -29,6 +29,13 @@ public static class AjStateUpdater
             if (existingUpload is not null && !IsUsableUploadFilename(item.Filename) && IsUsableUploadFilename(existingUpload.Filename))
                 item.Filename = existingUpload.Filename;
 
+            if (!IsUsableUploadFilename(item.Filename))
+            {
+                string? downloadFilename = GetDownloadFilenameFallback(state, item.ShareId);
+                if (!string.IsNullOrWhiteSpace(downloadFilename))
+                    item.Filename = downloadFilename;
+            }
+
             Upsert(state.Uploads, item, item.Id);
         }
 
@@ -81,6 +88,25 @@ public static class AjStateUpdater
         int backslash = value.LastIndexOf('\\');
         int index = slash > backslash ? slash : backslash;
         return index >= 0 && index + 1 < value.Length ? value[(index + 1)..] : value;
+    }
+
+    private static string? GetDownloadFilenameFallback(AjState state, long shareId)
+    {
+        if (shareId <= 0)
+            return null;
+
+        foreach (AjDownload download in state.Downloads.Where(download => download.ShareId == shareId))
+        {
+            string displayFilename = download.DisplayFilename.Trim();
+            if (IsUsableUploadFilename(displayFilename))
+                return displayFilename;
+
+            string filename = download.Filename.Trim();
+            if (IsUsableUploadFilename(filename))
+                return filename;
+        }
+
+        return null;
     }
 
     private static void Upsert<T>(ObservableCollection<T> collection, T item, long id) where T : class

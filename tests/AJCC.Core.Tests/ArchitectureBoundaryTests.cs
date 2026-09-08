@@ -8,7 +8,7 @@ namespace AJCC.Core.Tests;
 public sealed class ArchitectureBoundaryTests
 {
     [TestMethod]
-    public void CoreAssembly_DoesNotReferenceWindowsDesktopFrameworks()
+    public void CoreAssembly_DoesNotReferenceDesktopFrameworks()
     {
         Assembly coreAssembly = typeof(AjState).Assembly;
         HashSet<string> references = coreAssembly
@@ -27,6 +27,13 @@ public sealed class ArchitectureBoundaryTests
 
         foreach (string forbidden in forbiddenReferences)
             Assert.IsFalse(references.Contains(forbidden), $"AJCC.Core darf {forbidden} nicht referenzieren.");
+
+        foreach (string reference in references)
+        {
+            Assert.IsFalse(
+                reference.StartsWith("Avalonia", StringComparison.OrdinalIgnoreCase),
+                $"AJCC.Core darf das Desktop-Framework {reference} nicht referenzieren.");
+        }
     }
 
     [TestMethod]

@@ -33,8 +33,12 @@ public sealed class AjShareDirectory
     public string ShareModeText => ShareMode == "subdirectory" ? "Freigegeben inkl. Unterordner" : "Freigegeben";
 }
 
-public sealed class AjShareFile
+public sealed class AjShareFile : INotifyPropertyChanged
 {
+    private int _priority;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public long Id { get; set; }
     public string Filename { get; set; } = "";
     public long Size { get; set; }
@@ -43,7 +47,18 @@ public sealed class AjShareFile
     public string DisplayFilename => GetFileNameOnly(Filename);
     public string DirectoryPath => GetDirectoryOnly(Filename);
     public string Checksum { get; set; } = "";
-    public int Priority { get; set; }
+    public int Priority
+    {
+        get => _priority;
+        set
+        {
+            if (_priority == value)
+                return;
+
+            _priority = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Priority)));
+        }
+    }
     public long LastAsked { get; set; }
     public long AskCount { get; set; }
     public long SearchCount { get; set; }
@@ -120,6 +135,11 @@ public sealed class AjDownload : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(DownloadStatusSortKey));
+                OnPropertyChanged(nameof(StatusVisualRole));
+                OnPropertyChanged(nameof(HasStatusVisualColor));
+                OnPropertyChanged(nameof(IsCompletedStatusVisual));
+                OnPropertyChanged(nameof(IsAbortedStatusVisual));
+                OnPropertyChanged(nameof(IsPausedStatusVisual));
                 OnPropertyChanged(nameof(PowerDownloadText));
                 NotifyProgressProperties();
             }
@@ -138,6 +158,12 @@ public sealed class AjDownload : INotifyPropertyChanged
         1 or 13 => 70,
         _ => 90
     };
+
+    public DownloadStatusVisualRole StatusVisualRole => DownloadStatusVisualSemantics.GetRole(Status);
+    public bool HasStatusVisualColor => StatusVisualRole != DownloadStatusVisualRole.Neutral;
+    public bool IsCompletedStatusVisual => StatusVisualRole == DownloadStatusVisualRole.Completed;
+    public bool IsAbortedStatusVisual => StatusVisualRole == DownloadStatusVisualRole.Aborted;
+    public bool IsPausedStatusVisual => StatusVisualRole == DownloadStatusVisualRole.Paused;
 
     public string Filename
     {
@@ -380,10 +406,66 @@ public sealed class AjUpload
     public long UploadSize => Math.Max(0, UploadTo - UploadFrom);
     public long UploadedBytes => UploadSize <= 0 ? 0 : Math.Clamp(ActualUploadPosition - UploadFrom, 0, UploadSize);
     public string UploadedText => UploadSize > 0 ? DisplayFormatHelper.Bytes(UploadedBytes) : "-";
-    public double ProgressPercent => UploadSize <= 0 ? Math.Clamp(Loaded, 0.0, 100.0) : Math.Clamp((double)UploadedBytes / UploadSize * 100.0, 0.0, 100.0);
-    public string ProgressPercentText => UploadSize > 0 || Loaded > 0 ? $"{ProgressPercent:0.0} %" : "-";
-    public string WatermarkText => Loaded > 0 ? $"{Loaded:0.0} %" : ProgressPercentText;
+    public double LoadedPercent
+    {
+        get
+        {
+            double raw = Loaded;
+            if (double.IsNaN(raw) || double.IsInfinity(raw) || raw <= 0.0)
+                return 0.0;
+
+            double percent = raw <= 1.0 ? raw * 100.0 : raw;
+            return Math.Clamp(percent, 0.0, 100.0);
+        }
+    }
+    public double ProgressPercent => UploadSize <= 0 ? LoadedPercent : Math.Clamp((double)UploadedBytes / UploadSize * 100.0, 0.0, 100.0);
+    public string ProgressPercentText => UploadSize > 0 || LoadedPercent > 0 ? $"{ProgressPercent:0.0} %" : "-";
+    public string WatermarkText => LoadedPercent > 0 ? $"{LoadedPercent:0.0} %" : ProgressPercentText;
     public string ClientText => string.IsNullOrWhiteSpace(Version) ? "-" : Version;
+    public bool IsActiveTransfer
+    {
+        get
+        {
+            if (Status != 1)
+                return false;
+
+            if (Speed > 0)
+                return true;
+
+            return UploadTo > UploadFrom && ActualUploadPosition < UploadTo;
+        }
+    }
+    public string LastConnectionText
+    {
+        get
+        {
+            if (LastConnection <= 0)
+                return "-";
+
+            try
+            {
+                if (LastConnection > 10_000_000_000L)
+                    return DateTimeOffset.FromUnixTimeMilliseconds(LastConnection).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
+
+                if (LastConnection > 1_000_000_000L)
+                    return DateTimeOffset.FromUnixTimeSeconds(LastConnection).LocalDateTime.ToString("dd.MM.yyyy HH:mm");
+
+                TimeSpan age = TimeSpan.FromSeconds(LastConnection);
+                if (age.TotalDays >= 1)
+                    return $"vor {(int)age.TotalDays} d";
+                if (age.TotalHours >= 1)
+                    return $"vor {(int)age.TotalHours} h";
+                if (age.TotalMinutes >= 1)
+                    return $"vor {(int)age.TotalMinutes} min";
+
+                return "gerade eben";
+            }
+            catch
+            {
+                return "-";
+            }
+        }
+    }
 
     private static string GetFileNameOnly(string value)
     {
@@ -587,8 +669,12 @@ public sealed class AjSearch : INotifyPropertyChanged
     }
 }
 
-public sealed class AjSearchEntry
+public sealed class AjSearchEntry : INotifyPropertyChanged
 {
+    private bool _isExistingDownload;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public long Id { get; set; }
     public long SearchId { get; set; }
     public string Checksum { get; set; } = "";
@@ -598,6 +684,36 @@ public sealed class AjSearchEntry
     public string SourceText { get; set; } = "";
     public bool HasSourceText => !string.IsNullOrWhiteSpace(SourceText);
     public int FilenameUsers { get; set; }
+
+    public bool IsExistingDownload
+    {
+        get => _isExistingDownload;
+        set
+        {
+            if (_isExistingDownload == value)
+                return;
+
+            _isExistingDownload = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanImportAsDownload));
+            OnPropertyChanged(nameof(DownloadActionText));
+            OnPropertyChanged(nameof(ExistingDownloadToolTip));
+        }
+    }
+
+    public bool CanImportAsDownload => !IsExistingDownload;
+    public string DownloadActionText => IsExistingDownload
+        ? "ist bereits in der Downloadliste"
+        : "Als Download übernehmen";
+    public string ExistingDownloadToolTip => IsExistingDownload
+        ? "Diese Datei ist bereits in der Downloadliste."
+        : string.Empty;
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        if (!string.IsNullOrWhiteSpace(propertyName))
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public sealed class AjDirectoryEntry

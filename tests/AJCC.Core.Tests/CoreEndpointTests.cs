@@ -31,6 +31,31 @@ public sealed class CoreEndpointTests
     }
 
     [TestMethod]
+    public void Parse_PreservesSchemePortAndBasePath()
+    {
+        CoreEndpoint endpoint = CoreEndpoint.Parse("https://core.example.org:9443/applejuice/");
+
+        Assert.AreEqual("https", endpoint.Scheme);
+        Assert.AreEqual("core.example.org", endpoint.Host);
+        Assert.AreEqual(9443, endpoint.Port);
+        Assert.AreEqual("/applejuice/", endpoint.BasePath);
+        Assert.AreEqual("https://core.example.org:9443/applejuice/", endpoint.BaseUri.ToString());
+    }
+
+    [TestMethod]
+    public void Parse_RejectsEmbeddedCredentials()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => CoreEndpoint.Parse("http://user:secret@127.0.0.1:9851/"));
+    }
+
+    [TestMethod]
+    public void Parse_RejectsQueryAndFragment()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => CoreEndpoint.Parse("http://127.0.0.1:9851/?password=secret"));
+        Assert.ThrowsExactly<ArgumentException>(() => CoreEndpoint.Parse("http://127.0.0.1:9851/#fragment"));
+    }
+
+    [TestMethod]
     public void Constructor_RejectsUnsupportedScheme()
     {
         Assert.ThrowsExactly<ArgumentException>(() => new CoreEndpoint("ftp", "example.org"));

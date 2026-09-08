@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AJCC.Desktop.Views.FeedbackDialog"
+        Title="Feedback senden"
+        Width="760"
+        Height="780"
+        MinWidth="620"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="18" Spacing="12">
+      <TextBlock Text="AJCC Feedback"
+                 FontSize="20"
+                 FontWeight="SemiBold" />
+      <TextBlock Classes="muted"
+                 Text="Feedback direkt aus AJCC-X senden. Technischer Kontext und anonymisiertes Diagnose-ZIP können optional mitgesendet werden."
+                 TextWrapping="Wrap" />
+
+      <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+        <TextBlock Grid.Row="0" Text="Kategorie" VerticalAlignment="Center" Margin="0,0,10,8" />
+        <ComboBox x:Name="CategoryBox" Grid.Row="0" Grid.Column="1" SelectedIndex="0" Margin="0,0,0,8">
+          <ComboBoxItem Content="Bug / technisches Problem" />
+          <ComboBoxItem Content="Bedienfrage" />
+          <ComboBoxItem Content="Unterschied zur Java-GUI" />
+          <ComboBoxItem Content="Feature-Wunsch" />
+          <ComboBoxItem Content="Sonstiges" />
+        </ComboBox>
+
+        <TextBlock Grid.Row="1" Text="AJCC-Version" VerticalAlignment="Center" Margin="0,0,10,8" />
+        <TextBox x:Name="AjccVersionBox" Grid.Row="1" Grid.Column="1" IsReadOnly="True" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="2" Text="Core-Version" VerticalAlignment="Center" Margin="0,0,10,8" />
+        <TextBox x:Name="CoreVersionBox" Grid.Row="2" Grid.Column="1" IsReadOnly="True" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="3" Text="System" VerticalAlignment="Center" Margin="0,0,10,8" />
+        <TextBox x:Name="SystemVersionBox" Grid.Row="3" Grid.Column="1" IsReadOnly="True" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="4" Text="Name / Nick" VerticalAlignment="Center" Margin="0,0,10,0" />
+        <TextBox x:Name="NameBox" Grid.Row="4" Grid.Column="1" MaxLength="120" />
+      </Grid>
+
+      <TextBlock Text="E-Mail (optional)" FontWeight="SemiBold" />
+      <TextBox x:Name="EmailBox" MaxLength="180" />
+
+      <TextBlock Text="Kurztitel" FontWeight="SemiBold" />
+      <TextBox x:Name="TitleBox" MaxLength="120" />
+
+      <TextBlock Text="Beschreibung" FontWeight="SemiBold" />
+      <TextBox x:Name="DescriptionBox"
+               AcceptsReturn="True"
+               TextWrapping="Wrap"
+               MinHeight="150"
+               MaxLength="8000" />
+
+      <TextBlock Text="Reproduktionsschritte (optional)" FontWeight="SemiBold" />
+      <TextBox x:Name="StepsBox"
+               AcceptsReturn="True"
+               TextWrapping="Wrap"
+               MinHeight="100"
+               MaxLength="8000" />
+
+      <CheckBox x:Name="IncludeTechnicalDataBox"
+                IsChecked="False"
+                Content="Technischen Kontext und anonymisiertes Diagnose-ZIP mitsenden" />
+
+      <TextBox x:Name="TechnicalDataBox"
+               IsReadOnly="True"
+               AcceptsReturn="True"
+               TextWrapping="Wrap"
+               MinHeight="110" />
+
+      <TextBlock Classes="muted"
+                 Text="Datenschutz: Diagnosepaket und technischer Kontext enthalten absichtlich keine Passwörter, lokalen Pfade, IPs, Serveradressen, Dateinamen, Suchtexte, Hashes, Links oder Roh-Core-Antworten."
+                 TextWrapping="Wrap" />
+
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock x:Name="StatusText"
+                   VerticalAlignment="Center"
+                   Text="Bereit."
+                   TextWrapping="Wrap" />
+        <Button x:Name="CloseButton"
+                Grid.Column="1"
+                MinWidth="96"
+                Margin="8,0,0,0"
+                Content="Schließen"
+                IsCancel="True"
+                Click="CloseButton_OnClick" />
+        <Button x:Name="SendButton"
+                Grid.Column="2"
+                Classes="primary"
+                MinWidth="140"
+                Margin="8,0,0,0"
+                Content="Feedback senden"
+                IsDefault="True"
+                Click="SendButton_OnClick" />
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

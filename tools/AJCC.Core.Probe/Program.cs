@@ -22,7 +22,7 @@ internal static class Program
         CoreEndpoint endpoint;
         try
         {
-            endpoint = CreateEndpoint(endpointUri!);
+            endpoint = CoreEndpoint.FromUri(endpointUri!);
         }
         catch (Exception ex)
         {
@@ -93,21 +93,6 @@ internal static class Program
 
         Console.WriteLine("Foundation Core-Probe erfolgreich.");
         return 0;
-    }
-
-    private static CoreEndpoint CreateEndpoint(Uri uri)
-    {
-        if (!uri.IsAbsoluteUri)
-            throw new ArgumentException("Absolute URI erforderlich.");
-
-        if (!string.IsNullOrEmpty(uri.UserInfo))
-            throw new ArgumentException("Credentials dürfen nicht Bestandteil der Endpoint-URI sein.");
-
-        if (!string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-            throw new ArgumentException("Endpoint darf keine Query oder Fragment enthalten.");
-
-        int? port = uri.IsDefaultPort ? null : uri.Port;
-        return new CoreEndpoint(uri.Scheme, uri.Host, port, uri.AbsolutePath);
     }
 
     private static bool TryReadArguments(string[] args, out Uri? endpointUri, out string passwordEnvironmentVariable, out string? error)

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <SemanticVersion>0.0.2</SemanticVersion>
+    <ReleaseChannel>testbuild</ReleaseChannel>
+    <BuildCodename>FirstLight</BuildCodename>
+    <GitBranch Condition="'$(GitBranch)' == ''">local</GitBranch>
+    <GitCommit Condition="'$(GitCommit)' == ''">local</GitCommit>
+    <CiRunId Condition="'$(CiRunId)' == ''">local</CiRunId>
+    <CiRunNumber Condition="'$(CiRunNumber)' == ''">local</CiRunNumber>
+
+    <Version>$(SemanticVersion)</Version>
+    <AssemblyVersion>$(SemanticVersion).0</AssemblyVersion>
+    <FileVersion>$(SemanticVersion).0</FileVersion>
+    <InformationalVersion>$(SemanticVersion)-$(ReleaseChannel)+$(BuildCodename).$(GitCommit).ci$(CiRunNumber)</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="SemanticVersion" Value="$(SemanticVersion)" />
+    <AssemblyMetadata Include="ReleaseChannel" Value="$(ReleaseChannel)" />
+    <AssemblyMetadata Include="BuildCodename" Value="$(BuildCodename)" />
+    <AssemblyMetadata Include="GitBranch" Value="$(GitBranch)" />
+    <AssemblyMetadata Include="GitCommit" Value="$(GitCommit)" />
+    <AssemblyMetadata Include="CiRunId" Value="$(CiRunId)" />
+    <AssemblyMetadata Include="CiRunNumber" Value="$(CiRunNumber)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="SoundFlow" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/Sounds/button_tick.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AJCC.Core\AJCC.Core.csproj" />
+  </ItemGroup>
+</Project>
